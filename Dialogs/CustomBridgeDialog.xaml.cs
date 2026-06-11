@@ -188,7 +188,7 @@ namespace CrimsonOnion.Dialogs
                         return;
                     }
                 }
-                catch (Exception ex) when (ex is not OperationCanceledException)
+                catch (Exception)
                 {
                     if (!_fetchingBridges) return;
                 }
