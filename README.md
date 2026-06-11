@@ -6,6 +6,7 @@ This project is a re-written and improved version of [TorMultiplexer](https://gi
   
 # How to use and Troubleshooting
 - The interface of the app is pretty simple and tooltips have been included to help with understanding each option. But a guide is provided below nonetheless.
+
 __Bridge Type:__  
 - This option will show you different bridge types you can use to connect to Tor.
 - On healthy networks you can use "Direct".
