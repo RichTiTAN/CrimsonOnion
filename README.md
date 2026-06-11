@@ -4,7 +4,8 @@ This project is a re-written and improved version of [TorMultiplexer](https://gi
 
 <img width="3100" height="1080" alt="Untitl213ed-4" src="https://github.com/user-attachments/assets/d0f42c6e-654f-4f1c-ad1b-059b63d32b6b" />  
 
-__HOW IT WORKS::__
+
+__HOW IT WORKS:__
 - This app uses 1-8 Tor connections, load-balances them with HAProxy, uses Xray-core for managing and enabling the Proxy and Sing-box for managing the VPN MODE.
   
 # How to use and Troubleshooting
