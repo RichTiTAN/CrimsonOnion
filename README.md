@@ -58,14 +58,14 @@ __UNIFIED PANEL:__
 # Credits and Donations  
 Creator: [@itsTiTANVPN](https://t.me/itsTitanVPN)  
 
-Credits:  
+__Credits:__  
 HAProxy: https://github.com/xjoker/HAProxyForWindows  
 v2rayN: https://github.com/2dust/v2rayN  
 xray: https://github.com/xtls/xray-core  
 Tor: https://www.torproject.org/  
 Sing_Box: https://github.com/SagerNet/sing-box
 
-Donations: 
+__Donations:__ 
 - If you want to support the project or me you can do so by sending your desired amount to one of these wallet addresses:
 
 USDT (BEP20)  
