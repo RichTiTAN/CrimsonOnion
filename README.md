@@ -2,7 +2,7 @@
 A GUI client that runs Multiple Tor instances and Load-Balances them with HAProxy.  
 This project is a re-written and improved version of [TorMultiplexer](https://github.com/richTiTAN/Tor-Multiplexer/) in C# and .NET.  
 
-<img width="3100" height="1080" alt="Untitl213ed-4" src="https://github.com/user-attachments/assets/d0f42c6e-654f-4f1c-ad1b-059b63d32b6b" />  
+<img width="3100" height="1080" alt="Untitl213ed-4" src="https://github.com/user-attachments/assets/d0f42c6e-654f-4f1c-ad1b-059b63d32b6b" />
 
 
 __HOW IT WORKS:__
