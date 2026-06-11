@@ -60,7 +60,6 @@ Creator: [@itsTiTANVPN](https://t.me/itsTitanVPN)
 
 __Credits:__  
 HAProxy: https://github.com/xjoker/HAProxyForWindows  
-v2rayN: https://github.com/2dust/v2rayN  
 xray: https://github.com/xtls/xray-core  
 Tor: https://www.torproject.org/  
 Sing_Box: https://github.com/SagerNet/sing-box
