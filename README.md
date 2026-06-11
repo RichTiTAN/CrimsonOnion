@@ -1,8 +1,9 @@
 # CrimsonOnion
 A GUI client that runs Multiple Tor instances and Load-Balances them with HAProxy.  
-This project is a re-written version of [TorMultiplexer](https://github.com/richTiTAN/Tor-Multiplexer/) in C# and .NET.  
-<img width="1920" height="1080" alt="Untitled-1" src="https://github.com/user-attachments/assets/6375bada-3c29-49de-8841-37dd7a623f5f" />  
+This project is a re-written and improved version of [TorMultiplexer](https://github.com/richTiTAN/Tor-Multiplexer/) in C# and .NET.  
 
+<img width="3100" height="1080" alt="Untitl213ed-4" src="https://github.com/user-attachments/assets/d0f42c6e-654f-4f1c-ad1b-059b63d32b6b" />
+  
 # How to use and Troubleshooting
 - The interface of the app is pretty simple and tooltips have been included to help with understanding each option. But a guide is provided below nonetheless.
 __Bridge Type:__  
@@ -27,3 +28,23 @@ __OPTIONS:__
 __CONNECTION:__
 - PROXY MODE: This option will set a system-wide proxy in windows settings so all of your app's connections go through the Tor network. (Choosing this option means you don't care about leaks of your ISP when you visit websites/services.)
 - VPN MODE: This option will apply a system wide tunnel to capture all traffic. (This option will most likely prevent leaks but it's not guaranteed and to make it more fool-proof changing each setting will require a re-connect.) 
+- CLEAR PROXY: This option will clear the system proxy and no VPN tunnel will be enabled, instead a local proxy port (or LAN if you have the setting on) will be open on port 10818. If you use the address and port give in the "MIXED PORT" box you'll be able to connect to the Tor Multiplexer.
+
+__ADVANCED SETTINGS:__  
+__ROUTING:__  
+- SPLIT TUNNELING: With this option you can bypass the proxy for specific websites, ip addresses or applications and you can add websites or ip addresses to the blacklist to prevent them from connecting to the internet entirely. (Domain or IP bypass won't work in VPN MODE and Application Bypass won't work in Proxy Mode.)
+- CUSTOM V2RAY EXIT-NODE: With this option you can configure the last hop of the Tor network to be a custom Xray config. This will help Tor support UDP (with UDP over TCP) and it will give you a static IP address which you might need for sensitive websites. (The port of the config needs to be 443 or 80 as Tor might block other ports.)
+- OUTBOUND PROXY: With this option you can route your Tor traffic through an upstream HTTPS/SOCKS5 Proxy.
+- AD AND TRACKER BLOCKER: This option will block ads, trackers and telemetry loops.
+- ALLOW LAN CONNECTIONS: This option will allow other devices on your local network to connect to Tor using the app. After enabling the app will provide you with a LAN IP and Port on connection, which you can use in any proxy management app in your phone to connect to the app. (HTTP, HTTPS, SOCKS3,4,5 are supported.)
+__SYSTEM:__
+- LAUNCH ON START-UP: Enabling this option will launch the app when windows boots.
+- START MINIMIZED: Enabling This option will start the app in a minimized state with respect to MINIMIZE TO TRAY option.
+- MINIMIZE TO TRAY: Enabling this option will allow the app to minimize to the system tray instead of the task bar.
+- DEBUG MODE: Enabling this option will launch each app's window in cmd for debugging purposes.
+- LIVE LOGS: This option will open up a logs panel which you can see the Tor boostrap status in and monitor the Xray logs.
+- CREATE DESKTOP SHORTCUT: Creates a desktop shortcut for the app?
+
+__UNIFIED PANEL:__
+- MIXED PORT: This panel will show you the Local and LAN ip address and ports that you can use to connect to the Multiplexer if you'd like to.
+- STATS: This panel will provide you with the current network speed of the app, total amount of data used, location of the connection and the ping to the servers. If you click the panel another ping/location test will be taken.
