@@ -11,7 +11,7 @@ __HOW IT WORKS:__
 # How to use and Troubleshooting
 - The interface of the app is pretty simple and tooltips have been included to help with understanding each option. But a guide is provided below nonetheless.
 
-__Bridge Type:__  
+__BRIDGE TYPE:__  
 - This option will show you different bridge types you can use to connect to Tor.
 - On healthy networks you can use "Direct".
 - If Tor is blocked in your region you can choose other bridge types, Try with this order: Obfs4, Snowflake, meek_lite and see which one works better for you and your network interface.
