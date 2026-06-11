@@ -37,6 +37,7 @@ __ROUTING:__
 - OUTBOUND PROXY: With this option you can route your Tor traffic through an upstream HTTPS/SOCKS5 Proxy.
 - AD AND TRACKER BLOCKER: This option will block ads, trackers and telemetry loops.
 - ALLOW LAN CONNECTIONS: This option will allow other devices on your local network to connect to Tor using the app. After enabling the app will provide you with a LAN IP and Port on connection, which you can use in any proxy management app in your phone to connect to the app. (HTTP, HTTPS, SOCKS3,4,5 are supported.)
+
 __SYSTEM:__
 - LAUNCH ON START-UP: Enabling this option will launch the app when windows boots.
 - START MINIMIZED: Enabling This option will start the app in a minimized state with respect to MINIMIZE TO TRAY option.
