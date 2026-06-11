@@ -54,3 +54,13 @@ __SYSTEM:__
 __UNIFIED PANEL:__
 - MIXED PORT: This panel will show you the Local and LAN ip address and ports that you can use to connect to the Multiplexer if you'd like to.
 - STATS: This panel will provide you with the current network speed of the app, total amount of data used, location of the connection and the ping to the servers. If you click the panel another ping/location test will be taken.
+
+# Credits and Donations  
+Creator: [@itsTiTANVPN](https://t.me/itsTitanVPN)  
+Credits:  
+HAProxy: https://github.com/xjoker/HAProxyForWindows  
+v2rayN: https://github.com/2dust/v2rayN  
+xray: https://github.com/xtls/xray-core  
+Tor: https://www.torproject.org/  
+Sing_Box: https://github.com/SagerNet/sing-box
+
