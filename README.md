@@ -7,6 +7,7 @@ This project is a re-written and improved version of [TorMultiplexer](https://gi
 
 __HOW IT WORKS:__
 - This app uses 1-8 Tor connections, load-balances them with HAProxy, uses Xray-core for managing and enabling the Proxy and Sing-box for managing the VPN MODE.
+- [FARSI GUIDE](https://github.com/RichTiTAN/CrimsonOnion/blob/main/readmeFA.md)
   
 # How to use and Troubleshooting
 - The interface of the app is pretty simple and tooltips have been included to help with understanding each option. But a guide is provided below nonetheless.
