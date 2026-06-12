@@ -1,4 +1,6 @@
-CrimsonOnion
+__CrimsonOnion__
+
+
 یک کلاینت رابط کاربری گرافیکی (GUI) که چندین نمونه (instance) از Tor را اجرا کرده و آن‌ها را با HAProxy لودبالانس (Load-Balance) می‌کند.
 این پروژه نسخه‌ای بازنویسی شده و بهبود یافته از TorMultiplexer در C# و .NET است.
 
