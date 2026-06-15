@@ -38,7 +38,7 @@ __CONNECTION:__
 
 __ADVANCED SETTINGS:__  
 __ROUTING:__  
-- SPLIT TUNNELING: With this option you can bypass the proxy for specific websites, ip addresses or applications and you can add websites or ip addresses to the blacklist to prevent them from connecting to the internet entirely. (Domain or IP bypass won't work in VPN MODE and Application Bypass won't work in Proxy Mode.)
+- SPLIT TUNNELING: With "EXCLUSIVE" option you can bypass the proxy for specific websites, ip addresses or applications and you can add websites or ip addresses to the blacklist to prevent them from connecting to the internet entirely. With "INCLUSIVE" mode you can pick the desired IPs, domains and apps to go through Tor. (Domain or IP bypass won't work in VPN MODE and Application Bypass won't work in Proxy Mode.)
 - CUSTOM V2RAY EXIT-NODE: With this option you can configure the last hop of the Tor network to be a custom Xray config. This will help Tor support UDP (with UDP over TCP) and it will give you a static IP address which you might need for sensitive websites. (The port of the config needs to be 443 or 80 as Tor might block other ports.)
 - OUTBOUND PROXY: With this option you can route your Tor traffic through an upstream HTTPS/SOCKS5 Proxy.
 - AD AND TRACKER BLOCKER: This option will block ads, trackers and telemetry loops.
