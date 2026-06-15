@@ -11,7 +11,8 @@ namespace CrimsonOnion.Services
         {
             var rules = new List<object>
             {
-                new { type = "field", ip = new[] { "127.0.0.0/8", "::1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16" }, outboundTag = "direct" }
+                new { type = "field", ip = new[] { "127.0.0.0/8", "::1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16" }, outboundTag = "direct" },
+                new { type = "field", domain = new[] { "domain:get.geojs.io" }, outboundTag = "proxy" }
             };
 
             var blockDomains = new List<string>();
@@ -41,11 +42,13 @@ namespace CrimsonOnion.Services
                     if (t.Any(char.IsLetter)) domains.Add($"domain:{t}");
                     else ips.Add(t);
                 }
-                if (domains.Count > 0) rules.Add(new { type = "field", domain = domains.ToArray(), outboundTag = "direct" });
-                if (ips.Count > 0) rules.Add(new { type = "field", ip = ips.ToArray(), outboundTag = "direct" });
+                string targetTag = config.SplitTunnelMode == "INCLUSIVE" ? "proxy" : "direct";
+                if (domains.Count > 0) rules.Add(new { type = "field", domain = domains.ToArray(), outboundTag = targetTag });
+                if (ips.Count > 0) rules.Add(new { type = "field", ip = ips.ToArray(), outboundTag = targetTag });
             }
 
-            rules.Add(new { type = "field", network = "tcp,udp", outboundTag = "proxy" });
+            string defaultTag = (config.EnableDirect && config.SplitTunnelMode == "INCLUSIVE" && config.LastXrayMode != "VPN Mode") ? "direct" : "proxy";
+            rules.Add(new { type = "field", network = "tcp,udp", outboundTag = defaultTag });
 
             var inbounds = new object[]
             {
@@ -157,13 +160,15 @@ namespace CrimsonOnion.Services
         {
             var currentExe = Path.GetFileName(System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName ?? "").ToLower();
 
-            var bypassApps = new List<string>
+            var systemBypassApps = new List<string>
             {
                 currentExe, "tor.exe", "tor", "haproxy.exe", "haproxy",
                 "lyrebird.exe", "lyrebird", "xray.exe", "xray",
                 "sing-box.exe", "sing-box", "cmd.exe", "conhost.exe",
                 "powershell.exe", "pwsh.exe"
             };
+
+            var userApps = new List<string>();
 
             if (config.EnableDirect && !string.IsNullOrWhiteSpace(config.LastAppSplit))
             {
@@ -173,8 +178,8 @@ namespace CrimsonOnion.Services
                     if (string.IsNullOrEmpty(a)) continue;
                     var appExe = a.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? a : a + ".exe";
                     var appBase = appExe.Replace(".exe", "");
-                    if (!bypassApps.Contains(appExe.ToLower())) bypassApps.Add(appExe.ToLower());
-                    if (!bypassApps.Contains(appBase.ToLower())) bypassApps.Add(appBase.ToLower());
+                    if (!userApps.Contains(appExe.ToLower())) userApps.Add(appExe.ToLower());
+                    if (!userApps.Contains(appBase.ToLower())) userApps.Add(appBase.ToLower());
                 }
             }
 
@@ -185,10 +190,17 @@ namespace CrimsonOnion.Services
                 new { protocol = "dns", action = "hijack-dns" },
                 new { port = new[] { 53 }, network = "udp", action = "hijack-dns" },
                 new { port = new[] { 53 }, network = "tcp", action = "hijack-dns" },
-                new { process_name = bypassApps.ToArray(), action = "route", outbound = "direct" },
-                new { network = "udp", port = new[] { 3478, 5349 }, action = "route", outbound = "direct" },
-                new { ip_is_private = true, action = "route", outbound = "direct" }
+                new { process_name = systemBypassApps.ToArray(), action = "route", outbound = "direct" }
             };
+
+            if (userApps.Count > 0)
+            {
+                string targetOutbound = config.SplitTunnelMode == "INCLUSIVE" ? "proxy" : "direct";
+                sbRules.Add(new { process_name = userApps.ToArray(), action = "route", outbound = targetOutbound });
+            }
+
+            sbRules.Add(new { network = "udp", port = new[] { 3478, 5349 }, action = "route", outbound = "direct" });
+            sbRules.Add(new { ip_is_private = true, action = "route", outbound = "direct" });
 
             var dnsServers = new List<object>
             {
@@ -220,17 +232,39 @@ namespace CrimsonOnion.Services
                 dnsServers.Add(new { tag = "dns_proxy", type = "https", server = "cloudflare-dns.com", path = "/dns-query", detour = "proxy" });
             }
 
+            var dnsRules = new List<object>
+            {
+                new { domain_keyword = new[] { "stun", "cdn77", "datapacket" }, action = "route", server = "dns_direct" }
+            };
+
+            if (config.EnableDirect && config.SplitTunnelMode == "INCLUSIVE")
+            {
+                if (userApps.Count > 0)
+                {
+                    dnsRules.Add(new { process_name = userApps.ToArray(), action = "route", server = "dns_proxy" });
+                }
+                dnsRules.Add(new { action = "route", server = "dns_direct" });
+            }
+            else if (config.EnableDirect && config.SplitTunnelMode == "EXCLUSIVE")
+            {
+                if (userApps.Count > 0)
+                {
+                    dnsRules.Add(new { process_name = userApps.ToArray(), action = "route", server = "dns_direct" });
+                }
+                dnsRules.Add(new { action = "route", server = "dns_proxy" });
+            }
+            else
+            {
+                dnsRules.Add(new { action = "route", server = "dns_proxy" });
+            }
+
             var sbConfig = new
             {
                 log = new { level = "fatal" },
                 dns = new
                 {
                     servers = dnsServers.ToArray(),
-                    rules = new object[]
-                    {
-                        new { domain_keyword = new[] { "stun", "cdn77", "datapacket" }, action = "route", server = "dns_direct" },
-                        new { action = "route", server = "dns_proxy" }
-                    },
+                    rules = dnsRules.ToArray(),
                     strategy = "ipv4_only"
                 },
                 inbounds = new object[]
@@ -252,7 +286,7 @@ namespace CrimsonOnion.Services
                 route = new
                 {
                     rules = sbRules.ToArray(),
-                    final = "proxy",
+                    final = config.EnableDirect && config.SplitTunnelMode == "INCLUSIVE" ? "direct" : "proxy",
                     default_domain_resolver = new { server = "dns_direct" },
                     auto_detect_interface = true,
                     find_process = true

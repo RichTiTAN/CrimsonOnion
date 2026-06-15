@@ -22,6 +22,7 @@ namespace CrimsonOnion.Services
                 SelectedBridge = lastBridge,
                 InstanceCount = lastCount,
                 XrayMode = config.LastXrayMode,
+                SplitTunnelMode = config.SplitTunnelMode,
                 ManualSplit = config.LastManualSplit,
                 AppSplit = config.LastAppSplit,
                 BlockSplit = config.LastBlockSplit,
@@ -92,6 +93,7 @@ namespace CrimsonOnion.Services
                 TrySet(s, "SelectedBridge", (Action<dynamic>)(v => config.LastBridge = (string)v));
                 TrySet(s, "InstanceCount", (Action<dynamic>)(v => config.LastCount = ((object)v).ToString()!));
                 TrySet(s, "XrayMode", (Action<dynamic>)(v => config.LastXrayMode = (string)v));
+                TrySet(s, "SplitTunnelMode", (Action<dynamic>)(v => config.SplitTunnelMode = (string)v));
                 TrySet(s, "ManualSplit", (Action<dynamic>)(v => config.LastManualSplit = (string)v));
                 TrySet(s, "AppSplit", (Action<dynamic>)(v => config.LastAppSplit = (string)v));
                 TrySet(s, "BlockSplit", (Action<dynamic>)(v => config.LastBlockSplit = (string)v));
