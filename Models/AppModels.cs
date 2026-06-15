@@ -26,6 +26,7 @@ namespace CrimsonOnion.Models
         public string LastBridge { get; set; } = "meek_lite";
         public string LastCount { get; set; } = "6";
         public string LastXrayMode { get; set; } = "Proxy Mode";
+        public string SplitTunnelMode { get; set; } = ""; // "" (not set), "INCLUSIVE", "EXCLUSIVE"
         public string LastManualSplit { get; set; } = "";
         public string LastAppSplit { get; set; } = "";
         public string LastBlockSplit { get; set; } = "";
