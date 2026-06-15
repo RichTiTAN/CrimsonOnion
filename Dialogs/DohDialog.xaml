@@ -9,6 +9,7 @@
         <SolidColorBrush x:Key="BgPanel"    Color="#121417"/>
         <SolidColorBrush x:Key="BgInput"    Color="#0A0C0F"/>
         <SolidColorBrush x:Key="BorderMain" Color="#2D3748"/>
+        <SolidColorBrush x:Key="TextMain"   Color="#E2E8F0"/>
         <SolidColorBrush x:Key="TextMuted"  Color="#A0AEC0"/>
         <SolidColorBrush x:Key="TextGreen"  Color="#68D391"/>
         <SolidColorBrush x:Key="ColorOk"    Color="#4E7A5E"/>
@@ -36,6 +37,66 @@
                 <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="{StaticResource ColorHover}"/></Trigger>
             </Style.Triggers>
         </Style>
+        <Style TargetType="ComboBox" x:Key="EditableDarkComboBox">
+            <Setter Property="Foreground" Value="{StaticResource TextMain}"/>
+            <Setter Property="Background" Value="{StaticResource BgInput}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderMain}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton Name="ToggleButton" Background="{TemplateBinding Background}"
+                                          BorderBrush="{TemplateBinding BorderBrush}"
+                                          BorderThickness="{TemplateBinding BorderThickness}"
+                                          Focusable="False"
+                                          IsChecked="{Binding Path=IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          ClickMode="Press">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4">
+                                            <ContentPresenter HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                                <Path Fill="{StaticResource TextMuted}" Data="M0,0 L4,4 L8,0 Z"
+                                      HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            </ToggleButton>
+                            <TextBox x:Name="PART_EditableTextBox"
+                                     HorizontalAlignment="Stretch"
+                                     VerticalAlignment="Center"
+                                     Margin="6,0,23,0"
+                                     Focusable="True"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     Foreground="{TemplateBinding Foreground}"
+                                     CaretBrush="{TemplateBinding Foreground}"
+                                     FontSize="{TemplateBinding FontSize}"
+                                     FontFamily="{TemplateBinding FontFamily}"
+                                     IsReadOnly="{TemplateBinding IsReadOnly}"/>
+                            <Popup Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
+                                <Border Background="#1A202C" BorderThickness="1" BorderBrush="#3A3F44"
+                                        MinWidth="{TemplateBinding ActualWidth}" MaxHeight="200">
+                                    <ScrollViewer Margin="0,2" SnapsToDevicePixels="True">
+                                        <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Foreground" Value="{StaticResource TextMain}"/>
+            <Setter Property="Padding" Value="4,2"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="#4A5568"/></Trigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
     <Canvas>
         <Border Canvas.Left="12" Canvas.Top="12" Width="390" Height="186"
@@ -47,14 +108,15 @@
                                FontSize="10" Foreground="{StaticResource TextMuted}" FontWeight="Bold"/>
                     <TextBlock Canvas.Left="15" Canvas.Top="35" FontSize="11"
                                Foreground="{StaticResource TextMuted}" Text="Upstream DoH (Xray / Sing-box):"/>
-                    <Border Canvas.Left="15" Canvas.Top="55" Width="357" Height="30"
-                            Background="{StaticResource BgInput}" BorderBrush="{StaticResource BorderMain}"
-                            BorderThickness="1" CornerRadius="4">
-                        <TextBox Name="txtUpDoh" Margin="6,2,6,2" Background="Transparent"
-                                 Foreground="{StaticResource TextGreen}" CaretBrush="White"
-                                 BorderThickness="0" Padding="5,0,4,0" FontSize="12"
-                                 FontFamily="Consolas" VerticalContentAlignment="Center"/>
-                    </Border>
+                    <ComboBox Name="txtUpDoh" Canvas.Left="15" Canvas.Top="55" Width="357" Height="30"
+                              Style="{StaticResource EditableDarkComboBox}" Foreground="{StaticResource TextGreen}"
+                              FontSize="12" FontFamily="Consolas" VerticalContentAlignment="Center" IsEditable="True">
+                        <ComboBoxItem Content="https://1.1.1.1/dns-query"/>
+                        <ComboBoxItem Content="https://8.8.8.8/dns-query"/>
+                        <ComboBoxItem Content="https://dns.quad9.net/dns-query"/>
+                        <ComboBoxItem Content="https://dns.adguard-dns.com/dns-query"/>
+                        <ComboBoxItem Content="https://doh.opendns.com/dns-query"/>
+                    </ComboBox>
                     <TextBlock Canvas.Left="15" Canvas.Top="100" Width="350" TextWrapping="Wrap"
                                FontSize="11" Foreground="#4A5568"
                                Text="Hint: Enter a full DoH URL.&#x0a;(e.g., https://1.1.1.1/dns-query)"/>

@@ -20,7 +20,7 @@ namespace CrimsonOnion.Dialogs
             Loaded += (s, e) =>
             {
                 txtUpDoh.Focus();
-                txtUpDoh.CaretIndex = txtUpDoh.Text.Length;
+                // CaretIndex is not directly available on ComboBox
             };
         }
         private void OnSave(object sender, RoutedEventArgs e)
