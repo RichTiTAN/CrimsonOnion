@@ -23,7 +23,7 @@ namespace CrimsonOnion
         // ── Core state 
         private readonly AppConfig _cfg = new();
         private readonly AppState _state = new();
-        private const string AppVersion = "1.0.0";
+        private const string AppVersion = "1.1.0";
 
         // ── Paths 
         private string GetAppPath(string rel) => Path.Combine(_cfg.BaseDir, rel);
