@@ -1,0 +1,16 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:behaviors="clr-namespace:CrimsonOnion.Behaviors"
+             x:Class="CrimsonOnion.App"
+             RequestedThemeVariant="Default">
+
+    <Application.Styles>
+        <FluentTheme />
+        <Style Selector="Control">
+            <Setter Property="ToolTip.ShowDelay" Value="1500"/>
+        </Style>
+        <Style Selector="ScrollViewer">
+            <Setter Property="(behaviors:SmoothScrollBehavior.IsEnabled)" Value="True"/>
+        </Style>
+    </Application.Styles>
+</Application>
