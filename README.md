@@ -69,7 +69,8 @@ __Credits:__
 HAProxy: https://github.com/xjoker/HAProxyForWindows  
 xray: https://github.com/xtls/xray-core  
 Tor: https://www.torproject.org/  
-Sing_Box: https://github.com/SagerNet/sing-box
+Sing_Box: https://github.com/SagerNet/sing-box  
+Avalonia: https://github.com/avaloniaui
 
 __Donations:__ 
 - If you want to support the project or me you can do so by sending your desired amount to one of these wallet addresses:
