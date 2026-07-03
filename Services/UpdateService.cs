@@ -12,15 +12,15 @@ namespace CrimsonOnion.Services
 {
     public static class UpdateService
     {
-        public const string AppVersion = "2.0.0";
+        public const string AppVersion = "2.0.1";
+        
+        private static readonly HttpClient _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
 
         public static async Task<(string? remoteVer, string? remoteMin)> CheckForUpdatesAsync(CancellationToken token = default)
         {
             try
             {
-                using var wc = new HttpClient();
-                wc.Timeout = TimeSpan.FromSeconds(15);
-                var response = await wc.GetAsync("https://raw.githubusercontent.com/RichTiTAN/CrimsonOnion/main/version.json", token);
+                var response = await _httpClient.GetAsync("https://raw.githubusercontent.com/RichTiTAN/CrimsonOnion/main/version.json", token);
                 response.EnsureSuccessStatusCode();
                 
                 var raw = await response.Content.ReadAsStringAsync(token);
@@ -51,8 +51,7 @@ namespace CrimsonOnion.Services
 
             try
             {
-                using var dlClient = new HttpClient();
-                using var dlResponse = await dlClient.GetAsync(zipUrl, HttpCompletionOption.ResponseHeadersRead, token);
+                using var dlResponse = await _httpClient.GetAsync(zipUrl, HttpCompletionOption.ResponseHeadersRead, token);
                 dlResponse.EnsureSuccessStatusCode();
                 
                 var total = dlResponse.Content.Headers.ContentLength ?? -1L;
@@ -78,11 +77,13 @@ namespace CrimsonOnion.Services
                         }
                     }
                 }
-                fs.Close();
 
                 Dispatcher.UIThread.Post(() => progressCallback("EXTRACTING UPDATE..."));
                 
-                await Task.Run(() => System.IO.Compression.ZipFile.ExtractToDirectory(zipPath, extPath, true));
+                await Task.Run(() => {
+                    token.ThrowIfCancellationRequested();
+                    System.IO.Compression.ZipFile.ExtractToDirectory(zipPath, extPath, true);
+                }, token);
 
                 var exeFile = Directory.GetFiles(extPath, "CrimsonOnion.exe", SearchOption.AllDirectories).FirstOrDefault();
                 if (exeFile == null) throw new Exception("CrimsonOnion.exe not found in the downloaded ZIP!");
@@ -98,7 +99,6 @@ namespace CrimsonOnion.Services
             }
             catch
             {
-                // Clean up partial files so the next update attempt can start fresh
                 try { if (File.Exists(zipPath)) File.Delete(zipPath); } catch { }
                 try { if (Directory.Exists(extPath)) Directory.Delete(extPath, true); } catch { }
                 throw;

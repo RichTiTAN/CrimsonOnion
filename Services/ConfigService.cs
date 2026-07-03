@@ -147,7 +147,10 @@ namespace CrimsonOnion.Services
                 var val = s[key];
                 if (val != null) setter(val);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to set config key '{key}': {ex.Message}");
+            }
         }
     }
 }

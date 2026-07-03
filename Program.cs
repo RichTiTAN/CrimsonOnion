@@ -15,14 +15,14 @@ class Program
 
         if (!createdNew)
         {
-            // App is already running. Exit.
             return;
         }
 
         BuildAvaloniaApp()
             .StartWithClassicDesktopLifetime(args);
             
-        GC.KeepAlive(_mutex);
+        _mutex.ReleaseMutex();
+        _mutex.Dispose();
     }
 
     public static AppBuilder BuildAvaloniaApp()

@@ -490,19 +490,19 @@
                                                 <TextBlock x:Name="lblTorEngines" Text="TOR ENGINES" FontSize="11" FontWeight="SemiBold" Foreground="#8B949E" LetterSpacing="1" VerticalAlignment="Center"/>
                                             </StackPanel>
                                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="15,0,0,0">
-                                                <Slider x:Name="sldEngines" Minimum="1" Maximum="8" Value="1" TickFrequency="1" IsSnapToTickEnabled="True" Width="220" Margin="0,-12,0,-12" VerticalAlignment="Center" ValueChanged="Engines_ValueChanged" Foreground="#68D391">
+                                                <Slider x:Name="sldEngines" Minimum="1" Maximum="8" Value="1" TickFrequency="1" IsSnapToTickEnabled="True" Width="220" Margin="0,-12,0,-12" VerticalAlignment="Center" ValueChanged="Engines_ValueChanged" Foreground="#B82E42">
                                                     <Slider.Styles>
                                                         <Style Selector="Slider /template/ Thumb">
                                                             <Setter Property="Template">
                                                                 <ControlTemplate>
-                                                                    <Border Background="#68D391" Width="24" Height="10" CornerRadius="4" />
+                                                                    <Border Background="#B82E42" Width="24" Height="10" CornerRadius="4" />
                                                                 </ControlTemplate>
                                                             </Setter>
                                                         </Style>
                                                         <Style Selector="Slider:pointerover /template/ Thumb">
                                                             <Setter Property="Template">
                                                                 <ControlTemplate>
-                                                                    <Border Background="#9AE6B4" Width="24" Height="10" CornerRadius="4" />
+                                                                    <Border Background="#D13A51" Width="24" Height="10" CornerRadius="4" />
                                                                 </ControlTemplate>
                                                             </Setter>
                                                         </Style>
@@ -1094,8 +1094,8 @@
                                                 
                                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
                                                     <Button x:Name="btnSplitDisabled" Classes="optBtn activeOpt" Click="SplitTunnel_Click" ToolTip.Tip="Split tunneling is disabled."><TextBlock Text="DISABLED" FontSize="11" FontWeight="SemiBold"/></Button>
-                                                    <Button x:Name="btnSplitExclusive" Classes="optBtn" Click="SplitTunnel_Click" ToolTip.Tip="Only bypass the proxy for the apps, domains and IPs listed here."><TextBlock Text="EXCLUSIVE" FontSize="11" FontWeight="SemiBold"/></Button>
-                                                    <Button x:Name="btnSplitInclusive" Classes="optBtn" Click="SplitTunnel_Click" ToolTip.Tip="Only route the apps, domains and IPs listed here through the proxy."><TextBlock Text="INCLUSIVE" FontSize="11" FontWeight="SemiBold"/></Button>
+                                                    <Button x:Name="btnSplitExclusive" Classes="optBtn" Click="SplitTunnel_Click" ToolTip.Tip="Only bypass the proxy for the apps, domains, IPs and ports listed here."><TextBlock Text="EXCLUSIVE" FontSize="11" FontWeight="SemiBold"/></Button>
+                                                    <Button x:Name="btnSplitInclusive" Classes="optBtn" Click="SplitTunnel_Click" ToolTip.Tip="Only route the apps, domains, IPs and ports listed here through the proxy."><TextBlock Text="INCLUSIVE" FontSize="11" FontWeight="SemiBold"/></Button>
                                                 </StackPanel>
                                             </Grid>
                                             
@@ -1114,7 +1114,7 @@
                                                         <Border x:Name="panDomainsToggle" Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="4" Padding="0">
                                                             <Grid ColumnDefinitions="*, Auto">
                                                                 <Border Padding="15,5" VerticalAlignment="Center">
-                                                                    <TextBlock x:Name="lblDomainsAndIps" Text="DOMAINS AND IPs" FontSize="11" FontWeight="Bold" Foreground="#8B949E" LetterSpacing="1" />
+                                                                    <TextBlock x:Name="lblDomainsAndIps" Text="DOMAINS, IPs &amp; PORTS" FontSize="11" FontWeight="Bold" Foreground="#8B949E" LetterSpacing="1" />
                                                                 </Border>
                                                                 <Button Grid.Column="1" x:Name="btnToggleDomains" Classes="optBtn" CornerRadius="0,3,3,0" BorderThickness="1,0,0,0" BorderBrush="#2D3748" Padding="15,5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="SplitToggle_Click" Content="ADD" FontSize="11" FontWeight="SemiBold" Foreground="#8B949E" VerticalContentAlignment="Center" HorizontalContentAlignment="Center">
                                                                 </Button>
@@ -1128,7 +1128,7 @@
                                                             </Border.Transitions>
                                                             <StackPanel Margin="10,0,10,0">
                                                                 <Border Margin="0,3,0,0">
-                                                                    <TextBox x:Name="txtSplitDomains" Height="20" Background="Transparent" BorderThickness="0" PlaceholderText="example.com, 1.2.3.4" FontSize="11" Foreground="#E2E8F0" AcceptsReturn="True" TextWrapping="Wrap"/>
+                                                                    <TextBox x:Name="txtSplitDomains" Height="20" LineHeight="17" Background="Transparent" BorderThickness="0" PlaceholderText="example.com, 1.2.3.4, 443" FontSize="11" Foreground="#E2E8F0" AcceptsReturn="True" TextWrapping="Wrap"/>
                                                                 </Border>
                                                                 <Border Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="6" HorizontalAlignment="Right" Margin="0,10,0,0" Width="140">
                                                                     <Grid ColumnDefinitions="*, 1, *">
@@ -1163,7 +1163,7 @@
                                                             </Border.Transitions>
                                                             <StackPanel Margin="10,0,10,0">
                                                                 <Border Margin="0,3,0,0">
-                                                                    <TextBox x:Name="txtSplitApps" Height="20" Background="Transparent" BorderThickness="0" PlaceholderText="app.exe, game.exe" FontSize="11" Foreground="#E2E8F0" AcceptsReturn="True" TextWrapping="Wrap"/>
+                                                                    <TextBox x:Name="txtSplitApps" Height="20" LineHeight="17" Background="Transparent" BorderThickness="0" PlaceholderText="app.exe, game.exe" FontSize="11" Foreground="#E2E8F0" AcceptsReturn="True" TextWrapping="Wrap"/>
                                                                 </Border>
                                                                 <Border Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="6" HorizontalAlignment="Right" Margin="0,10,0,0" Width="140">
                                                                     <Grid ColumnDefinitions="*, 1, *">
@@ -1181,7 +1181,7 @@
                                                         <Border x:Name="panBlockToggle" Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="4" Padding="0">
                                                             <Grid ColumnDefinitions="*, Auto">
                                                                 <Border Padding="15,5" VerticalAlignment="Center">
-                                                                    <TextBlock x:Name="lblBlockedDomainsIps" Text="BLOCKED DOMAINS AND IPs" FontSize="11" FontWeight="Bold" Foreground="#8B949E" LetterSpacing="1" />
+                                                                    <TextBlock x:Name="lblBlockedDomainsIps" Text="BLOCKED DOMAINS, IPs &amp; PORTS" FontSize="11" FontWeight="Bold" Foreground="#8B949E" LetterSpacing="1" />
                                                                 </Border>
                                                                 <Button Grid.Column="1" x:Name="btnToggleBlock" Classes="optBtn" CornerRadius="0,3,3,0" BorderThickness="1,0,0,0" BorderBrush="#2D3748" Padding="15,5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="SplitToggle_Click" Content="ADD" FontSize="11" FontWeight="SemiBold" Foreground="#8B949E" VerticalContentAlignment="Center" HorizontalContentAlignment="Center">
                                                                 </Button>
@@ -1195,7 +1195,7 @@
                                                             </Border.Transitions>
                                                             <StackPanel Margin="10,0,10,0">
                                                                 <Border Margin="0,3,0,0">
-                                                                    <TextBox x:Name="txtSplitBlock" Height="20" Background="Transparent" BorderThickness="0" PlaceholderText="malicious.com, 5.6.7.8" FontSize="11" Foreground="#E2E8F0" AcceptsReturn="True" TextWrapping="Wrap"/>
+                                                                    <TextBox x:Name="txtSplitBlock" Height="20" LineHeight="17" Background="Transparent" BorderThickness="0" PlaceholderText="malicious.com, 5.6.7.8, 443" FontSize="11" Foreground="#E2E8F0" AcceptsReturn="True" TextWrapping="Wrap"/>
                                                                 </Border>
                                                                 <Border Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="6" HorizontalAlignment="Right" Margin="0,10,0,0" Width="140">
                                                                     <Grid ColumnDefinitions="*, 1, *">

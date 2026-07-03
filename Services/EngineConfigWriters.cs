@@ -17,6 +17,7 @@ namespace CrimsonOnion.Services
 
             var blockDomains = new List<string>();
             var blockIps = new List<string>();
+            var blockPorts = new List<string>();
             if (config.EnableAdBlock)
             {
                 blockDomains.AddRange(new[] { "geosite:category-ads-all", "domain:analytics.google.com", "domain:google-analytics.com" });
@@ -28,7 +29,8 @@ namespace CrimsonOnion.Services
                     var t = d.Trim();
                     if (!string.IsNullOrEmpty(t)) 
                     {
-                        if (t.Any(char.IsLetter)) blockDomains.Add($"domain:{t}");
+                        if (t.All(c => char.IsDigit(c) || c == '-')) blockPorts.Add(t);
+                        else if (t.Any(char.IsLetter)) blockDomains.Add($"domain:{t}");
                         else blockIps.Add(t);
                     }
                 }
@@ -37,21 +39,26 @@ namespace CrimsonOnion.Services
                 rules.Add(new { type = "field", domain = blockDomains.ToArray(), outboundTag = "block" });
             if (blockIps.Count > 0)
                 rules.Add(new { type = "field", ip = blockIps.ToArray(), outboundTag = "block" });
+            if (blockPorts.Count > 0)
+                rules.Add(new { type = "field", port = string.Join(",", blockPorts), outboundTag = "block" });
 
             if (config.EnableDirect && config.LastXrayMode != "VPN Mode" && !string.IsNullOrWhiteSpace(config.LastManualSplit))
             {
                 var domains = new List<string>();
                 var ips = new List<string>();
+                var ports = new List<string>();
                 foreach (var item in config.LastManualSplit.Split(','))
                 {
                     var t = item.Trim();
                     if (string.IsNullOrEmpty(t)) continue;
-                    if (t.Any(char.IsLetter)) domains.Add($"domain:{t}");
+                    if (t.All(c => char.IsDigit(c) || c == '-')) ports.Add(t);
+                    else if (t.Any(char.IsLetter)) domains.Add($"domain:{t}");
                     else ips.Add(t);
                 }
                 string targetTag = config.SplitTunnelMode == "INCLUSIVE" ? "proxy" : "direct";
                 if (domains.Count > 0) rules.Add(new { type = "field", domain = domains.ToArray(), outboundTag = targetTag });
                 if (ips.Count > 0) rules.Add(new { type = "field", ip = ips.ToArray(), outboundTag = targetTag });
+                if (ports.Count > 0) rules.Add(new { type = "field", port = string.Join(",", ports), outboundTag = targetTag });
             }
 
             string defaultTag = (config.EnableDirect && config.SplitTunnelMode == "INCLUSIVE" && config.LastXrayMode != "VPN Mode") ? "direct" : "proxy";
@@ -132,7 +139,7 @@ namespace CrimsonOnion.Services
 
             var cfg = new Dictionary<string, object>
             {
-                ["log"] = new { logLevel = "info", access = "access.log", error = "error.log" },
+                ["log"] = new { logLevel = "info", access = Path.Combine(xrayDir, "access.log").Replace("\\", "/"), error = Path.Combine(xrayDir, "error.log").Replace("\\", "/") },
                 ["stats"] = new { },
                 ["api"] = new { tag = "api", services = new[] { "StatsService" } },
                 ["policy"] = new { system = new { statsInboundUplink = true, statsInboundDownlink = true } },
@@ -142,7 +149,24 @@ namespace CrimsonOnion.Services
             };
 
             if (config.EnableUpstreamDoh && !string.IsNullOrWhiteSpace(config.UpstreamDohUrl))
-                cfg["dns"] = new { servers = new[] { config.UpstreamDohUrl } };
+            {
+                if (config.UpstreamDohUrl == "8.8.8.8" || config.UpstreamDohUrl == "8.8.4.4") 
+                {
+                    cfg["dns"] = new { servers = new[] { "https://dns.google/dns-query" } };
+                }
+                else if (config.UpstreamDohUrl == "1.1.1.1" || config.UpstreamDohUrl == "1.0.0.1") 
+                {
+                    cfg["dns"] = new { servers = new[] { "https://cloudflare-dns.com/dns-query" } };
+                }
+                else if (config.UpstreamDohUrl == "9.9.9.9")
+                {
+                    cfg["dns"] = new { servers = new[] { "https://dns.quad9.net/dns-query" } };
+                }
+                else 
+                {
+                    cfg["dns"] = new { servers = new[] { config.UpstreamDohUrl } };
+                }
+            }
 
             try
             {
@@ -182,6 +206,10 @@ namespace CrimsonOnion.Services
                     if (string.IsNullOrEmpty(a)) continue;
                     var appExe = a.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? a : a + ".exe";
                     var appBase = Path.GetFileNameWithoutExtension(appExe);
+                    
+                    if (!userApps.Contains(appExe)) userApps.Add(appExe);
+                    if (!userApps.Contains(appBase)) userApps.Add(appBase);
+                    
                     if (!userApps.Contains(appExe.ToLower())) userApps.Add(appExe.ToLower());
                     if (!userApps.Contains(appBase.ToLower())) userApps.Add(appBase.ToLower());
                 }
@@ -228,12 +256,27 @@ namespace CrimsonOnion.Services
                 }
                 else
                 {
-                    dnsServers.Add(new { tag = "dns_proxy", type = "tcp", server = config.UpstreamDohUrl, detour = "proxy" });
+                    if (config.UpstreamDohUrl == "8.8.8.8" || config.UpstreamDohUrl == "8.8.4.4") 
+                    {
+                        dnsServers.Add(new { tag = "dns_proxy", type = "https", server = "dns.google", path = "/dns-query", detour = "proxy" });
+                    }
+                    else if (config.UpstreamDohUrl == "1.1.1.1" || config.UpstreamDohUrl == "1.0.0.1") 
+                    {
+                        dnsServers.Add(new { tag = "dns_proxy", type = "https", server = "cloudflare-dns.com", path = "/dns-query", detour = "proxy" });
+                    }
+                    else if (config.UpstreamDohUrl == "9.9.9.9")
+                    {
+                        dnsServers.Add(new { tag = "dns_proxy", type = "https", server = "dns.quad9.net", path = "/dns-query", detour = "proxy" });
+                    }
+                    else 
+                    {
+                        dnsServers.Add(new { tag = "dns_proxy", type = "tcp", server = config.UpstreamDohUrl, detour = "proxy" });
+                    }
                 }
             }
             else
             {
-                dnsServers.Add(new { tag = "dns_proxy", type = "https", server = "cloudflare-dns.com", path = "/dns-query", detour = "proxy" });
+                dnsServers.Add(new { tag = "dns_proxy", type = "https", server = "dns.google", path = "/dns-query", detour = "proxy" });
             }
 
             var dnsRules = new List<object>
@@ -247,7 +290,7 @@ namespace CrimsonOnion.Services
                 {
                     dnsRules.Add(new { process_name = userApps.ToArray(), action = "route", server = "dns_proxy" });
                 }
-                dnsRules.Add(new { action = "route", server = "dns_direct" });
+                dnsRules.Add(new { action = "route", server = "dns_proxy" }); 
             }
             else if (config.EnableDirect && config.SplitTunnelMode == "EXCLUSIVE")
             {

@@ -44,7 +44,6 @@ namespace CrimsonOnion.Behaviors
                 if (e.Handled || e.KeyModifiers.HasFlag(KeyModifiers.Shift) || e.KeyModifiers.HasFlag(KeyModifiers.Control))
                     return;
 
-                // Find the deepest scrollable ScrollViewer that can handle this delta
                 var visual = e.Source as Avalonia.Visual;
                 ScrollViewer? targetScroller = null;
                 while (visual != null)
@@ -63,15 +62,12 @@ namespace CrimsonOnion.Behaviors
                     visual = visual.GetVisualParent();
                 }
 
-                // If a deeper scroll viewer wants to handle this event, do not intercept it
                 if (targetScroller != null && targetScroller != scroller)
                     return;
 
-                // Don't intercept if THIS scrollviewer cannot scroll vertically in the requested direction
                 if (targetScroller != scroller)
                     return;
 
-                // Reset target offset if the scroll viewer changed, or if user was scrolling manually
                 if (_currentScroller != scroller || (_animTimer != null && !_animTimer.IsEnabled))
                 {
                     _currentScroller = scroller;
@@ -79,23 +75,17 @@ namespace CrimsonOnion.Behaviors
                     _scrollVelocity = 0;
                 }
 
-                // If user scrolls opposite to current velocity, cancel out the velocity for responsiveness
                 if (Math.Sign(e.Delta.Y) != Math.Sign(_scrollVelocity))
                 {
                     _scrollVelocity = 0;
                 }
 
-                // Add to velocity
-                double scrollAmount = 180; // Speed multiplier
+                double scrollAmount = 180; 
                 _scrollVelocity += e.Delta.Y * scrollAmount;
                 
-                // We already checked boundaries in the visual tree walk, so we just calculate the target
 
-
-                // Calculate new target
                 _targetOffset = _currentScroller.Offset.Y - _scrollVelocity;
                 
-                // Clamp target
                 double maxOffset = scroller.Extent.Height - scroller.Viewport.Height;
                 _targetOffset = Math.Max(0, Math.Min(_targetOffset, maxOffset));
 
@@ -103,7 +93,7 @@ namespace CrimsonOnion.Behaviors
 
                 if (_animTimer == null)
                 {
-                    _animTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) }; // ~60fps
+                    _animTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) }; 
                     _animTimer.Tick += AnimTimer_Tick;
                 }
                 
@@ -123,10 +113,8 @@ namespace CrimsonOnion.Behaviors
             double currentOffset = _currentScroller.Offset.Y;
             double diff = _targetOffset - currentOffset;
 
-            // Apply friction to velocity so it decays
             _scrollVelocity *= 0.82; 
 
-            // Edge-like spring
             if (Math.Abs(diff) < 1.0 && Math.Abs(_scrollVelocity) < 1.0)
             {
                 _currentScroller.Offset = new Vector(_currentScroller.Offset.X, _targetOffset);
@@ -134,7 +122,6 @@ namespace CrimsonOnion.Behaviors
             }
             else
             {
-                // Smooth ease out based on diff
                 double easeAmount = diff * 0.28; 
                 _currentScroller.Offset = new Vector(_currentScroller.Offset.X, currentOffset + easeAmount);
             }

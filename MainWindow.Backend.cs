@@ -39,7 +39,7 @@ public partial class MainWindow
     };
 
     private System.Threading.CancellationTokenSource? _geoCts;
-    private bool _isFetchingStats = false;
+    private volatile bool _isFetchingStats = false; // H-3 FIX: volatile for thread visibility
     private System.Collections.Generic.Queue<double> _upHistory = new();
     private System.Collections.Generic.Queue<double> _dnHistory = new();
     private double _upSum = 0;
@@ -173,6 +173,30 @@ public partial class MainWindow
         }
     }
 
+    internal void UpdateDisconnectedTorLabels()
+    {
+        for (int i = 1; i <= 8; i++)
+        {
+            var lbl = this.FindControl<TextBlock>($"lblTor{i}");
+            if (lbl != null)
+            {
+                var padded = i.ToString().PadLeft(2, '0');
+                if (i > _activeTorEngines)
+                {
+                    lbl.Text = $"TOR {padded}: DISABLED";
+                    lbl.Foreground = SolidColorBrush.Parse("#A0AEC0");
+                    lbl.Opacity = 0.5;
+                }
+                else
+                {
+                    lbl.Text = $"TOR {padded}: OFFLINE";
+                    lbl.Foreground = SolidColorBrush.Parse("#A0AEC0");
+                    lbl.Opacity = 0.5;
+                }
+            }
+        }
+    }
+
     private void UpdateTorLabel(int torIdx)
     {
         if (torIdx < 1 || torIdx > 8) return;
@@ -273,19 +297,13 @@ public partial class MainWindow
 
         if (newCount < curCount)
         {
+            _pollSelCount = newCount;
             for (int i = newCount + 1; i <= 8; i++)
             {
                 KillPidRef(ref _torPids[i - 1]);
                 _staggerQueue.Remove(i);
-
-                var lbl = this.FindControl<TextBlock>($"lblTor{i}");
-                if (lbl != null)
-                {
-                    lbl.Text       = $"TOR {i}: OFF";
-                    lbl.Foreground = SolidColorBrush.Parse("#4A5568");
-                }
+                UpdateTorLabel(i);
             }
-            _pollSelCount = newCount;
             FormatHAProxyConfig(newCount);
         }
         else if (newCount > curCount)
@@ -351,12 +369,12 @@ public partial class MainWindow
         var lines = TorrcBuilder.BuildTorrcConfig(torrcFile, _pollSelBridge, _cfg.LastConfig, torPath, _cfg);
         File.WriteAllLines(Path.Combine(torPath, torrcFile), lines);
 
-        var proc = ProcessService.StartProcessDirect(
+        using (var proc = ProcessService.StartProcessDirect(
             GetAppPath(@"Data\TorBin\tor.exe"),
             $"-f {torrcFile}",
             torPath,
-            hidden: !_cfg.DebugMode);
-
+            hidden: !_cfg.DebugMode))
+        {
         if (proc != null)
         {
             _torPids[i - 1] = proc.Id;
@@ -403,6 +421,7 @@ public partial class MainWindow
             _torControlClients.Add(controlClient);
             controlClient.Start();
         }
+        }
     }
 
 
@@ -416,8 +435,10 @@ public partial class MainWindow
         _sessionClockTimer?.Stop();
         _statsTimer?.Stop();
         _pingTimer?.Stop();
-        if (_geoCts != null) { try { _geoCts.Cancel(); _geoCts.Dispose(); } catch { } }
-        ProxyService.DisableSystemProxy();
+        if (_geoCts != null) { try { _geoCts.Cancel(); _geoCts.Dispose(); } catch { } _geoCts = null; } // H-9 FIX: null after dispose
+        _logTimer?.Stop(); // H-12 FIX: stop log timer on engine stop
+        _logClearTimer?.Stop(); // H-13 FIX: stop log clear timer on engine stop
+        ProxyService.SetSystemProxy(false);
 
         foreach (var client in _torControlClients) client.Dispose();
         _torControlClients.Clear();
@@ -428,7 +449,7 @@ public partial class MainWindow
         KillManagedProcess("sing-box");
         KillPidRef(ref _xrayDebugPid);
         KillPidRef(ref _sbDebugPid);
-        KillPidRef(ref _xrayDohPid);
+
 
         _state.IsConnected      = false;
         _state.LastTotalBytes   = 0;
@@ -436,32 +457,34 @@ public partial class MainWindow
         _state.SessionStartTime = null;
         _state.SpeedSamples     = new double[5];
 
-        _upHistory.Clear();
-        _dnHistory.Clear();
-        _upSum = 0;
-        _dnSum = 0;
-        var graphUpload = this.FindControl<global::Avalonia.Controls.Shapes.Polyline>("graphUpload");
-        var graphDownload = this.FindControl<global::Avalonia.Controls.Shapes.Polyline>("graphDownload");
-        if (graphUpload != null) graphUpload.Points = new global::Avalonia.Collections.AvaloniaList<global::Avalonia.Point>();
-        if (graphDownload != null) graphDownload.Points = new global::Avalonia.Collections.AvaloniaList<global::Avalonia.Point>();
+        global::Avalonia.Threading.Dispatcher.UIThread.Post(() => {
+            _upHistory.Clear();
+            _dnHistory.Clear();
+            _upSum = 0;
+            _dnSum = 0;
+            var graphUpload = this.FindControl<global::Avalonia.Controls.Shapes.Polyline>("graphUpload");
+            var graphDownload = this.FindControl<global::Avalonia.Controls.Shapes.Polyline>("graphDownload");
+            if (graphUpload != null) graphUpload.Points = new global::Avalonia.Collections.AvaloniaList<global::Avalonia.Point>();
+            if (graphDownload != null) graphDownload.Points = new global::Avalonia.Collections.AvaloniaList<global::Avalonia.Point>();
 
-        var panTimerContent = this.FindControl<StackPanel>("panTimerContent");
-        if (panTimerContent != null) panTimerContent.IsVisible = false;
-        var lblDisconnected = this.FindControl<TextBlock>("lblDisconnected");
-        if (lblDisconnected != null) lblDisconnected.IsVisible = true;
+            var panTimerContent = this.FindControl<StackPanel>("panTimerContent");
+            if (panTimerContent != null) panTimerContent.IsVisible = false;
+            var lblDisconnected = this.FindControl<TextBlock>("lblDisconnected");
+            if (lblDisconnected != null) lblDisconnected.IsVisible = true;
 
-        var lblPing = this.FindControl<TextBlock>("lblPing");
-        if (lblPing != null) lblPing.Text = "0 ms";
-        
-        var lblLocalIp = this.FindControl<TextBlock>("lblLocalIp");
-        if (lblLocalIp != null) lblLocalIp.Text = "Disconnected";
+            var lblPing = this.FindControl<TextBlock>("lblPing");
+            if (lblPing != null) lblPing.Text = "0 ms";
+            
+            var lblLocalIp = this.FindControl<TextBlock>("lblLocalIp");
+            if (lblLocalIp != null) lblLocalIp.Text = "Disconnected";
 
-        UpdateLanPortUI();
+            UpdateLanPortUI();
 
-        var lblTimer = this.FindControl<TextBlock>("lblTimer");
-        if (lblTimer != null) lblTimer.Text = "00:00:00";
-        var lblCountryName = this.FindControl<TextBlock>("lblCountryName");
-        if (lblCountryName != null) lblCountryName.Text = "UNKNOWN";
+            var lblTimer = this.FindControl<TextBlock>("lblTimer");
+            if (lblTimer != null) lblTimer.Text = "00:00:00";
+            var lblCountryName = this.FindControl<TextBlock>("lblCountryName");
+            if (lblCountryName != null) lblCountryName.Text = "UNKNOWN";
+        });
 
         for (int i = 1; i <= 8; i++)
         {
@@ -482,15 +505,7 @@ public partial class MainWindow
                     txtConnectBtn.Foreground = SolidColorBrush.Parse("#E2E8F0");
                 }
 
-                for (int i = 1; i <= 8; i++)
-                {
-                    var lbl = this.FindControl<TextBlock>($"lblTor{i}");
-                    if (lbl != null)
-                    {
-                        lbl.Text = $"TOR {i}: OFF";
-                        lbl.Foreground = SolidColorBrush.Parse("#A0AEC0");
-                    }
-                }
+                UpdateDisconnectedTorLabels();
 
                 var txtXrayLogs = this.FindControl<TextBox>("txtXrayLogs");
                 if (txtXrayLogs != null) txtXrayLogs.Text = "";
@@ -591,6 +606,23 @@ public partial class MainWindow
 
     private async void StartEnginesAsync()
     {
+        try
+        {
+        await StartEnginesAsyncCore();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"StartEnginesAsync failed: {ex.Message}");
+            ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
+                ? "خطا در شروع موتور. لطفاً دوباره تلاش کنید."
+                : "Engine start failed. Please try again.");
+            StopAllEngines();
+        }
+    }
+
+    // C-1 FIX: extracted body so async void only wraps the try/catch
+    private async Task StartEnginesAsyncCore()
+    {
         _state.IsEngineRunning = true;
         UpdateLanIp();
 
@@ -607,11 +639,11 @@ public partial class MainWindow
         KillManagedProcess("sing-box");
         KillPidRef(ref _xrayDebugPid);
         KillPidRef(ref _sbDebugPid);
-        KillPidRef(ref _xrayDohPid);
+
         _bootstrapTimer?.Stop();
         _staggerTimer?.Stop();
         _staggerQueue.Clear();
-        ProxyService.DisableSystemProxy();
+        ProxyService.SetSystemProxy(false);
 
         _state.IsConnected      = false;
         _state.LastTotalBytes   = 0;
@@ -620,6 +652,10 @@ public partial class MainWindow
         _state.SpeedSamples     = new double[5];
         _torPids                = new int?[8];
         _state.AbortBoot        = false;
+
+        _pollSelCount  = _activeTorEngines;
+        _pollSelBridge = _activeBridge;
+
         for (int i = 0; i < 8; i++) _state.TorPcts[i] = -1;
 
         for (int i = 1; i <= 8; i++) UpdateTorLabel(i);
@@ -632,9 +668,6 @@ public partial class MainWindow
 
         await Task.Delay(800);
         if (_state.AbortBoot) return;
-
-        _pollSelCount  = _activeTorEngines;
-        _pollSelBridge = _activeBridge;
 
         for (int i = 1; i <= 8; i++)
             TryDeleteFile(GetAppPath($@"Data\Tors\Tor{i}\tor.log"));
@@ -656,11 +689,12 @@ public partial class MainWindow
 
             var idx = i;
             TryDeleteFile(Path.Combine(torPath, "Data", "control_auth_cookie"));
-            var proc = ProcessService.StartProcessDirect(
+            using (var proc = ProcessService.StartProcessDirect(
                         GetAppPath(@"Data\TorBin\tor.exe"),
                         $"-f {torrcFile}",
                         torPath,
-                        hidden: !_cfg.DebugMode);
+                        hidden: !_cfg.DebugMode))
+            {
             if (proc != null)
             {
                 _torPids[idx - 1] = proc.Id;
@@ -693,6 +727,7 @@ public partial class MainWindow
                 };
                 _torControlClients.Add(controlClient);
                 controlClient.Start();
+            }
             }
 
             await Task.Delay(1500);
@@ -758,13 +793,13 @@ public partial class MainWindow
 
         var haExe = GetAppPath(@"Data\HAproxy\haproxy.exe");
         if (File.Exists(haExe))
-            ProcessService.StartProcessDirect(haExe, "-f haproxy.cfg", _cfg.HaPath, hidden: !_cfg.DebugMode);
+            ProcessService.StartProcessDirect(haExe, "-f haproxy.cfg", _cfg.HaPath, hidden: !_cfg.DebugMode)?.Dispose();
 
         KillManagedProcess("xray");
         KillManagedProcess("sing-box");
         KillPidRef(ref _xrayDebugPid);
         KillPidRef(ref _sbDebugPid);
-        KillPidRef(ref _xrayDohPid);
+
 
         _xrayBootTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
         _xrayBootTimer.Tick += (s2, e2) =>
@@ -773,6 +808,11 @@ public partial class MainWindow
             if (_state.AbortBoot) return;
 
             if (!XrayConfigWriter.Write(_cfg, _cfg.XrayDir)) return;
+
+            if (_pollMode == "VPN Mode")
+            {
+                if (!SingboxConfigWriter.Write(_cfg, _cfg.SbDir)) return;
+            }
 
             if (_cfg.DebugMode)
             {
@@ -783,13 +823,11 @@ public partial class MainWindow
             }
             else
             {
-                ProcessService.StartProcessDirect(GetAppPath(@"Data\Xray\xray.exe"), "run -c config.json", _cfg.XrayDir);
+                ProcessService.StartProcessDirect(GetAppPath(@"Data\Xray\xray.exe"), "run -c config.json", _cfg.XrayDir)?.Dispose();
             }
 
             if (_pollMode == "VPN Mode")
             {
-                if (!SingboxConfigWriter.Write(_cfg, _cfg.SbDir)) return;
-                
                 if (_cfg.DebugMode)
                 {
                     using var p2 = Process.Start(new ProcessStartInfo("cmd.exe",
@@ -799,12 +837,11 @@ public partial class MainWindow
                 }
                 else
                 {
-                    ProcessService.StartProcessDirect(GetAppPath(@"Data\sing_box\sing-box.exe"), "run -c config.json", _cfg.SbDir);
+                    ProcessService.StartProcessDirect(GetAppPath(@"Data\sing_box\sing-box.exe"), "run -c config.json", _cfg.SbDir)?.Dispose();
                 }
             }
 
             ProxyService.SetSystemProxy(_pollMode == "Proxy Mode");
-            if (_pollMode != "Proxy Mode") ProxyService.DisableSystemProxy();
 
             _state.IsConnected      = true;
             _state.SessionStartTime = DateTime.Now;
@@ -824,6 +861,7 @@ public partial class MainWindow
             StartSessionClock();
             StartGeoPing();
             StartStatsPolling();
+            if (_state.IsLogsOpen) StartLogsTimers();
         };
         _xrayBootTimer.Start();
     }
@@ -834,13 +872,14 @@ public partial class MainWindow
         if (_state.IsConnected)
         {
             if (_cfg.LastXrayMode == "VPN Mode")
-                ShowToast("Please reconnect to apply the changes safely.");
+                ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian ? "لطفاً برای اعمال ایمن تغییرات دوباره متصل شوید." : "Please reconnect to apply the changes safely.");
             else
                 RestartXray(_cfg.LastXrayMode);
         }
         else if (_state.IsEngineRunning)
         {
-            ShowToast("Please reconnect to apply the changes.");
+            if (_cfg.LastXrayMode == "VPN Mode")
+                ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian ? "لطفاً برای اعمال تغییرات دوباره متصل شوید." : "Please reconnect to apply the changes.");
         }
     }
 
@@ -850,7 +889,7 @@ public partial class MainWindow
         KillManagedProcess("sing-box");
         KillPidRef(ref _xrayDebugPid);
         KillPidRef(ref _sbDebugPid);
-        KillPidRef(ref _xrayDohPid);
+
 
         _xrayRestartTimer?.Stop();
         _xrayRestartTimer = new global::Avalonia.Threading.DispatcherTimer
@@ -862,6 +901,11 @@ public partial class MainWindow
             _xrayRestartTimer?.Stop();
             if (!XrayConfigWriter.Write(_cfg, _cfg.XrayDir)) return;
 
+            if (targetMode == "VPN Mode")
+            {
+                if (!SingboxConfigWriter.Write(_cfg, _cfg.SbDir)) return;
+            }
+
             if (_cfg.DebugMode)
             {
                 using var p = Process.Start(new ProcessStartInfo("cmd.exe",
@@ -871,12 +915,11 @@ public partial class MainWindow
             }
             else
             {
-                ProcessService.StartProcessDirect(GetAppPath(@"Data\Xray\xray.exe"), "run -c config.json", _cfg.XrayDir);
+                ProcessService.StartProcessDirect(GetAppPath(@"Data\Xray\xray.exe"), "run -c config.json", _cfg.XrayDir)?.Dispose();
             }
 
             if (targetMode == "VPN Mode")
             {
-                if (!SingboxConfigWriter.Write(_cfg, _cfg.SbDir)) return;
                 if (_cfg.DebugMode)
                 {
                     using var p2 = Process.Start(new ProcessStartInfo("cmd.exe",
@@ -886,12 +929,11 @@ public partial class MainWindow
                 }
                 else
                 {
-                    ProcessService.StartProcessDirect(GetAppPath(@"Data\sing_box\sing-box.exe"), "run -c config.json", _cfg.SbDir);
+                    ProcessService.StartProcessDirect(GetAppPath(@"Data\sing_box\sing-box.exe"), "run -c config.json", _cfg.SbDir)?.Dispose();
                 }
             }
 
             ProxyService.SetSystemProxy(targetMode == "Proxy Mode");
-            if (targetMode != "Proxy Mode") ProxyService.DisableSystemProxy();
 
             if (_state.IsConnected)
             {
@@ -1095,7 +1137,7 @@ public partial class MainWindow
 
                         if (imgCaptcha != null)
                         {
-                            var ms = new MemoryStream(imgBytes);
+                            using var ms = new MemoryStream(imgBytes);
                             imgCaptcha.Source = new global::Avalonia.Media.Imaging.Bitmap(ms);
                         }
                         if (panCaptcha != null) { panCaptcha.MaxHeight = 300; panCaptcha.MaxWidth = 160; panCaptcha.Margin = new global::Avalonia.Thickness(0,0,10,0); panCaptcha.Opacity = 1; panCaptcha.BorderThickness = new global::Avalonia.Thickness(1); }
@@ -1142,7 +1184,13 @@ public partial class MainWindow
         var btnCaptchaSubmit = this.FindControl<global::Avalonia.Controls.Button>("btnCaptchaSubmit");
         if (btnCaptchaSubmit != null) { btnCaptchaSubmit.Content = "VERIFYING..."; btnCaptchaSubmit.IsEnabled = false; }
 
-        var url  = _moatEndpoints[_moatIndex < _moatEndpoints.Length ? _moatIndex : 0] + "/check";
+        if (_moatIndex >= _moatEndpoints.Length)
+        {
+            CancelFetch();
+            return;
+        }
+
+        var url  = _moatEndpoints[_moatIndex] + "/check";
         var body = Newtonsoft.Json.JsonConvert.SerializeObject(new
         {
             data = new object[]
@@ -1201,8 +1249,32 @@ public partial class MainWindow
 
     private global::Avalonia.Threading.DispatcherTimer? _logTimer;
     private global::Avalonia.Threading.DispatcherTimer? _logClearTimer;
-    private long _lastXrayLogPos = 0;
+    private long _lastXrayLogPos = 0; // H-4: access via Interlocked
     private readonly System.Collections.Generic.List<string> _xrayLogLines = new();
+
+    private void StartLogsTimers()
+    {
+        if (_logTimer != null)
+        {
+            _logTimer.Stop();
+            _logTimer.Tick -= LogTimer_Tick;
+        }
+        _logTimer = new global::Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
+        _logTimer.Tick += LogTimer_Tick;
+        _logTimer.Start();
+        _logClearTimer?.Start();
+    }
+
+    private void StopLogsTimers()
+    {
+        if (_logTimer != null)
+        {
+            _logTimer.Stop();
+            _logTimer.Tick -= LogTimer_Tick;
+            _logTimer = null;
+        }
+        _logClearTimer?.Stop();
+    }
 
     internal void InitLogClearTimer()
     {
@@ -1221,6 +1293,7 @@ public partial class MainWindow
 
     private void chkLogs_CheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
     {
+        if (_isInitializingSettings) return;
         var panLogs = this.FindControl<global::Avalonia.Controls.Border>("panLogs");
         var chkLogs = sender as global::Avalonia.Controls.ToggleSwitch;
         if (panLogs != null && chkLogs != null)
@@ -1231,9 +1304,7 @@ public partial class MainWindow
                 panLogs.Opacity         = 1;
                 panLogs.BorderThickness = new global::Avalonia.Thickness(1);
                 _state.IsLogsOpen       = true;
-                _logTimer = new global::Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
-                _logTimer.Tick += LogTimer_Tick;
-                _logTimer.Start();
+                StartLogsTimers();
             }
             else
             {
@@ -1241,7 +1312,7 @@ public partial class MainWindow
                 panLogs.Opacity         = 0;
                 panLogs.BorderThickness = new global::Avalonia.Thickness(0);
                 _state.IsLogsOpen       = false;
-                _logTimer?.Stop();
+                StopLogsTimers();
             }
             RequestConfigSave();
         }
@@ -1967,7 +2038,7 @@ public partial class MainWindow
             {
                 _cfg.V2rayChainJson = "";
                 _cfg.EnableV2rayChain = enable;
-                ConfigService.Save(_cfg, _state, _cfg.CfgFile, "Optimized", _cfg.LastBridge, _cfg.LastCount);
+                ConfigService.Save(_cfg, _state, _cfg.CfgFile, _cfg.LastConfig, _cfg.LastBridge, _cfg.LastCount);
                 
                 btnXrayCancel_Click(sender, e);
                 return;
@@ -2015,32 +2086,42 @@ public partial class MainWindow
                 }
                 
                 string tempFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "xray_test.json");
-                System.IO.File.WriteAllText(tempFile, text);
-                
-                string xrayExe = System.IO.Path.Combine(_cfg.BaseDir, "Data", "xray", "xray.exe");
-                if (System.IO.File.Exists(xrayExe))
+                try
                 {
-                    var psi = new System.Diagnostics.ProcessStartInfo
-                    {
-                        FileName = xrayExe,
-                        Arguments = $"-test -config \"{tempFile}\"",
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    };
+                    System.IO.File.WriteAllText(tempFile, text);
                     
-                    var proc = System.Diagnostics.Process.Start(psi);
-                    if (proc != null)
+                    string xrayExe = System.IO.Path.Combine(_cfg.BaseDir, "Data", "xray", "xray.exe");
+                    if (System.IO.File.Exists(xrayExe))
                     {
-                        await proc.WaitForExitAsync();
-                        if (proc.ExitCode != 0)
+                        var psi = new System.Diagnostics.ProcessStartInfo
                         {
-                            string err = await proc.StandardError.ReadToEndAsync();
-                            ShowToast("Xray config rejected. " + err.Substring(0, System.Math.Min(err.Length, 100)));
-                            return;
+                            FileName = xrayExe,
+                            Arguments = $"-test -config \"{tempFile}\"",
+                            RedirectStandardOutput = true,
+                            RedirectStandardError = true,
+                            UseShellExecute = false,
+                            CreateNoWindow = true
+                        };
+                        
+                        using (var proc = System.Diagnostics.Process.Start(psi))
+                        {
+                            if (proc != null)
+                            {
+                                var errTask = proc.StandardError.ReadToEndAsync();
+                                await proc.WaitForExitAsync();
+                                if (proc.ExitCode != 0)
+                                {
+                                    string err = await errTask;
+                                    ShowToast("Xray config rejected. " + err.Substring(0, System.Math.Min(err.Length, 100)));
+                                    return;
+                                }
+                            }
                         }
                     }
+                }
+                finally
+                {
+                    try { if (System.IO.File.Exists(tempFile)) System.IO.File.Delete(tempFile); } catch { }
                 }
 
                 _cfg.V2rayChainJson = text.Trim();
@@ -2049,7 +2130,8 @@ public partial class MainWindow
                     tog.IsChecked = true;
                 });
                 
-                ConfigService.Save(_cfg, _state, _cfg.CfgFile, "Optimized", _cfg.LastBridge, _cfg.LastCount);
+                ConfigService.Save(_cfg, _state, _cfg.CfgFile, _cfg.LastConfig, _cfg.LastBridge, _cfg.LastCount);
+                if (_state.IsEngineRunning) SmartRestartXray();
                 
                 btnXrayCancel_Click(sender, e);
             }
@@ -2136,7 +2218,7 @@ public partial class MainWindow
                 try {
                     string exe = System.Environment.ProcessPath ?? "";
                     string dir = System.IO.Path.GetDirectoryName(exe) ?? "";
-                    CrimsonOnion.Services.ProcessService.UpdateBootScheduledTask(val, exe, dir);
+                    CrimsonOnion.Services.ProcessService.UpdateBootScheduledTask(val, exe);
                     _cfg.LaunchOnBoot = val;
                 } catch (System.Exception ex) {
                     _cfg.LaunchOnBoot = false;
@@ -2194,7 +2276,7 @@ public partial class MainWindow
             }
 
             dynamic sc = ws.CreateShortcut(destPath);
-            sc.TargetPath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName ?? "";
+            sc.TargetPath = System.Environment.ProcessPath ?? "";
             sc.WorkingDirectory = _cfg.BaseDir;
             sc.Save();
 
@@ -2240,7 +2322,7 @@ public partial class MainWindow
             {
                 if (string.IsNullOrWhiteSpace(_cfg.V2rayChainJson))
                 {
-                    tog.IsChecked = false;
+                    global::Avalonia.Threading.Dispatcher.UIThread.Post(() => tog.IsChecked = false);
                     
                     var panXrayExitNode = this.FindControl<global::Avalonia.Controls.Border>("panXrayExitNode");
                     var icoXrayExitNodeExpander = this.FindControl<global::Avalonia.Controls.PathIcon>("icoXrayExitNodeExpander");
@@ -2261,7 +2343,8 @@ public partial class MainWindow
                 else if (!_cfg.EnableV2rayChain)
                 {
                     _cfg.EnableV2rayChain = true;
-                    ConfigService.Save(_cfg, _state, _cfg.CfgFile, "Optimized", _cfg.LastBridge, _cfg.LastCount);
+                    RequestConfigSave();
+                    if (_state.IsEngineRunning) SmartRestartXray();
                 }
             }
             else
@@ -2269,7 +2352,8 @@ public partial class MainWindow
                 if (_cfg.EnableV2rayChain)
                 {
                     _cfg.EnableV2rayChain = false;
-                    ConfigService.Save(_cfg, _state, _cfg.CfgFile, "Optimized", _cfg.LastBridge, _cfg.LastCount);
+                    RequestConfigSave();
+                    if (_state.IsEngineRunning) SmartRestartXray();
                 }
             }
         }
@@ -2398,8 +2482,9 @@ public partial class MainWindow
                 _cfg.OutboundProxyAddress = "";
                 _cfg.OutboundProxyPort = "";
                 _cfg.EnableOutboundProxy = enable;
-                ConfigService.Save(_cfg, _state, _cfg.CfgFile, "Optimized", _cfg.LastBridge, _cfg.LastCount);
+                RequestConfigSave();
                 btnOutboundCancel_Click(sender, e);
+                if (_state.IsEngineRunning) ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian ? "لطفاً برای اعمال تغییرات دوباره متصل شوید." : "Please reconnect to apply the changes.");
                 return;
             }
 
@@ -2415,8 +2500,9 @@ public partial class MainWindow
                 tog.IsChecked = true;
             });
             
-            ConfigService.Save(_cfg, _state, _cfg.CfgFile, "Optimized", _cfg.LastBridge, _cfg.LastCount);
+            RequestConfigSave();
             btnOutboundCancel_Click(sender, e);
+            if (_state.IsEngineRunning) ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian ? "لطفاً برای اعمال تغییرات دوباره متصل شوید." : "Please reconnect to apply the changes.");
         }
     }
 
@@ -2471,7 +2557,8 @@ public partial class MainWindow
                 else if (!_cfg.EnableOutboundProxy)
                 {
                     _cfg.EnableOutboundProxy = true;
-                    ConfigService.Save(_cfg, _state, _cfg.CfgFile, "Optimized", _cfg.LastBridge, _cfg.LastCount);
+                    RequestConfigSave();
+                    if (_state.IsEngineRunning) ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian ? "لطفاً برای اعمال تغییرات دوباره متصل شوید." : "Please reconnect to apply the changes.");
                 }
             }
             else
@@ -2479,7 +2566,8 @@ public partial class MainWindow
                 if (_cfg.EnableOutboundProxy)
                 {
                     _cfg.EnableOutboundProxy = false;
-                    ConfigService.Save(_cfg, _state, _cfg.CfgFile, "Optimized", _cfg.LastBridge, _cfg.LastCount);
+                    RequestConfigSave();
+                    if (_state.IsEngineRunning) ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian ? "لطفاً برای اعمال تغییرات دوباره متصل شوید." : "Please reconnect to apply the changes.");
                 }
             }
         }
@@ -2559,7 +2647,7 @@ public partial class MainWindow
                 tog.IsChecked = true;
             });
             
-            ConfigService.Save(_cfg, _state, _cfg.CfgFile, "Optimized", _cfg.LastBridge, _cfg.LastCount);
+            RequestConfigSave();
             btnDnsCancel_Click(sender, e);
             if (_state.IsEngineRunning) SmartRestartXray();
         }
@@ -2597,7 +2685,7 @@ public partial class MainWindow
                 else if (!_cfg.EnableUpstreamDoh)
                 {
                     _cfg.EnableUpstreamDoh = true;
-                    ConfigService.Save(_cfg, _state, _cfg.CfgFile, "Optimized", _cfg.LastBridge, _cfg.LastCount);
+                    RequestConfigSave();
                     if (_state.IsEngineRunning) SmartRestartXray();
                 }
             }
@@ -2606,7 +2694,7 @@ public partial class MainWindow
                 if (_cfg.EnableUpstreamDoh)
                 {
                     _cfg.EnableUpstreamDoh = false;
-                    ConfigService.Save(_cfg, _state, _cfg.CfgFile, "Optimized", _cfg.LastBridge, _cfg.LastCount);
+                    RequestConfigSave();
                     if (_state.IsEngineRunning) SmartRestartXray();
                 }
             }

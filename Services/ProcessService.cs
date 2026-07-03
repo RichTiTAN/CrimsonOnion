@@ -65,7 +65,7 @@ namespace CrimsonOnion.Services
             }
         }
 
-        public static void UpdateBootScheduledTask(bool enable, string exePath, string workingDir)
+        public static void UpdateBootScheduledTask(bool enable, string exePath)
         {
             const string taskName = "CrimsonOnion_AutoStart";
             try
@@ -81,10 +81,13 @@ namespace CrimsonOnion.Services
                         RedirectStandardError = true
                     };
                     using var p = Process.Start(psi);
-                    p?.WaitForExit(3000);
-                    if (p != null && p.ExitCode != 0) {
-                        string err = p.StandardError.ReadToEnd();
-                        throw new Exception("schtasks exit code " + p.ExitCode + " " + err);
+                    if (p != null)
+                    {
+                        var stderrTask = p.StandardError.ReadToEndAsync();
+                        p.WaitForExit();
+                        string err = stderrTask.GetAwaiter().GetResult();
+                        if (p.ExitCode != 0)
+                            throw new Exception("schtasks exit code " + p.ExitCode + " " + err);
                     }
                 }
                 else
@@ -98,10 +101,13 @@ namespace CrimsonOnion.Services
                         RedirectStandardError = true
                     };
                     using var p = Process.Start(psi);
-                    p?.WaitForExit(3000);
-                    if (p != null && p.ExitCode != 0) {
-                        string err = p.StandardError.ReadToEnd();
-                        throw new Exception("schtasks exit code " + p.ExitCode + " " + err);
+                    if (p != null)
+                    {
+                        var stderrTask = p.StandardError.ReadToEndAsync();
+                        p.WaitForExit();
+                        string err = stderrTask.GetAwaiter().GetResult();
+                        if (p.ExitCode != 0)
+                            throw new Exception("schtasks exit code " + p.ExitCode + " " + err);
                     }
                 }
 

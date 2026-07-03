@@ -79,7 +79,7 @@ namespace CrimsonOnion.Models
         public long SessionDataBytes { get; set; } = 0;
         public double[] SpeedSamples { get; set; } = new double[5];
         public string TempProxyType { get; set; } = "SOCKS5";
-        public int[] TorPcts { get; set; } = new int[8] { -1, -1, -1, -1, -1, -1, -1, -1 };
+        public int[] TorPcts { get; set; } = System.Linq.Enumerable.Repeat(-1, 32).ToArray();
     }
 
     public class BridgeEntry

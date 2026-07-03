@@ -30,8 +30,9 @@ public partial class MainWindow : Window
     private AppState _state;
     private List<TorControlClient> _torControlClients = new();
     private int?[] _torPids = new int?[8];
-    private int? _xrayDebugPid, _sbDebugPid, _xrayDohPid;
+    private int? _xrayDebugPid, _sbDebugPid;
     private DispatcherTimer? _bootstrapTimer;
+    private DispatcherTimer? _autoBootTimer; // H-15 FIX: tracked so it can be stopped in OnClosing
     private int _pollSelCount = 6;
     private string _pollMode = "Proxy Mode";
     private string _pollSelBridge = "Direct";
@@ -84,7 +85,7 @@ public partial class MainWindow : Window
         var down = this.FindControl<global::Avalonia.Controls.TextBlock>("lblDownloadSpeed")?.Text ?? "0 KB/s";
         var up = this.FindControl<global::Avalonia.Controls.TextBlock>("lblUploadSpeed")?.Text ?? "0 KB/s";
         var total = this.FindControl<global::Avalonia.Controls.TextBlock>("lblTotalData")?.Text ?? "0 MB";
-        return $"Speed: {down}\nTotal: {total}";
+        return $"⬇ {down} | ⬆ {up}\nTotal: {total}";
     }
 
     public MainWindow()
@@ -145,14 +146,15 @@ public partial class MainWindow : Window
 
         if (_cfg.AutoStart && !_state.IsFirstLaunch)
         {
-            var bootT = new global::Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
-            bootT.Tick += (s, ev) => 
-            { 
-                bootT.Stop(); 
-                if (!_state.AbortBoot) 
-                    btnConnect_Click(null, new global::Avalonia.Interactivity.RoutedEventArgs()); 
+            // H-15 FIX: store in named field so it can be cancelled in OnClosing
+            _autoBootTimer = new global::Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+            _autoBootTimer.Tick += (s, ev) =>
+            {
+                _autoBootTimer?.Stop();
+                if (!_state.AbortBoot)
+                    btnConnect_Click(null, new global::Avalonia.Interactivity.RoutedEventArgs());
             };
-            bootT.Start();
+            _autoBootTimer.Start();
         }
 
         CheckUpdateSilent();
@@ -202,7 +204,6 @@ public partial class MainWindow : Window
         {
             panSplitOverlay.Classes.Remove("popupOpen");
             global::Avalonia.Threading.DispatcherTimer.RunOnce(() => { panSplitOverlay.IsVisible = false; }, TimeSpan.FromMilliseconds(200));
-            ApplyRoutingUI();
         }
         var panSettingsOverlay = this.FindControl<Border>("panSettingsOverlay");
         if (panSettingsOverlay != null && panSettingsOverlay.IsVisible)
@@ -263,12 +264,12 @@ public partial class MainWindow : Window
 
     private void BtnGithub_Click(object? sender, RoutedEventArgs e)
     {
-        Process.Start(new ProcessStartInfo("https://github.com/RichTiTAN") { UseShellExecute = true });
+        Process.Start(new ProcessStartInfo("https://github.com/RichTiTAN") { UseShellExecute = true })?.Dispose();
     }
 
     private void BtnTelegram_Click(object? sender, RoutedEventArgs e)
     {
-        Process.Start(new ProcessStartInfo("https://t.me/itsTitanVPN") { UseShellExecute = true });
+        Process.Start(new ProcessStartInfo("https://t.me/itsTitanVPN") { UseShellExecute = true })?.Dispose();
     }
 
     private async void BtnCopyAddress_Click(object? sender, RoutedEventArgs e)
@@ -321,7 +322,7 @@ public partial class MainWindow : Window
                 btnTitleUpdate.Content = status;
             }, token);
 
-            ProxyService.DisableSystemProxy();
+            ProxyService.SetSystemProxy(false);
             StopAllEngines(true);
             System.Environment.Exit(0);
         }
@@ -400,7 +401,7 @@ public partial class MainWindow : Window
                 btnCheckUpdate.Content = status;
             }, token);
             
-            ProxyService.DisableSystemProxy();
+            ProxyService.SetSystemProxy(false);
             StopAllEngines(true);
             System.Environment.Exit(0);
         }
@@ -485,19 +486,19 @@ public partial class MainWindow : Window
         TextBlock? F(string name) => this.FindControl<TextBlock>(name);
         Button? B(string name)    => this.FindControl<Button>(name);
 
-        AppStrings.Apply(F("lblSidebarConnection"),  AppStrings.SidebarConnection,  AppStrings.SidebarConnection);
-        AppStrings.Apply(F("lblSidebarCountries"),   AppStrings.SidebarCountries,   AppStrings.SidebarCountries);
-        AppStrings.Apply(F("lblSidebarSplitTunnel"), AppStrings.SidebarSplitTunnel, AppStrings.SidebarSplitTunnel);
-        AppStrings.Apply(F("lblSidebarSettings"),    AppStrings.SidebarSettings,    AppStrings.SidebarSettings);
-        AppStrings.Apply(F("lblSidebarAbout"),       AppStrings.SidebarAbout,       AppStrings.SidebarAbout);
+        AppStrings.Apply(F("lblSidebarConnection"),  AppStrings.SidebarConnection);
+        AppStrings.Apply(F("lblSidebarCountries"),   AppStrings.SidebarCountries);
+        AppStrings.Apply(F("lblSidebarSplitTunnel"), AppStrings.SidebarSplitTunnel);
+        AppStrings.Apply(F("lblSidebarSettings"),    AppStrings.SidebarSettings);
+        AppStrings.Apply(F("lblSidebarAbout"),       AppStrings.SidebarAbout);
 
-        AppStrings.Apply(F("lblProxyMode"),  AppStrings.ProxyMode,  AppStrings.ProxyMode);
-        AppStrings.Apply(F("lblVpnMode"),    AppStrings.VpnMode,    AppStrings.VpnMode);
-        AppStrings.Apply(F("lblClearProxy"), AppStrings.ClearProxy, AppStrings.ClearProxy);
+        AppStrings.Apply(F("lblProxyMode"),  AppStrings.ProxyMode);
+        AppStrings.Apply(F("lblVpnMode"),    AppStrings.VpnMode);
+        AppStrings.Apply(F("lblClearProxy"), AppStrings.ClearProxy);
 
-        AppStrings.ApplyToolTip(B("btnProxyMode"),  AppStrings.TtProxyMode,  AppStrings.TtProxyMode);
-        AppStrings.ApplyToolTip(B("btnVpnMode"),    AppStrings.TtVpnMode,    AppStrings.TtVpnMode);
-        AppStrings.ApplyToolTip(B("btnClearProxy"), AppStrings.TtClearProxy, AppStrings.TtClearProxy);
+        AppStrings.ApplyToolTip(B("btnProxyMode"),  AppStrings.TtProxyMode);
+        AppStrings.ApplyToolTip(B("btnVpnMode"),    AppStrings.TtVpnMode);
+        AppStrings.ApplyToolTip(B("btnClearProxy"), AppStrings.TtClearProxy);
 
         
         var panTimerContent = this.FindControl<StackPanel>("panTimerContent");
@@ -508,21 +509,21 @@ public partial class MainWindow : Window
                 : global::Avalonia.Media.FlowDirection.LeftToRight;
         }
 
-        AppStrings.Apply(F("lblBridgeType"),    AppStrings.BridgeType,    AppStrings.BridgeType);
-        AppStrings.Apply(F("lblGetBridges"),    AppStrings.GetBridges,    AppStrings.GetBridges);
-        AppStrings.Apply(F("lblTorEngines"),    AppStrings.TorEngines,    AppStrings.TorEngines);
-        AppStrings.Apply(F("lblLogsStatus"),    AppStrings.LogsStatus,    AppStrings.LogsStatus);
-        AppStrings.Apply(F("lblTorBootstrap"),  AppStrings.TorBootstrap,  AppStrings.TorBootstrap);
-        AppStrings.Apply(F("lblXrayLogHeader"), AppStrings.XrayLogHeader, AppStrings.XrayLogHeader);
-        AppStrings.Apply(F("lblConnectedFor"),  AppStrings.ConnectedFor,  AppStrings.ConnectedFor);
-        AppStrings.Apply(F("lblConnectedTo"),   AppStrings.ConnectedTo,   AppStrings.ConnectedTo);
-        AppStrings.Apply(F("lblDisconnected"),  AppStrings.Disconnected,  AppStrings.Disconnected);
-        AppStrings.Apply(F("lblLocalPortLabel"),AppStrings.OpenLocalPort, AppStrings.OpenLocalPort);
-        AppStrings.Apply(F("lblLanPortLabel"),  AppStrings.OpenLanPort,   AppStrings.OpenLanPort);
-        AppStrings.Apply(F("lblPingLabel"),     AppStrings.PingLabel,     AppStrings.PingLabel);
-        AppStrings.Apply(F("lblTotalLabel"),    AppStrings.TotalLabel,    AppStrings.TotalLabel);
-        AppStrings.Apply(F("lblDownloadLabel"), AppStrings.DownloadLabel, AppStrings.DownloadLabel);
-        AppStrings.Apply(F("lblUploadLabel"),   AppStrings.UploadLabel,   AppStrings.UploadLabel);
+        AppStrings.Apply(F("lblBridgeType"),    AppStrings.BridgeType);
+        AppStrings.Apply(F("lblGetBridges"),    AppStrings.GetBridges);
+        AppStrings.Apply(F("lblTorEngines"),    AppStrings.TorEngines);
+        AppStrings.Apply(F("lblLogsStatus"),    AppStrings.LogsStatus);
+        AppStrings.Apply(F("lblTorBootstrap"),  AppStrings.TorBootstrap);
+        AppStrings.Apply(F("lblXrayLogHeader"), AppStrings.XrayLogHeader);
+        AppStrings.Apply(F("lblConnectedFor"),  AppStrings.ConnectedFor);
+        AppStrings.Apply(F("lblConnectedTo"),   AppStrings.ConnectedTo);
+        AppStrings.Apply(F("lblDisconnected"),  AppStrings.Disconnected);
+        AppStrings.Apply(F("lblLocalPortLabel"), AppStrings.OpenLocalPort);
+        AppStrings.Apply(F("lblLanPortLabel"), AppStrings.OpenLanPort);
+        AppStrings.Apply(F("lblPingLabel"),     AppStrings.PingLabel);
+        AppStrings.Apply(F("lblTotalLabel"),    AppStrings.TotalLabel);
+        AppStrings.Apply(F("lblDownloadLabel"), AppStrings.DownloadLabel);
+        AppStrings.Apply(F("lblUploadLabel"),   AppStrings.UploadLabel);
 
         var btnConn = this.FindControl<Button>("btnConnect");
         if (btnConn != null)
@@ -540,63 +541,63 @@ public partial class MainWindow : Window
             }
         }
 
-        AppStrings.Apply(F("lblSectionStartup"),    AppStrings.SectionStartup,   AppStrings.SectionStartup, true);
-        AppStrings.Apply(F("lblLaunchOnStartup"),  AppStrings.LaunchOnStartup,  AppStrings.LaunchOnStartup);
-        AppStrings.Apply(F("lblAutoConnect"),       AppStrings.AutoConnect,      AppStrings.AutoConnect);
-        AppStrings.Apply(F("lblStartMinimized"),    AppStrings.StartMinimized,   AppStrings.StartMinimized);
-        AppStrings.Apply(F("lblMinimizeToTray"),    AppStrings.MinimizeToTray,   AppStrings.MinimizeToTray);
+        AppStrings.Apply(F("lblSectionStartup"), AppStrings.SectionStartup, forceLtr: true);
+        AppStrings.Apply(F("lblLaunchOnStartup"),  AppStrings.LaunchOnStartup);
+        AppStrings.Apply(F("lblAutoConnect"), AppStrings.AutoConnect);
+        AppStrings.Apply(F("lblStartMinimized"), AppStrings.StartMinimized);
+        AppStrings.Apply(F("lblMinimizeToTray"), AppStrings.MinimizeToTray);
 
-        AppStrings.Apply(F("lblSectionConnection"),  AppStrings.SectionConnection, AppStrings.SectionConnection, true);
+        AppStrings.Apply(F("lblSectionConnection"), AppStrings.SectionConnection, forceLtr: true);
 
 
         var tbCustomXray = this.FindControl<TextBlock>("lblCustomXrayExit");
-        AppStrings.Apply(tbCustomXray, AppStrings.CustomXrayExit, AppStrings.CustomXrayExit);
-        AppStrings.ApplyToolTip(tbCustomXray, AppStrings.TtCustomXray, AppStrings.TtCustomXray);
+        AppStrings.Apply(tbCustomXray, AppStrings.CustomXrayExit);
+        AppStrings.ApplyToolTip(tbCustomXray, AppStrings.TtCustomXray);
         
         var tbOutboundProxy = this.FindControl<TextBlock>("lblOutboundProxySetting");
-        AppStrings.Apply(tbOutboundProxy, AppStrings.OutboundProxy, AppStrings.OutboundProxy);
-        AppStrings.ApplyToolTip(tbOutboundProxy, AppStrings.TtOutboundProxy, AppStrings.TtOutboundProxy);
+        AppStrings.Apply(tbOutboundProxy, AppStrings.OutboundProxy);
+        AppStrings.ApplyToolTip(tbOutboundProxy, AppStrings.TtOutboundProxy);
         
         var tbDnsSetting = this.FindControl<TextBlock>("lblDnsSettingTitle");
-        AppStrings.Apply(tbDnsSetting, AppStrings.DnsSettings, AppStrings.DnsSettings);
-        AppStrings.ApplyToolTip(tbDnsSetting, AppStrings.TtDnsSettings, AppStrings.TtDnsSettings);
+        AppStrings.Apply(tbDnsSetting, AppStrings.DnsSettings);
+        AppStrings.ApplyToolTip(tbDnsSetting, AppStrings.TtDnsSettings);
 
         var tbAdBlocker = this.FindControl<TextBlock>("lblAdBlockerSetting");
-        AppStrings.Apply(tbAdBlocker, AppStrings.AdBlocker, AppStrings.AdBlocker);
-        AppStrings.ApplyToolTip(tbAdBlocker, AppStrings.TtAdBlocker, AppStrings.TtAdBlocker);
+        AppStrings.Apply(tbAdBlocker, AppStrings.AdBlocker);
+        AppStrings.ApplyToolTip(tbAdBlocker, AppStrings.TtAdBlocker);
         
         var tbAllowLan = this.FindControl<TextBlock>("lblAllowLanSetting");
-        AppStrings.Apply(tbAllowLan, AppStrings.AllowLan, AppStrings.AllowLan);
-        AppStrings.ApplyToolTip(tbAllowLan, AppStrings.TtAllowLan, AppStrings.TtAllowLan);
+        AppStrings.Apply(tbAllowLan, AppStrings.AllowLan);
+        AppStrings.ApplyToolTip(tbAllowLan, AppStrings.TtAllowLan);
 
-        AppStrings.Apply(F("lblOutboundType"),     AppStrings.ProxyType,      AppStrings.ProxyType);
-        AppStrings.Apply(F("lblOutboundAddress"),  AppStrings.AddressIp,      AppStrings.AddressIp);
-        AppStrings.Apply(F("lblOutboundPort"),     AppStrings.Port,           AppStrings.Port);
-        AppStrings.Apply(F("lblOutboundAuth"),     AppStrings.Authentication, AppStrings.Authentication);
-        AppStrings.Apply(F("lblOutboundUsername"), AppStrings.Username,       AppStrings.Username);
-        AppStrings.Apply(F("lblOutboundPassword"), AppStrings.Password,       AppStrings.Password);
-        AppStrings.Apply(F("lblUpstreamDoh"),      AppStrings.UpstreamDohUrl, AppStrings.UpstreamDohUrl);
+        AppStrings.Apply(F("lblOutboundType"), AppStrings.ProxyType);
+        AppStrings.Apply(F("lblOutboundAddress"), AppStrings.AddressIp);
+        AppStrings.Apply(F("lblOutboundPort"), AppStrings.Port);
+        AppStrings.Apply(F("lblOutboundAuth"), AppStrings.Authentication);
+        AppStrings.Apply(F("lblOutboundUsername"), AppStrings.Username);
+        AppStrings.Apply(F("lblOutboundPassword"), AppStrings.Password);
+        AppStrings.Apply(F("lblUpstreamDoh"), AppStrings.UpstreamDohUrl);
 
-        AppStrings.Apply(F("lblSectionSystem"),    AppStrings.SectionSystem,    AppStrings.SectionSystem, true);
+        AppStrings.Apply(F("lblSectionSystem"),    AppStrings.SectionSystem, forceLtr: true);
         
         var tbLanguageSetting = this.FindControl<TextBlock>("lblLanguageSetting");
-        AppStrings.Apply(tbLanguageSetting, AppStrings.LanguageSetting, AppStrings.LanguageSetting);
-        AppStrings.ApplyToolTip(tbLanguageSetting, AppStrings.TtLanguage, AppStrings.TtLanguage);
+        AppStrings.Apply(tbLanguageSetting, AppStrings.LanguageSetting);
+        AppStrings.ApplyToolTip(tbLanguageSetting, AppStrings.TtLanguage);
         
         var tbDebugMode = this.FindControl<TextBlock>("lblDebugMode");
-        AppStrings.Apply(tbDebugMode, AppStrings.DebugMode, AppStrings.DebugMode);
-        AppStrings.ApplyToolTip(tbDebugMode, AppStrings.TtDebugMode, AppStrings.TtDebugMode);
+        AppStrings.Apply(tbDebugMode, AppStrings.DebugMode);
+        AppStrings.ApplyToolTip(tbDebugMode, AppStrings.TtDebugMode);
         
-        AppStrings.Apply(F("lblDesktopShortcut"),  AppStrings.DesktopShortcut,  AppStrings.DesktopShortcut);
-        AppStrings.Apply(F("lblStartMenuShortcut"),AppStrings.StartMenuShortcut,AppStrings.StartMenuShortcut);
+        AppStrings.Apply(F("lblDesktopShortcut"),  AppStrings.DesktopShortcut);
+        AppStrings.Apply(F("lblStartMenuShortcut"), AppStrings.StartMenuShortcut);
 
-        AppStrings.ApplyBtn(B("btnDesktopShortcut"),   AppStrings.Create, AppStrings.Create);
-        AppStrings.ApplyBtn(B("btnStartMenuShortcut"), AppStrings.Create, AppStrings.Create);
+        AppStrings.ApplyBtn(B("btnDesktopShortcut"), AppStrings.Create);
+        AppStrings.ApplyBtn(B("btnStartMenuShortcut"), AppStrings.Create);
 
-        AppStrings.Apply(F("lblSplitTunnelingHeader"), AppStrings.SplitTunneling, AppStrings.SplitTunneling, true);
-        AppStrings.Apply(F("lblDomainsAndIps"),         AppStrings.DomainsAndIps,  AppStrings.DomainsAndIps);
-        AppStrings.Apply(F("lblApplications"),          AppStrings.Applications,   AppStrings.Applications);
-        AppStrings.Apply(F("lblBlockedDomainsIps"),     AppStrings.BlockedDomains, AppStrings.BlockedDomains);
+        AppStrings.Apply(F("lblSplitTunnelingHeader"), AppStrings.SplitTunneling, forceLtr: true);
+        AppStrings.Apply(F("lblDomainsAndIps"), AppStrings.DomainsAndIps);
+        AppStrings.Apply(F("lblApplications"), AppStrings.Applications);
+        AppStrings.Apply(F("lblBlockedDomainsIps"), AppStrings.BlockedDomains);
         
         UpdateSplitTunnelUI();
 
@@ -604,13 +605,13 @@ public partial class MainWindow : Window
         var btnSplitExclusive = this.FindControl<Button>("btnSplitExclusive");
         var btnSplitInclusive = this.FindControl<Button>("btnSplitInclusive");
         
-        AppStrings.ApplyToolTip(btnSplitDisabled, AppStrings.TtSplitDis, AppStrings.TtSplitDis);
-        AppStrings.ApplyToolTip(btnSplitExclusive, AppStrings.TtSplitExc, AppStrings.TtSplitExc);
-        AppStrings.ApplyToolTip(btnSplitInclusive, AppStrings.TtSplitInc, AppStrings.TtSplitInc);
+        AppStrings.ApplyToolTip(btnSplitDisabled, AppStrings.TtSplitDis);
+        AppStrings.ApplyToolTip(btnSplitExclusive, AppStrings.TtSplitExc);
+        AppStrings.ApplyToolTip(btnSplitInclusive, AppStrings.TtSplitInc);
         
-        if (btnSplitDisabled?.Content  is TextBlock tbDis) AppStrings.Apply(tbDis, AppStrings.Disabled,  AppStrings.Disabled);
-        if (btnSplitExclusive?.Content is TextBlock tbEx)  AppStrings.Apply(tbEx,  AppStrings.Exclusive, AppStrings.Exclusive);
-        if (btnSplitInclusive?.Content is TextBlock tbIn)  AppStrings.Apply(tbIn,  AppStrings.Inclusive, AppStrings.Inclusive);
+        if (btnSplitDisabled?.Content  is TextBlock tbDis) AppStrings.Apply(tbDis, AppStrings.Disabled);
+        if (btnSplitExclusive?.Content is TextBlock tbEx)  AppStrings.Apply(tbEx, AppStrings.Exclusive);
+        if (btnSplitInclusive?.Content is TextBlock tbIn)  AppStrings.Apply(tbIn, AppStrings.Inclusive);
 
         var btnToggleDomains = this.FindControl<Button>("btnToggleDomains");
         var btnToggleApps    = this.FindControl<Button>("btnToggleApps");
@@ -625,16 +626,16 @@ public partial class MainWindow : Window
         var btnBrowseApp = this.FindControl<Button>("btnBrowseApp");
         if (btnBrowseApp != null) btnBrowseApp.Content = fa ? "مرور" : "BROWSE";
 
-        AppStrings.Apply(F("lblAboutVersion"),  AppStrings.AboutVersion,  AppStrings.AboutVersion);
-        AppStrings.Apply(F("lblDonations"),     AppStrings.Donations,     AppStrings.Donations);
-        AppStrings.Apply(F("lblDonationsDesc"), AppStrings.DonationsDesc, AppStrings.DonationsDesc);
-        AppStrings.ApplyBtn(B("btnCheckUpdate"), AppStrings.CheckForUpdates, AppStrings.CheckForUpdates);
+        AppStrings.Apply(F("lblAboutVersion"),  AppStrings.AboutVersion);
+        AppStrings.Apply(F("lblDonations"),     AppStrings.Donations);
+        AppStrings.Apply(F("lblDonationsDesc"), AppStrings.DonationsDesc);
+        AppStrings.ApplyBtn(B("btnCheckUpdate"), AppStrings.CheckForUpdates);
 
-        AppStrings.Apply(F("lblExpertTitle"),    AppStrings.ExpertTitle,     AppStrings.ExpertTitle);
-        AppStrings.Apply(F("lblHardwareAccel"),  AppStrings.HardwareAccel,   AppStrings.HardwareAccel);
-        AppStrings.Apply(F("lblFascistFirewall"),AppStrings.FascistFirewall, AppStrings.FascistFirewall);
-        AppStrings.Apply(F("lblStrictNodes"),    AppStrings.StrictNodes,     AppStrings.StrictNodes);
-        AppStrings.Apply(F("lblCustomTorrc"),    AppStrings.CustomTorrcLabel,AppStrings.CustomTorrcLabel);
+        AppStrings.Apply(F("lblExpertTitle"), AppStrings.ExpertTitle);
+        AppStrings.Apply(F("lblHardwareAccel"), AppStrings.HardwareAccel);
+        AppStrings.Apply(F("lblFascistFirewall"), AppStrings.FascistFirewall);
+        AppStrings.Apply(F("lblStrictNodes"), AppStrings.StrictNodes);
+        AppStrings.Apply(F("lblCustomTorrc"), AppStrings.CustomTorrcLabel);
 
         if (_trayWidget != null)
             _trayWidget.ApplyLanguage(fa);
@@ -733,7 +734,7 @@ public partial class MainWindow : Window
             else if (clickedBtn.Name == "btnBridgeCustom")    _activeBridge = "Custom";
 
             _cfg.LastBridge = _activeBridge;
-            ConfigService.Save(_cfg, _state, _cfg.CfgFile, "Optimized", _cfg.LastBridge, _cfg.LastCount);
+            RequestConfigSave();
 
             if (_activeBridge == "snowflake" && _cfg.LastXrayMode == "VPN Mode")
             {
@@ -784,7 +785,10 @@ public partial class MainWindow : Window
             if (_state.IsEngineRunning)
                 OnEngineCountChanged(engines);
             else
+            {
+                UpdateDisconnectedTorLabels();
                 RequestConfigSave();
+            }
         }
     }
 
@@ -996,7 +1000,7 @@ public partial class MainWindow : Window
             _cfg.EnableDirect = _cfg.SplitTunnelMode != "DISABLED";
 
             UpdateSplitTunnelUI();
-            ConfigService.Save(_cfg, _state, _cfg.CfgFile, "Optimized", _cfg.LastBridge, _cfg.LastCount);
+            RequestConfigSave();
             
             if (_state.IsEngineRunning)
                 SmartRestartXray();
@@ -1012,7 +1016,7 @@ public partial class MainWindow : Window
         
         if (hasText)
         {
-            tb.Height = 20;
+            tb.Height = 17;
             tb.Margin = new global::Avalonia.Thickness(0);
             tb.IsHitTestVisible = false;
             tb.IsReadOnly = true;
@@ -1056,14 +1060,13 @@ public partial class MainWindow : Window
     private void ClosePanel(Border panel, Border togglePanel, TextBox tb, Button btnToggle)
     {
         bool hasText = !string.IsNullOrWhiteSpace(tb.Text);
-        double targetHeight = hasText ? 34 : 0;
         
         btnToggle.Content = hasText ? CrimsonOnion.Localization.AppStrings.Edit : CrimsonOnion.Localization.AppStrings.Add;
-        togglePanel.CornerRadius = (hasText || targetHeight > 0) ? new global::Avalonia.CornerRadius(4, 4, 0, 0) : new global::Avalonia.CornerRadius(4);
+        togglePanel.CornerRadius = hasText ? new global::Avalonia.CornerRadius(4, 4, 0, 0) : new global::Avalonia.CornerRadius(4);
         
         if (hasText)
         {
-            tb.Height = 20;
+            tb.Height = 17;
             tb.Margin = new global::Avalonia.Thickness(0);
             tb.IsHitTestVisible = false;
             tb.IsReadOnly = true;
@@ -1071,7 +1074,7 @@ public partial class MainWindow : Window
             tb.Cursor = new global::Avalonia.Input.Cursor(global::Avalonia.Input.StandardCursorType.Arrow);
         }
         
-        panel.Height = targetHeight;
+        panel.Height = hasText ? 34 : 0;
     }
 
     private void SplitToggle_Click(object? sender, RoutedEventArgs e)
@@ -1106,7 +1109,7 @@ public partial class MainWindow : Window
                 _cfg.LastBlockSplit = tb.Text?.Trim() ?? "";
                 ClosePanel(this.FindControl<Border>("panBlockEdit")!, this.FindControl<Border>("panBlockToggle")!, tb, this.FindControl<Button>("btnToggleBlock")!);
             }
-            ConfigService.Save(_cfg, _state, _cfg.CfgFile, "Optimized", _cfg.LastBridge, _cfg.LastCount);
+            RequestConfigSave();
             if (_state.IsEngineRunning)
                 SmartRestartXray();
         }
@@ -1171,7 +1174,10 @@ public partial class MainWindow : Window
                         txtSplitApps.Text += $", {exeName}";
                         
                     _cfg.LastAppSplit = txtSplitApps.Text;
-                    ConfigService.Save(_cfg, _state, _cfg.CfgFile, "Optimized", _cfg.LastBridge, _cfg.LastCount);
+                    RequestConfigSave();
+                    
+                    ClosePanel(this.FindControl<Border>("panAppsEdit")!, this.FindControl<Border>("panAppsToggle")!, txtSplitApps, this.FindControl<Button>("btnToggleApps")!);
+                    
                     if (_state.IsEngineRunning)
                         SmartRestartXray();
                 }
@@ -1209,9 +1215,11 @@ public partial class MainWindow : Window
         {
             _cfg.WindowLeft = this.Position.X;
             _cfg.WindowTop = this.Position.Y;
-            ConfigService.Save(_cfg, _state, _cfg.CfgFile, "Optimized", _cfg.LastBridge, _cfg.LastCount);
+            ConfigService.Save(_cfg, _state, _cfg.CfgFile, _cfg.LastConfig, _cfg.LastBridge, _cfg.LastCount);
         }
 
+        _autoBootTimer?.Stop(); // H-15 FIX: cancel tracked boot timer
+        _staggerTimer?.Stop(); // C-7 FIX: stagger timer was missing from OnClosing
         _statsTimer?.Stop();
         _sessionClockTimer?.Stop();
         _logTimer?.Stop();
@@ -1222,7 +1230,10 @@ public partial class MainWindow : Window
         _toastTimer?.Stop();
         _xrayBootTimer?.Stop();
         _xrayRestartTimer?.Stop();
-        if (_geoCts != null) { try { _geoCts.Cancel(); _geoCts.Dispose(); } catch { } }
+        if (_geoCts != null) { try { _geoCts.Cancel(); _geoCts.Dispose(); } catch { } _geoCts = null; }
+        // C-9 FIX: dispose _httpClient (bridge fetch) if window closed mid-captcha
+        try { _httpClient?.Dispose(); _httpClient = null; } catch { }
+        try { _cts?.Dispose(); _cts = null; } catch { }
         StopAllEngines(isClosing: true);
         DisposeTrayIcon();
     }

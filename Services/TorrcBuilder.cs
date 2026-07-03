@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using CrimsonOnion.Models;
 
 namespace CrimsonOnion.Services
@@ -31,7 +31,7 @@ namespace CrimsonOnion.Services
             },
             ["snowflake"] = new BridgeEntry
             {
-                Plugin = "ClientTransportPlugin snowflake exec ../../TorBin/lyrebird.exe",
+                Plugin = "ClientTransportPlugin snowflake exec %%LYREBIRD%%",
                 Lines = new[]
                 {
                     "Bridge snowflake 192.0.2.3:80 2B280B23E1107BB62ABFC40DDCC8824814F80A72 fingerprint=2B280B23E1107BB62ABFC40DDCC8824814F80A72 url=https://1098762253.rsc.cdn77.org/ fronts=app.datapacket.com,www.datapacket.com ice=stun:stun.epygi.com:3478,stun:stun.uls.co.za:3478,stun:stun.voipgate.com:3478,stun:stun.mixvoip.com:3478,stun:stun.telnyx.com:3478,stun:stun.hot-chilli.net:3478,stun:stun.fitauto.ru:3478,stun:stun.m-online.net:3478 utls-imitate=hellorandomizedalpn",
@@ -48,33 +48,33 @@ namespace CrimsonOnion.Services
             var cleanCfg = new List<string>();
             foreach (var line in rawLines)
             {
-                if (line.StartsWith("# --- MANAGED BRIDGES ---")) break;
-                if (!line.TrimStart().StartsWith("UseBridges") &&
-                    !line.TrimStart().StartsWith("ClientTransportPlugin") &&
-                    !line.TrimStart().StartsWith("Bridge ") &&
-                    !line.TrimStart().StartsWith("HTTPSProxy") &&
-                    !line.TrimStart().StartsWith("Socks5Proxy") &&
-                    !line.TrimStart().StartsWith("Socks5ProxyUsername") &&
-                    !line.TrimStart().StartsWith("Socks5ProxyPassword") &&
-                    !line.TrimStart().StartsWith("HTTPSProxyAuthenticator") &&
-                    !line.TrimStart().StartsWith("Log notice file") &&
-                    !line.TrimStart().StartsWith("MaxCircuitDirtiness") &&
-                    !line.TrimStart().StartsWith("ExitNodes") &&
-                    !line.TrimStart().StartsWith("StrictNodes") &&
-                    !line.TrimStart().StartsWith("CircuitBuildTimeout") &&
-                    !line.TrimStart().StartsWith("HardwareAccel") &&
-                    !line.TrimStart().StartsWith("KeepalivePeriod") &&
-                    !line.TrimStart().StartsWith("NewCircuitPeriod") &&
-                    !line.TrimStart().StartsWith("FascistFirewall") &&
-                    !line.TrimStart().StartsWith("ExcludeNodes") &&
-                    !line.TrimStart().StartsWith("ExcludeExitNodes") &&
-                    !line.TrimStart().StartsWith("DataDirectory") &&
-                    !line.TrimStart().StartsWith("GeoIPFile") &&
-                    !line.TrimStart().StartsWith("GeoIPv6File") &&
-                    !line.TrimStart().StartsWith("ControlPort") &&
-                    !line.TrimStart().StartsWith("SocksPort") &&
-                    !line.TrimStart().StartsWith("CookieAuthentication") &&
-                    !line.TrimStart().StartsWith("# --- DYNAMIC ROUTING ---") &&
+                if (line.StartsWith("# --- MANAGED BRIDGES ---", StringComparison.OrdinalIgnoreCase)) break;
+                if (!line.TrimStart().StartsWith("UseBridges", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("ClientTransportPlugin", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("Bridge ", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("HTTPSProxy", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("Socks5Proxy", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("Socks5ProxyUsername", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("Socks5ProxyPassword", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("HTTPSProxyAuthenticator", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("Log notice file", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("MaxCircuitDirtiness", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("ExitNodes", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("StrictNodes", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("CircuitBuildTimeout", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("HardwareAccel", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("KeepalivePeriod", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("NewCircuitPeriod", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("FascistFirewall", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("ExcludeNodes", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("ExcludeExitNodes", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("DataDirectory", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("GeoIPFile", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("GeoIPv6File", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("ControlPort", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("SocksPort", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("CookieAuthentication", StringComparison.OrdinalIgnoreCase) &&
+                    !line.TrimStart().StartsWith("# --- DYNAMIC ROUTING ---", StringComparison.OrdinalIgnoreCase) &&
                     !string.IsNullOrWhiteSpace(line.Trim()))
                 {
                     cleanCfg.Add(line.Trim());
@@ -92,6 +92,10 @@ namespace CrimsonOnion.Services
             if (match.Success && int.TryParse(match.Groups[1].Value, out int idx))
             {
                 torIndex = idx;
+            }
+            else
+            {
+                throw new Exception($"Could not extract Tor index from path: {path}");
             }
             cleanCfg.Add($"SocksPort 127.0.0.1:{19050 + torIndex}");
             cleanCfg.Add($"ControlPort {20050 + torIndex}");
@@ -183,9 +187,9 @@ namespace CrimsonOnion.Services
                     foreach (var bl in config.CustomBridgeLine.Split('\n'))
                     {
                         var trimmed = bl.Trim();
-                        if (!string.IsNullOrEmpty(trimmed) && !trimmed.StartsWith("ClientTransportPlugin"))
+                        if (!string.IsNullOrEmpty(trimmed) && !trimmed.StartsWith("ClientTransportPlugin", StringComparison.OrdinalIgnoreCase))
                         {
-                            cleanCfg.Add(trimmed.StartsWith("Bridge ") ? trimmed : $"Bridge {trimmed}");
+                            cleanCfg.Add(trimmed.StartsWith("Bridge ", StringComparison.OrdinalIgnoreCase) ? trimmed : $"Bridge {trimmed}");
                         }
                     }
                 }

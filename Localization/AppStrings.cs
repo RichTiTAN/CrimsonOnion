@@ -12,10 +12,10 @@ namespace CrimsonOnion.Localization
         }
 
 
-        public static void Apply(TextBlock? tb, string en, string fa, bool forceLtr = false)
+        public static void Apply(TextBlock? tb, string text, bool forceLtr = false)
         {
             if (tb == null) return;
-            tb.Text = IsPersian ? fa : en;
+            tb.Text = text;
             if (IsPersian)
             {
                 tb.FontFamily = new global::Avalonia.Media.FontFamily("Segoe UI");
@@ -35,10 +35,10 @@ namespace CrimsonOnion.Localization
             }
         }
 
-        public static void ApplyBtn(Button? btn, string en, string fa)
+        public static void ApplyBtn(Button? btn, string text)
         {
             if (btn == null) return;
-            btn.Content = IsPersian ? fa : en;
+            btn.Content = text;
             if (IsPersian)
             {
                 btn.FontFamily = new global::Avalonia.Media.FontFamily("Segoe UI");
@@ -49,10 +49,10 @@ namespace CrimsonOnion.Localization
             }
         }
 
-        public static void ApplyToolTip(Control? c, string en, string fa)
+        public static void ApplyToolTip(Control? c, string text)
         {
             if (c == null) return;
-            ToolTip.SetTip(c, IsPersian ? fa : en);
+            ToolTip.SetTip(c, text);
         }
 
         public static string SidebarConnection  => IsPersian ? "اتصال"             : "CONNECTION";
@@ -117,9 +117,9 @@ namespace CrimsonOnion.Localization
         public static string Disabled           => IsPersian ? "غیرفعال"           : "DISABLED";
         public static string Exclusive          => IsPersian ? "اختصاصی"           : "EXCLUSIVE";
         public static string Inclusive          => IsPersian ? "شامل"              : "INCLUSIVE";
-        public static string DomainsAndIps      => IsPersian ? "دامنه‌ها و IPها"   : "DOMAINS AND IPs";
+        public static string DomainsAndIps      => IsPersian ? "دامنه‌ها، IPها و پورت‌ها" : "DOMAINS, IPs & PORTS";
         public static string Applications       => IsPersian ? "برنامه‌ها"          : "APPLICATIONS";
-        public static string BlockedDomains     => IsPersian ? "دامنه‌ها و IPهای مسدود شده" : "BLOCKED DOMAINS AND IPs";
+        public static string BlockedDomains     => IsPersian ? "دامنه‌ها، IPها و پورت‌های مسدود شده" : "BLOCKED DOMAINS, IPs & PORTS";
         public static string Add                => IsPersian ? "افزودن"             : "ADD";
         public static string Edit               => IsPersian ? "ویرایش"             : "EDIT";
         public static string Browse             => IsPersian ? "مرور"               : "BROWSE";
@@ -155,11 +155,11 @@ namespace CrimsonOnion.Localization
         public static string TtClearProxy => IsPersian ? "پروکسی سیستم را غیرفعال میکند اما پورت محلی را باز نگه میدارد، بنابراین میتوانید برنامه ها را به صورت دستی تنظیم کنید تا از پروکسی استفاده کنند." : "Disables the system proxy but keeps the local port open, so you can manually configure specific applications to use the proxy.";
         
         public static string TtSplitDis     => IsPersian ? "اسپلیت تانل غیرفعال است." : "Split tunneling is disabled.";
-        public static string TtSplitExc     => IsPersian ? "فقط برنامه ها دامنه ها و ای پی های لیست شده در اینجا از پروکسی مستثنی می شوند." : "Only bypass the proxy for the apps, domains and IPs listed here.";
-        public static string TtSplitInc     => IsPersian ? "فقط برنامه ها دامنه ها و ای پی های لیست شده در اینجا از طریق پروکسی هدایت می شوند." : "Only route the apps, domains and IPs listed here through the proxy.";
+        public static string TtSplitExc     => IsPersian ? "فقط برنامه ها، دامنه ها، ای پی ها و پورت های لیست شده در اینجا از پروکسی مستثنی می شوند." : "Only bypass the proxy for the apps, domains, IPs and ports listed here.";
+        public static string TtSplitInc     => IsPersian ? "فقط برنامه ها، دامنه ها، ای پی ها و پورت های لیست شده در اینجا از طریق پروکسی هدایت می شوند." : "Only route the apps, domains, IPs and ports listed here through the proxy.";
 
-        public static string SplitExplanationExclusive => IsPersian ? "فقط برنامه ها، دامنه ها و آیپی های لیست شده در اینجا از پروکسی مستثنی می شوند." : "Only bypass the proxy for the apps, domains, and IPs listed below.";
-        public static string SplitExplanationInclusive => IsPersian ? "فقط برنامه ها، دامنه ها و آیپی های لیست شده در اینجا از طریق پروکسی هدایت می شوند." : "Only route the apps, domains, and IPs listed below through the proxy.";
+        public static string SplitExplanationExclusive => IsPersian ? "فقط برنامه ها، دامنه ها، آیپی ها و پورت های لیست شده در اینجا از پروکسی مستثنی می شوند." : "Only bypass the proxy for the apps, domains, IPs and ports listed below.";
+        public static string SplitExplanationInclusive => IsPersian ? "فقط برنامه ها، دامنه ها، آیپی ها و پورت های لیست شده در اینجا از طریق پروکسی هدایت می شوند." : "Only route the apps, domains, IPs and ports listed below through the proxy.";
     }
 }
 

@@ -4,6 +4,22 @@
              x:Class="CrimsonOnion.App"
              RequestedThemeVariant="Default">
 
+    <Application.Resources>
+        <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#B82E42"/>
+        <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#D13A51"/>
+        <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#932535"/>
+        <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="Transparent"/>
+        <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="Transparent"/>
+        <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="Transparent"/>
+        
+        <SolidColorBrush x:Key="SliderThumbBackground" Color="#B82E42"/>
+        <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="#D13A51"/>
+        <SolidColorBrush x:Key="SliderThumbBackgroundPressed" Color="#932535"/>
+        <SolidColorBrush x:Key="SliderTrackValueFill" Color="#B82E42"/>
+        <SolidColorBrush x:Key="SliderTrackValueFillPointerOver" Color="#D13A51"/>
+        <SolidColorBrush x:Key="SliderTrackValueFillPressed" Color="#932535"/>
+    </Application.Resources>
+
     <Application.Styles>
         <FluentTheme />
         <Style Selector="Control">

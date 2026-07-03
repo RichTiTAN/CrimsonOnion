@@ -27,12 +27,14 @@ namespace CrimsonOnion.Services
                 else
                 {
                     key.SetValue("ProxyEnable", 0, RegistryValueKind.DWord);
+                    key.DeleteValue("ProxyServer", false);
                 }
             }
             catch { }
 
             RefreshProxy();
         }
+
 
         public static void DisableSystemProxy()
         {
