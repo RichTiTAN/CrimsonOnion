@@ -56,8 +56,23 @@ public partial class MainWindow
         DefaultVersionPolicy = System.Net.Http.HttpVersionPolicy.RequestVersionExact
     };
 
+    private static readonly SolidColorBrush BrGray   = new SolidColorBrush(Color.FromRgb(160, 174, 192)); // #A0AEC0
+    private static readonly SolidColorBrush BrGreen  = new SolidColorBrush(Color.FromRgb(104, 211, 145)); // #68D391
+    private static readonly SolidColorBrush BrOrange = new SolidColorBrush(Color.FromRgb(246, 173, 85));  // #F6AD55
+    private static readonly SolidColorBrush BrRed    = new SolidColorBrush(Color.FromRgb(245, 101, 101)); // #F56565
+    private static readonly SolidColorBrush BrWhite  = new SolidColorBrush(Color.FromRgb(226, 232, 240)); // #E2E8F0
+    private static readonly SolidColorBrush BrAmber  = new SolidColorBrush(Color.FromRgb(221, 107, 32));  // #DD6B20
+    private static readonly SolidColorBrush BrPink   = new SolidColorBrush(Color.FromRgb(252, 129, 129)); // #FC8181
+
+    private static readonly System.Collections.Generic.Dictionary<string, string> _continentNames =
+        new System.Collections.Generic.Dictionary<string, string>
+        {
+            ["NA"] = "NORTH AMERICA", ["EU"] = "EUROPE",  ["AS"] = "ASIA",
+            ["SA"] = "SOUTH AMERICA", ["AF"] = "AFRICA",  ["OC"] = "OCEANIA", ["AN"] = "ANTARCTICA"
+        };
+
     private System.Threading.CancellationTokenSource? _geoCts;
-    private volatile bool _isFetchingStats = false; // H-3 FIX: volatile for thread visibility
+    private volatile bool _isFetchingStats = false; 
     private System.Collections.Generic.Queue<double> _upHistory = new();
     private System.Collections.Generic.Queue<double> _dnHistory = new();
     private double _upSum = 0;
@@ -160,6 +175,23 @@ public partial class MainWindow
         catch { _state.LanIp = "UNKNOWN"; }
     }
 
+    private void UpdateLocalPortUI()
+    {
+        var lblLocalIp = this.FindControl<global::Avalonia.Controls.TextBlock>("lblLocalIp");
+        if (lblLocalIp == null) return;
+        
+        lblLocalIp.ClearValue(global::Avalonia.Controls.TextBlock.ForegroundProperty);
+        
+        if (_state.IsConnected || _state.IsEngineRunning)
+        {
+            lblLocalIp.Text = "127.0.0.1:10818";
+        }
+        else
+        {
+            lblLocalIp.Text = CrimsonOnion.Localization.AppStrings.PortStatusDisconnected;
+        }
+    }
+
     private void UpdateLanPortUI()
     {
         var lblLanIp = this.FindControl<global::Avalonia.Controls.TextBlock>("lblLanIp");
@@ -169,14 +201,18 @@ public partial class MainWindow
 
         if (!_cfg.AllowLanConnections)
         {
-            lblLanIp.Text = "Disabled";
+            lblLanIp.Text = CrimsonOnion.Localization.AppStrings.PortStatusDisabled;
         }
         else
         {
             if (_state.IsConnected || _state.IsEngineRunning)
+            {
                 lblLanIp.Text = (_state.LanIp ?? "UNKNOWN") + ":10818";
+            }
             else
-                lblLanIp.Text = "Disconnected";
+            {
+                lblLanIp.Text = CrimsonOnion.Localization.AppStrings.PortStatusDisconnected;
+            }
         }
     }
 
@@ -201,14 +237,14 @@ public partial class MainWindow
                 var padded = i.ToString().PadLeft(2, '0');
                 if (i > _activeTorEngines)
                 {
-                    lbl.Text = $"TOR {padded}: DISABLED";
-                    lbl.Foreground = SolidColorBrush.Parse("#A0AEC0");
+                    lbl.Text = $"TOR {padded}: {CrimsonOnion.Localization.AppStrings.TorStatusDisabled}";
+                    lbl.Foreground = BrGray;
                     lbl.Opacity = 0.5;
                 }
                 else
                 {
-                    lbl.Text = $"TOR {padded}: OFFLINE";
-                    lbl.Foreground = SolidColorBrush.Parse("#A0AEC0");
+                    lbl.Text = $"TOR {padded}: {CrimsonOnion.Localization.AppStrings.TorStatusOffline}";
+                    lbl.Foreground = BrGray;
                     lbl.Opacity = 0.5;
                 }
             }
@@ -233,25 +269,40 @@ public partial class MainWindow
         if (lbl == null) return;
 
         var padded = torIdx.ToString().PadLeft(2, '0');
+
+        int uiSelCount = _activeTorEngines;
+        if (torIdx > uiSelCount && torIdx > _pollSelCount)
+        {
+            lbl.Text = $"TOR {padded}: {CrimsonOnion.Localization.AppStrings.TorStatusDisabled}";
+            lbl.Foreground = BrGray;
+            lbl.Opacity = 0.5;
+            return;
+        }
+        else if (torIdx > _pollSelCount && torIdx <= uiSelCount)
+        {
+            lbl.Text = $"TOR {padded}: {CrimsonOnion.Localization.AppStrings.TorStatusOffline}";
+            lbl.Foreground = BrGray;
+            lbl.Opacity = 0.5;
+            return;
+        }
+
         int pct = _state.TorPcts[torIdx - 1];
         if (pct == -2)
         {
             lbl.Text = $"TOR {padded}: ERR";
-            lbl.Foreground = SolidColorBrush.Parse("#F56565"); // red
+            lbl.Foreground = BrRed;
             lbl.Opacity = 1.0;
         }
         else if (pct >= 0)
         {
             lbl.Text = $"TOR {padded}: {(pct == 100 ? "100%" : $"{pct}%")}";
-            lbl.Foreground = pct == 100
-                ? SolidColorBrush.Parse("#68D391")   // green
-                : SolidColorBrush.Parse("#F6AD55");  // orange
+            lbl.Foreground = pct == 100 ? BrGreen : BrOrange;
             lbl.Opacity = 1.0;
         }
         else
         {
-            lbl.Text = $"TOR {padded}: BOOTING...";
-            lbl.Foreground = SolidColorBrush.Parse("#A0AEC0");
+            lbl.Text = $"TOR {padded}: {CrimsonOnion.Localization.AppStrings.TorStatusBooting}";
+            lbl.Foreground = BrGray;
             lbl.Opacity = 1.0;
         }
     }
@@ -267,12 +318,18 @@ public partial class MainWindow
 
             _toastTimer?.Stop();
 
-            toastText.Text = message.ToUpperInvariant();
+            toastText.Text = CrimsonOnion.Localization.AppStrings.IsPersian
+                ? message
+                : message.ToUpperInvariant();
+            toastText.FontFamily = CrimsonOnion.Localization.AppStrings.IsPersian
+                ? new global::Avalonia.Media.FontFamily("Segoe UI")
+                : global::Avalonia.Media.FontFamily.Default;
+            toastText.FlowDirection = CrimsonOnion.Localization.AppStrings.IsPersian
+                ? global::Avalonia.Media.FlowDirection.RightToLeft
+                : global::Avalonia.Media.FlowDirection.LeftToRight;
             toastText.FontWeight = global::Avalonia.Media.FontWeight.Bold;
             toastText.LetterSpacing = 1;
-            toastText.Foreground = success
-                ? SolidColorBrush.Parse("#68D391")
-                : SolidColorBrush.Parse("#FC8181");
+            toastText.Foreground = success ? BrGreen : BrPink;
 
             toast.Opacity = 0;
             toast.IsVisible = true;
@@ -305,7 +362,7 @@ public partial class MainWindow
 
         if (_state.IsConnected)
         {
-            ShowToast("Please reconnect to apply the changes.");
+            ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
             return;
         }
 
@@ -338,8 +395,8 @@ public partial class MainWindow
                 var lbl = this.FindControl<TextBlock>($"lblTor{i}");
                 if (lbl != null)
                 {
-                    lbl.Text       = $"TOR {i}: WAITING...";
-                    lbl.Foreground = SolidColorBrush.Parse("#A0AEC0");
+                    lbl.Text       = $"TOR {i}: {CrimsonOnion.Localization.AppStrings.TorStatusWaiting}";
+                    lbl.Foreground = BrGray;
                 }
 
                 TryDeleteFile(GetAppPath($@"Data\Tors\Tor{i}\tor.log"));
@@ -429,7 +486,7 @@ public partial class MainWindow
                     {
                         if (_state.TorPcts[torIdx - 1] != 100)
                         {
-                            _state.TorPcts[torIdx - 1] = -2; // Indicate failure
+                            _state.TorPcts[torIdx - 1] = -2; 
                             UpdateTorLabel(torIdx);
                         }
                     }
@@ -438,6 +495,8 @@ public partial class MainWindow
 
             _torControlClients.Add(controlClient);
             controlClient.Start();
+            
+            UpdateTorLabel(i);
         }
         }
     }
@@ -453,10 +512,11 @@ public partial class MainWindow
         _sessionClockTimer?.Stop();
         _statsTimer?.Stop();
         _pingTimer?.Stop();
-        if (_geoCts != null) { try { _geoCts.Cancel(); _geoCts.Dispose(); } catch { } _geoCts = null; } // H-9 FIX: null after dispose
-        _logTimer?.Stop(); // H-12 FIX: stop log timer on engine stop
-        _logClearTimer?.Stop(); // H-13 FIX: stop log clear timer on engine stop
+        if (_geoCts != null) { try { _geoCts.Cancel(); _geoCts.Dispose(); } catch { } _geoCts = null; } 
+        _logTimer?.Stop(); 
+        _logClearTimer?.Stop(); 
         ProxyService.SetSystemProxy(false);
+        RestoreSystemDns();
 
         foreach (var client in _torControlClients) client.Dispose();
         _torControlClients.Clear();
@@ -467,6 +527,7 @@ public partial class MainWindow
         KillManagedProcess("sing-box");
         KillPidRef(ref _xrayDebugPid);
         KillPidRef(ref _sbDebugPid);
+        KillPidRef(ref _adapterXrayDebugPid);
 
 
         _state.IsConnected      = false;
@@ -492,10 +553,8 @@ public partial class MainWindow
 
             var lblPing = this.FindControl<TextBlock>("lblPing");
             if (lblPing != null) lblPing.Text = "0 ms";
-            
-            var lblLocalIp = this.FindControl<TextBlock>("lblLocalIp");
-            if (lblLocalIp != null) lblLocalIp.Text = "Disconnected";
 
+            UpdateLocalPortUI();
             UpdateLanPortUI();
 
             var lblTimer = this.FindControl<TextBlock>("lblTimer");
@@ -520,7 +579,7 @@ public partial class MainWindow
                 if (txtConnectBtn != null)
                 {
                     txtConnectBtn.Text = CrimsonOnion.Localization.AppStrings.Connect;
-                    txtConnectBtn.Foreground = SolidColorBrush.Parse("#E2E8F0");
+                    txtConnectBtn.Foreground = BrWhite;
                 }
 
                 UpdateDisconnectedTorLabels();
@@ -576,18 +635,20 @@ public partial class MainWindow
         while (newLines.Count > 0 && string.IsNullOrWhiteSpace(newLines[newLines.Count - 1]))
             newLines.RemoveAt(newLines.Count - 1);
 
-        if (!string.Join("\n", lines).Equals(string.Join("\n", newLines)))
+        if (!lines.SequenceEqual(newLines))
             File.WriteAllLines(cfgPath, newLines);
     }
 
     private void CopyIp_PointerPressed(object? sender, global::Avalonia.Input.PointerPressedEventArgs e)
     {
         var tb = sender as TextBlock;
-        if (tb != null && !string.IsNullOrWhiteSpace(tb.Text) && !tb.Text.Contains("UNKNOWN"))
+        if (tb != null && !string.IsNullOrWhiteSpace(tb.Text) && tb.Text.Contains(":") && !tb.Text.Contains("UNKNOWN"))
         {
             var clipboard = global::Avalonia.Controls.TopLevel.GetTopLevel(this)?.Clipboard;
             if (clipboard != null) _ = clipboard.SetTextAsync(tb.Text);
-            ShowToast("Copied to clipboard!", success: true);
+            
+            string msg = CrimsonOnion.Localization.AppStrings.IsPersian ? "کپی شد!" : "Copied to clipboard!";
+            ShowToast(msg, success: true);
         }
     }
 
@@ -600,7 +661,6 @@ public partial class MainWindow
     }
 
     // -------------------------------------------------------------------------------------------------
-    // -------------------------------------------------------------------------------------------------─────────────────────────────────────────────────────────────────────
 
     private void btnConnect_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
     {
@@ -618,6 +678,25 @@ public partial class MainWindow
             ShowToast(msg);
         }
 
+        if (_cfg.EnableAdapterBinding && !string.IsNullOrWhiteSpace(_cfg.SelectedAdapterName))
+        {
+            var adapters = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
+            bool exists = false;
+            foreach (var adapter in adapters)
+            {
+                if (adapter.Name == _cfg.SelectedAdapterName && adapter.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up)
+                {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists)
+            {
+                ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian ? "آداپتور انتخاب شده در دسترس نیست!" : "Selected adapter is not available!");
+                return;
+            }
+        }
+
         StartEnginesAsync();
     }
 
@@ -630,22 +709,23 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"StartEnginesAsync failed: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"StartEnginesAsync failed: {ex.Message}\n{ex.StackTrace}");
             ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
-                ? "خطا در شروع موتور. لطفاً دوباره تلاش کنید."
-                : "Engine start failed. Please try again.");
+                ? $"خطا در شروع موتور: {ex.Message}"
+                : $"Engine start failed: {ex.Message}");
             StopAllEngines();
         }
     }
 
-    // C-1 FIX: extracted body so async void only wraps the try/catch
     private async Task StartEnginesAsyncCore()
     {
         _state.IsEngineRunning = true;
         UpdateLanIp();
 
+        ApplySystemDns();
+
         txtConnectBtn.Text = CrimsonOnion.Localization.AppStrings.IsPersian ? "در حال اتصال..." : "CONNECTING";
-        txtConnectBtn.Foreground = SolidColorBrush.Parse("#DD6B20");
+        txtConnectBtn.Foreground = BrAmber;
         UpdateRingAnimation("Connecting");
 
         foreach (var client in _torControlClients) client.Dispose();
@@ -657,6 +737,7 @@ public partial class MainWindow
         KillManagedProcess("sing-box");
         KillPidRef(ref _xrayDebugPid);
         KillPidRef(ref _sbDebugPid);
+        KillPidRef(ref _adapterXrayDebugPid);
 
         _bootstrapTimer?.Stop();
         _staggerTimer?.Stop();
@@ -686,6 +767,8 @@ public partial class MainWindow
 
         await Task.Delay(800);
         if (_state.AbortBoot) return;
+
+        StartAdapterXray();
 
         for (int i = 1; i <= 8; i++)
             TryDeleteFile(GetAppPath($@"Data\Tors\Tor{i}\tor.log"));
@@ -737,7 +820,7 @@ public partial class MainWindow
                         {
                             if (_state.TorPcts[torIdx - 1] != 100)
                             {
-                                _state.TorPcts[torIdx - 1] = -2; // Indicate failure
+                                _state.TorPcts[torIdx - 1] = -2; 
                                 UpdateTorLabel(torIdx);
                             }
                         }
@@ -745,6 +828,8 @@ public partial class MainWindow
                 };
                 _torControlClients.Add(controlClient);
                 controlClient.Start();
+                
+                UpdateTorLabel(idx);
             }
             }
 
@@ -773,7 +858,7 @@ public partial class MainWindow
             if (txtConnectBtn != null)
             {
                 txtConnectBtn.Text = CrimsonOnion.Localization.AppStrings.Connect;
-                txtConnectBtn.Foreground = SolidColorBrush.Parse("#E2E8F0");
+                txtConnectBtn.Foreground = BrWhite;
             }
             UpdateRingAnimation("Idle");
             return;
@@ -798,7 +883,8 @@ public partial class MainWindow
             if (DateTime.Now >= deadline)
             {
                 _bootstrapTimer?.Stop();
-                ShowToast("Bootstrap timed out. Try a different bridge type.");
+                double elapsed = Math.Round((DateTime.Now - (_state.SessionStartTime ?? DateTime.Now)).TotalSeconds, 1);
+                ShowToast($"Bootstrap timed out after {elapsed}s. Try a different bridge type.");
                 StopAllEngines();
             }
             return;
@@ -812,13 +898,6 @@ public partial class MainWindow
         var haExe = GetAppPath(@"Data\HAproxy\haproxy.exe");
         if (File.Exists(haExe))
             ProcessService.StartProcessDirect(haExe, "-f haproxy.cfg", _cfg.HaPath, hidden: !_cfg.DebugMode)?.Dispose();
-
-        KillManagedProcess("xray");
-        KillManagedProcess("sing-box");
-        KillPidRef(ref _xrayDebugPid);
-        KillPidRef(ref _sbDebugPid);
-
-
         _xrayBootTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
         _xrayBootTimer.Tick += (s2, e2) =>
         {
@@ -866,15 +945,13 @@ public partial class MainWindow
             if (txtConnectBtn != null)
             {
                 txtConnectBtn.Text = CrimsonOnion.Localization.AppStrings.ConnectedBtn;
-                txtConnectBtn.Foreground = SolidColorBrush.Parse("#68D391");
+                txtConnectBtn.Foreground = BrGreen;
             }
             UpdateRingAnimation("Connected");
 
             UpdateLanPortUI();
 
-            var lblLocalIp = this.FindControl<TextBlock>("lblLocalIp");
-            if (lblLocalIp != null)
-                lblLocalIp.Text = "127.0.0.1:10818";
+            UpdateLocalPortUI();
 
             StartSessionClock();
             StartGeoPing();
@@ -883,21 +960,63 @@ public partial class MainWindow
         };
         _xrayBootTimer.Start();
     }
+    private int? _adapterXrayDebugPid;
 
+    private void StartAdapterXray()
+    {
+        if (!_cfg.EnableAdapterBinding || string.IsNullOrWhiteSpace(_cfg.SelectedAdapterIp)) return;
+
+        var adapterXrayDir = GetAppPath(@"Data\Xray");
+        if (!Directory.Exists(adapterXrayDir)) Directory.CreateDirectory(adapterXrayDir);
+
+        var configJson = $$"""
+{
+  "log": { "loglevel": "warning" },
+  "inbounds": [
+    {
+      "port": 10819,
+      "listen": "127.0.0.1",
+      "protocol": "socks",
+      "settings": { "auth": "noauth", "udp": true }
+    }
+  ],
+  "outbounds": [
+    {
+      "protocol": "freedom",
+      "settings": {},
+      "sendThrough": "{{_cfg.SelectedAdapterIp}}"
+    }
+  ]
+}
+""";
+        File.WriteAllText(Path.Combine(adapterXrayDir, "adapter_config.json"), configJson);
+        
+        if (_cfg.DebugMode)
+        {
+            using var p = Process.Start(new ProcessStartInfo("cmd.exe",
+                $"/c \"title AdapterXrayDebug & .\\xray.exe run -c adapter_config.json || pause\"")
+                { WorkingDirectory = adapterXrayDir, UseShellExecute = true });
+            _adapterXrayDebugPid = p?.Id;
+        }
+        else
+        {
+            ProcessService.StartProcessDirect(GetAppPath(@"Data\Xray\xray.exe"), "run -c adapter_config.json", adapterXrayDir, hidden: true)?.Dispose();
+        }
+    }
 
     private void SmartRestartXray()
     {
         if (_state.IsConnected)
         {
             if (_cfg.LastXrayMode == "VPN Mode")
-                ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian ? "لطفاً برای اعمال ایمن تغییرات دوباره متصل شوید." : "Please reconnect to apply the changes safely.");
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectSafely);
             else
                 RestartXray(_cfg.LastXrayMode);
         }
         else if (_state.IsEngineRunning)
         {
             if (_cfg.LastXrayMode == "VPN Mode")
-                ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian ? "لطفاً برای اعمال تغییرات دوباره متصل شوید." : "Please reconnect to apply the changes.");
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
         }
     }
 
@@ -958,9 +1077,7 @@ public partial class MainWindow
                 UpdateLanIp();
                 UpdateLanPortUI();
 
-                var lblLocalIp = this.FindControl<TextBlock>("lblLocalIp");
-                if (lblLocalIp != null)
-                    lblLocalIp.Text = "127.0.0.1:10818";
+                UpdateLocalPortUI();
 
                 _pingTimer?.Stop();
                 var pt = new global::Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
@@ -975,7 +1092,6 @@ public partial class MainWindow
 
     private void StartSessionClock()
     {
-        _state.SessionStartTime = DateTime.Now;
 
         var panTimerContent = this.FindControl<StackPanel>("panTimerContent");
         if (panTimerContent != null) panTimerContent.IsVisible = true;
@@ -1108,7 +1224,7 @@ public partial class MainWindow
 
             if (btnGetWebTunnel != null) { btnGetWebTunnel.Content = "WEBTUNNEL"; btnGetWebTunnel.IsEnabled = true; }
             if (btnGetObfs4 != null)     { btnGetObfs4.Content     = "OBFS4";     btnGetObfs4.IsEnabled     = true; }
-            if (btnCaptchaSubmit != null) { btnCaptchaSubmit.Content = "SUBMIT";   btnCaptchaSubmit.IsEnabled = true; }
+            if (btnCaptchaSubmit != null) { btnCaptchaSubmit.Content = CrimsonOnion.Localization.AppStrings.Submit; btnCaptchaSubmit.IsEnabled = true; }
             if (panCaptcha != null) { panCaptcha.MaxHeight = 0; panCaptcha.MaxWidth = 0; panCaptcha.Margin = new global::Avalonia.Thickness(0); panCaptcha.Opacity = 0; panCaptcha.BorderThickness = new global::Avalonia.Thickness(0); }
         });
     }
@@ -1160,7 +1276,7 @@ public partial class MainWindow
                         }
                         if (panCaptcha != null) { panCaptcha.MaxHeight = 300; panCaptcha.MaxWidth = 160; panCaptcha.Margin = new global::Avalonia.Thickness(0,0,10,0); panCaptcha.Opacity = 1; panCaptcha.BorderThickness = new global::Avalonia.Thickness(1); }
                         if (txtCaptchaSol != null) { txtCaptchaSol.Text = ""; txtCaptchaSol.Focus(); }
-                        if (btnCaptchaSubmit != null) { btnCaptchaSubmit.Content = "SUBMIT"; btnCaptchaSubmit.IsEnabled = true; }
+                        if (btnCaptchaSubmit != null) { btnCaptchaSubmit.Content = CrimsonOnion.Localization.AppStrings.Submit; btnCaptchaSubmit.IsEnabled = true; }
                     });
                     return;
                 }
@@ -1200,7 +1316,7 @@ public partial class MainWindow
         if (string.IsNullOrWhiteSpace(solution)) return;
 
         var btnCaptchaSubmit = this.FindControl<global::Avalonia.Controls.Button>("btnCaptchaSubmit");
-        if (btnCaptchaSubmit != null) { btnCaptchaSubmit.Content = "VERIFYING..."; btnCaptchaSubmit.IsEnabled = false; }
+        if (btnCaptchaSubmit != null) { btnCaptchaSubmit.Content = CrimsonOnion.Localization.AppStrings.CaptchaVerifying; btnCaptchaSubmit.IsEnabled = false; }
 
         if (_moatIndex >= _moatEndpoints.Length)
         {
@@ -1267,7 +1383,8 @@ public partial class MainWindow
 
     private global::Avalonia.Threading.DispatcherTimer? _logTimer;
     private global::Avalonia.Threading.DispatcherTimer? _logClearTimer;
-    private long _lastXrayLogPos = 0; // H-4: access via Interlocked
+    private long _lastXrayLogPos = 0;
+    private volatile bool _isReadingLogs = false; 
     private readonly System.Collections.Generic.List<string> _xrayLogLines = new();
 
     private void StartLogsTimers()
@@ -1349,8 +1466,8 @@ public partial class MainWindow
                 if (lbl != null)
                 {
                     var padded = i.ToString().PadLeft(2, '0');
-                    lbl.Text = i <= selCount ? $"TOR {padded}: OFFLINE" : $"TOR {padded}: DISABLED";
-                    lbl.Foreground = SolidColorBrush.Parse("#A0AEC0"); // BrDarkGray equivalent
+                    lbl.Text = i <= selCount ? $"TOR {padded}: {CrimsonOnion.Localization.AppStrings.TorStatusOffline}" : $"TOR {padded}: {CrimsonOnion.Localization.AppStrings.TorStatusDisabled}";
+                    lbl.Foreground = BrGray; 
                     lbl.Opacity = 0.5;
                 }
             }
@@ -1368,42 +1485,46 @@ public partial class MainWindow
                 int uiSelCount = _activeTorEngines;
                 if (i > uiSelCount && i > _pollSelCount)
                 {
-                    lbl.Text = $"TOR {padded}: DISABLED";
-                    lbl.Foreground = SolidColorBrush.Parse("#A0AEC0");
+                    lbl.Text = $"TOR {padded}: {CrimsonOnion.Localization.AppStrings.TorStatusDisabled}";
+                    lbl.Foreground = BrGray;
                     lbl.Opacity = 0.5;
                 }
                 else if (i > _pollSelCount && i <= uiSelCount)
                 {
-                    lbl.Text = $"TOR {padded}: OFFLINE";
-                    lbl.Foreground = SolidColorBrush.Parse("#A0AEC0");
+                    lbl.Text = $"TOR {padded}: {CrimsonOnion.Localization.AppStrings.TorStatusOffline}";
+                    lbl.Foreground = BrGray;
                     lbl.Opacity = 0.5;
                 }
                 else
                 {
                     if (_state.TorPcts[i - 1] == -1)
                     {
-                        lbl.Text = $"TOR {padded}: BOOTING...";
-                        lbl.Foreground = SolidColorBrush.Parse("#A0AEC0");
+                        lbl.Text = $"TOR {padded}: {CrimsonOnion.Localization.AppStrings.TorStatusBooting}";
+                        lbl.Foreground = BrGray;
                         lbl.Opacity = 1.0;
                     }
                     else if (_state.TorPcts[i - 1] == 100)
                     {
                         lbl.Text = $"TOR {padded}: 100%";
-                        lbl.Foreground = SolidColorBrush.Parse("#68D391");
+                        lbl.Foreground = BrGreen;
                         lbl.Opacity = 1.0;
                     }
                     else
                     {
                         lbl.Text = $"TOR {padded}: {_state.TorPcts[i - 1]}%";
-                        lbl.Foreground = SolidColorBrush.Parse("#F6AD55");
+                        lbl.Foreground = BrOrange;
                         lbl.Opacity = 1.0;
                     }
                 }
             }
         }
 
+        if (_isReadingLogs) return;
+        _isReadingLogs = true;
         Task.Run(() =>
         {
+            try
+            {
             var newXrayLines = new Queue<string>(16);
             var xrayLogPath = GetAppPath(@"Data\Xray\access.log");
             if (File.Exists(xrayLogPath))
@@ -1458,6 +1579,8 @@ public partial class MainWindow
                     txtXrayLogs.CaretIndex = txtXrayLogs.Text.Length;
                 }
             });
+            }
+            finally { _isReadingLogs = false; }
         });
     }
 
@@ -1491,7 +1614,7 @@ public partial class MainWindow
 
         var lblCountry = this.FindControl<TextBlock>("lblCountryName");
         var lblPing = this.FindControl<TextBlock>("lblPing");
-        if (lblCountry != null) lblCountry.Text = "TRACING...";
+        if (lblCountry != null) lblCountry.Text = CrimsonOnion.Localization.AppStrings.GeoTracing;
         if (lblPing != null) lblPing.Text = "0 ms";
 
         if (_geoCts != null) { try { _geoCts.Cancel(); _geoCts.Dispose(); } catch { } }
@@ -1514,23 +1637,29 @@ public partial class MainWindow
 
                     var data = Newtonsoft.Json.Linq.JObject.Parse(result);
 
-                    var cMap = new System.Collections.Generic.Dictionary<string, string>
-                    {
-                        ["NA"] = "NORTH AMERICA", ["EU"] = "EUROPE", ["AS"] = "ASIA",
-                        ["SA"] = "SOUTH AMERICA", ["AF"] = "AFRICA", ["OC"] = "OCEANIA", ["AN"] = "ANTARCTICA"
-                    };
+                    var cMap = _continentNames;
                     var continentCode = data["continent_code"]?.ToString() ?? "";
+                    var countryCode   = data["country_code"]?.ToString() ?? "";
                     var continent     = cMap.TryGetValue(continentCode, out var c) ? c : continentCode;
+                    var country       = data["country"]?.ToString() ?? "";
+
+                    bool isFa = CrimsonOnion.Localization.AppStrings.IsPersian;
+                    
+                    if (isFa)
+                    {
+                        continent = CrimsonOnion.Localization.GeoTranslation.GetContinentFa(continentCode, continent);
+                        country   = CrimsonOnion.Localization.GeoTranslation.GetCountryFa(countryCode, country);
+                    }
 
                     string geoStr;
                     if (_cfg.EnableV2rayChain || _cfg.LastConfig == "Custom")
-                        geoStr = data["country"]?.ToString() ?? "";
+                        geoStr = country;
                     else if (_cfg.LastConfig == "Expert"
                              && !string.IsNullOrWhiteSpace(_cfg.ExpertExitNodes)
                              && !_cfg.ExpertExitNodes.Contains(","))
-                        geoStr = data["country"]?.ToString() ?? "";
+                        geoStr = country;
                     else if (_cfg.LastConfig != "Optimized" && _cfg.LastConfig != "Expert")
-                        geoStr = data["country"]?.ToString() ?? "";
+                        geoStr = country;
                     else
                         geoStr = continent;
 
@@ -1545,7 +1674,7 @@ public partial class MainWindow
                     _state.IsGeoTracing = false;
                     if (!_state.IsConnected) return;
 
-                    if (lblCountry != null) lblCountry.Text = "TIMEOUT";
+                    if (lblCountry != null) lblCountry.Text = CrimsonOnion.Localization.AppStrings.GeoTimeout;
                     if (lblPing != null) lblPing.Text = "0 ms";
                 });
             }
@@ -1887,7 +2016,6 @@ public partial class MainWindow
         CloseAllOverlays();
     }
 
-        // ========================================================================
     // ========================================================================
 
     private void btnSplitTunnel_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
@@ -1901,9 +2029,10 @@ public partial class MainWindow
             if (ldo != null) ldo.IsVisible = true;
         }
         var countriesPopup = this.FindControl<global::Avalonia.Controls.Primitives.Popup>("CountriesPopup");
-        if (countriesPopup != null && countriesPopup.IsOpen)
+        var languagePopup = this.FindControl<global::Avalonia.Controls.Primitives.Popup>("LanguagePopup");
+        if ((countriesPopup != null && countriesPopup.IsOpen) || (languagePopup != null && languagePopup.IsOpen))
         {
-            countriesPopup.IsOpen = false;
+            _ = ClosePopupAnimatedAsync();
         }
         var panSettingsOverlay = this.FindControl<global::Avalonia.Controls.Border>("panSettingsOverlay");
         if (panSettingsOverlay != null && panSettingsOverlay.IsVisible)
@@ -1932,8 +2061,6 @@ public partial class MainWindow
     }
 
 
-
-    // ========================================================================
     // ========================================================================
 
     private void btnSettings_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
@@ -1953,7 +2080,8 @@ public partial class MainWindow
         }
         }
         var countriesPopup = this.FindControl<global::Avalonia.Controls.Primitives.Popup>("CountriesPopup");
-        if (countriesPopup != null && countriesPopup.IsOpen)
+        var languagePopup = this.FindControl<global::Avalonia.Controls.Primitives.Popup>("LanguagePopup");
+        if ((countriesPopup != null && countriesPopup.IsOpen) || (languagePopup != null && languagePopup.IsOpen))
         {
             _ = ClosePopupAnimatedAsync();
         }
@@ -2074,14 +2202,14 @@ public partial class MainWindow
                 {
                     if (streamSettings["security"]?.ToString()?.ToLowerInvariant() == "reality")
                     {
-                        ShowToast("REALITY configs are not supported over Tor.");
+                        ShowToast(CrimsonOnion.Localization.AppStrings.ToastRealityNotSupported);
                         return;
                     }
                     
                     var net = streamSettings["network"]?.ToString()?.ToLowerInvariant();
                     if (net == "kcp" || net == "quic")
                     {
-                        ShowToast("KCP and QUIC transports are not supported over Tor.");
+                        ShowToast(CrimsonOnion.Localization.AppStrings.ToastKcpQuicNotSupported);
                         return;
                     }
                 }
@@ -2096,7 +2224,7 @@ public partial class MainWindow
                         {
                             if (port != 80 && port != 443)
                             {
-                                ShowToast("Only port 80 and 443 are supported.");
+                                ShowToast(CrimsonOnion.Localization.AppStrings.ToastPortsSupported);
                                 return;
                             }
                         }
@@ -2130,7 +2258,7 @@ public partial class MainWindow
                                 if (proc.ExitCode != 0)
                                 {
                                     string err = await errTask;
-                                    ShowToast("Xray config rejected. " + err.Substring(0, System.Math.Min(err.Length, 100)));
+                                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastXrayRejected + err.Substring(0, System.Math.Min(err.Length, 100)));
                                     return;
                                 }
                             }
@@ -2155,7 +2283,7 @@ public partial class MainWindow
             }
             catch (Exception)
             {
-                ShowToast("Invalid Xray JSON syntax!");
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastInvalidJson);
             }
         }
     }
@@ -2172,12 +2300,12 @@ public partial class MainWindow
         {
             if (text.Contains("security=reality", StringComparison.OrdinalIgnoreCase))
             {
-                ShowToast("REALITY configs are not supported over Tor.");
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastRealityNotSupported);
                 return;
             }
             if (text.Contains("type=kcp", StringComparison.OrdinalIgnoreCase) || text.Contains("net=kcp", StringComparison.OrdinalIgnoreCase) || text.Contains("type=quic", StringComparison.OrdinalIgnoreCase) || text.Contains("net=quic", StringComparison.OrdinalIgnoreCase))
             {
-                ShowToast("KCP and QUIC transports are not supported over Tor.");
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastKcpQuicNotSupported);
                 return;
             }
         }
@@ -2185,7 +2313,7 @@ public partial class MainWindow
         if (CrimsonOnion.Services.XrayLinkParser.TryParseLink(text, out string json))
         {
             txt.Text = json;
-            ShowToast("Link auto-converted to JSON!", success: true);
+            ShowToast(CrimsonOnion.Localization.AppStrings.ToastLinkConverted, success: true);
         }
     }
 
@@ -2217,11 +2345,11 @@ public partial class MainWindow
         }
         catch
         {
-            ShowToast("Failed to import JSON.");
+            ShowToast(CrimsonOnion.Localization.AppStrings.ToastFailedImport);
         }
     }
 
-    private void SettingTog_CheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    private async void SettingTog_CheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (_isInitializingSettings) return;
 
@@ -2235,13 +2363,12 @@ public partial class MainWindow
             case "btnBootTog":
                 try {
                     string exe = System.Environment.ProcessPath ?? "";
-                    string dir = System.IO.Path.GetDirectoryName(exe) ?? "";
-                    CrimsonOnion.Services.ProcessService.UpdateBootScheduledTask(val, exe);
+                    await CrimsonOnion.Services.ProcessService.UpdateBootScheduledTask(val, exe);
                     _cfg.LaunchOnBoot = val;
                 } catch (System.Exception ex) {
                     _cfg.LaunchOnBoot = false;
                     tog.IsChecked = false;
-                    ShowToast("Task failed: " + ex.Message);
+                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastTaskFailed + ex.Message);
                 }
                 break;
             case "btnAutoTog":
@@ -2298,24 +2425,24 @@ public partial class MainWindow
             sc.WorkingDirectory = _cfg.BaseDir;
             sc.Save();
 
-            ShowToast($"Shortcut created successfully!", success: true);
+            ShowToast(CrimsonOnion.Localization.AppStrings.ToastShortcutCreated, success: true);
         }
         catch
         {
-            ShowToast("Failed to create shortcut.");
+            ShowToast(CrimsonOnion.Localization.AppStrings.ToastShortcutFailed);
         }
     }
 
-    private void ApplyRoutingUI()
+    private void ApplyRoutingUI(bool showToast = true)
     {
         if (_cfg.LastConfig == "Optimized")
         {
-            txtCurrentRouting.Text = "OPTIMIZED";
+            txtCurrentRouting.Text = CrimsonOnion.Localization.AppStrings.RoutingOptimized;
             iconCurrentRouting.Data = global::Avalonia.Media.Geometry.Parse("M7 2v11h3v9l7-12h-4l4-8z");
         }
         else if (_cfg.LastConfig == "Expert")
         {
-            txtCurrentRouting.Text = "EXPERT";
+            txtCurrentRouting.Text = CrimsonOnion.Localization.AppStrings.RoutingExpert;
             iconCurrentRouting.Data = global::Avalonia.Media.Geometry.Parse("M19.43 12.98c.04-.32.06-.64.06-.98s-.02-.66-.06-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.06.65-.06.98s.02.66.06.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z");
         }
         else
@@ -2325,11 +2452,10 @@ public partial class MainWindow
             iconCurrentRouting.Data = global::Avalonia.Media.Geometry.Parse("M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z");
         }
 
-        if (_state.IsEngineRunning)
+        if (_state.IsEngineRunning && showToast)
         {
-            ShowToast("Please reconnect to apply the changes.");
+            ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
         }
-    
     }
         private void togXrayExitNode_IsCheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
     {
@@ -2357,6 +2483,7 @@ public partial class MainWindow
                         if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
                         if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
                     }
+                    return;
                 }
                 else if (!_cfg.EnableV2rayChain)
                 {
@@ -2502,7 +2629,7 @@ public partial class MainWindow
                 _cfg.EnableOutboundProxy = enable;
                 RequestConfigSave();
                 btnOutboundCancel_Click(sender, e);
-                if (_state.IsEngineRunning) ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian ? "لطفاً برای اعمال تغییرات دوباره متصل شوید." : "Please reconnect to apply the changes.");
+                if (_state.IsEngineRunning) ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
                 return;
             }
 
@@ -2520,7 +2647,7 @@ public partial class MainWindow
             
             RequestConfigSave();
             btnOutboundCancel_Click(sender, e);
-            if (_state.IsEngineRunning) ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian ? "لطفاً برای اعمال تغییرات دوباره متصل شوید." : "Please reconnect to apply the changes.");
+            if (_state.IsEngineRunning) ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
         }
     }
 
@@ -2539,6 +2666,23 @@ public partial class MainWindow
             {
                 panAuth.MaxHeight = 0;
                 panAuth.Opacity = 0;
+            }
+        }
+    }
+
+    private void togDirectUDP_IsCheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var tog = sender as global::Avalonia.Controls.ToggleSwitch;
+        if (tog != null)
+        {
+            _cfg.EnableDirectUDP = tog.IsChecked == true;
+            RequestConfigSave();
+            if (_state.IsEngineRunning)
+            {
+                if (_cfg.LastXrayMode == "Proxy Mode" || _cfg.LastXrayMode == "Clear Proxy")
+                    SmartRestartXray();
+                else
+                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
             }
         }
     }
@@ -2571,12 +2715,13 @@ public partial class MainWindow
                         if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
                         if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
                     }
+                    return;
                 }
                 else if (!_cfg.EnableOutboundProxy)
                 {
                     _cfg.EnableOutboundProxy = true;
                     RequestConfigSave();
-                    if (_state.IsEngineRunning) ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian ? "لطفاً برای اعمال تغییرات دوباره متصل شوید." : "Please reconnect to apply the changes.");
+                    if (_state.IsEngineRunning) ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
                 }
             }
             else
@@ -2585,142 +2730,596 @@ public partial class MainWindow
                 {
                     _cfg.EnableOutboundProxy = false;
                     RequestConfigSave();
-                    if (_state.IsEngineRunning) ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian ? "لطفاً برای اعمال تغییرات دوباره متصل شوید." : "Please reconnect to apply the changes.");
+                    if (_state.IsEngineRunning) ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
                 }
             }
+            UpdateAdapterBindingMutualExclusivity();
         }
     }
 
-    private void btnDnsToggle_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    private void btnAdapterBindingToggle_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
     {
-
         var src = e.Source as global::Avalonia.Controls.Control;
         while (src != null)
         {
-            if (src.Name == "togDnsSettings")
-                return;
+            if (src.Name == "togAdapterBinding") return;
             src = src.Parent as global::Avalonia.Controls.Control;
         }
 
-        var panToggle = this.FindControl<global::Avalonia.Controls.Border>("panDnsToggle");
-        var btnToggle = this.FindControl<global::Avalonia.Controls.Button>("btnDnsToggle");
-        var pan = this.FindControl<global::Avalonia.Controls.Border>("panDnsSettings");
-        var ico = this.FindControl<global::Avalonia.Controls.PathIcon>("icoDnsExpander");
-        
-        var cmbDohUrl = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbDohUrl");
-        var tog = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togDnsSettings");
-
-        if (pan != null && ico != null && cmbDohUrl != null && tog != null)
+        var pan = this.FindControl<global::Avalonia.Controls.Border>("panAdapterBinding");
+        var ico = this.FindControl<global::Avalonia.Controls.PathIcon>("icoAdapterBindingExpander");
+        var panToggle = this.FindControl<global::Avalonia.Controls.Border>("panAdapterBindingToggle");
+        var btnToggle = this.FindControl<global::Avalonia.Controls.Button>("btnAdapterBindingToggle");
+        if (pan != null)
         {
             if (pan.MaxHeight == 0)
             {
-                cmbDohUrl.Text = _cfg.UpstreamDohUrl;
-
-                pan.MaxHeight = 150;
+                pan.MaxHeight = 200;
                 pan.Opacity = 1;
-                
-                var transform = new global::Avalonia.Media.RotateTransform(180);
-                ico.RenderTransform = transform;
-                
+                if (ico != null) ico.RenderTransform = new global::Avalonia.Media.RotateTransform(180);
                 if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
                 if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
+                
+                var cmb = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbAdapters");
+                if (cmb != null && cmb.Items.Count == 0)
+                {
+                    btnScanAdapters_Click(null, null);
+                }
             }
             else
             {
-                btnDnsCancel_Click(sender, e);
+                pan.MaxHeight = 0;
+                pan.Opacity = 0;
+                if (ico != null) ico.RenderTransform = new global::Avalonia.Media.RotateTransform(0);
+                if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
+                if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
             }
         }
     }
 
-    private void btnDnsCancel_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        var pan = this.FindControl<global::Avalonia.Controls.Border>("panDnsSettings");
-        var ico = this.FindControl<global::Avalonia.Controls.PathIcon>("icoDnsExpander");
-        var panToggle = this.FindControl<global::Avalonia.Controls.Border>("panDnsToggle");
-        var btnToggle = this.FindControl<global::Avalonia.Controls.Button>("btnDnsToggle");
-        if (pan != null && ico != null)
-        {
-            pan.MaxHeight = 0;
-            pan.Opacity = 0;
-            var transform = new global::Avalonia.Media.RotateTransform(0);
-            ico.RenderTransform = transform;
-            if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
-            if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
-        }
-    }
-
-    private void btnDnsSave_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        var cmbDohUrl = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbDohUrl");
-        var tog = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togDnsSettings");
-
-        if (cmbDohUrl != null && tog != null)
-        {
-            var url = cmbDohUrl.Text?.Trim() ?? "";
-
-            _cfg.UpstreamDohUrl = url;
-            
-            _cfg.EnableUpstreamDoh = true;
-            global::Avalonia.Threading.Dispatcher.UIThread.Post(() => {
-                tog.IsChecked = true;
-            });
-            
-            RequestConfigSave();
-            btnDnsCancel_Click(sender, e);
-            if (_state.IsEngineRunning) SmartRestartXray();
-        }
-    }
-
-    private void togDnsSettings_IsCheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    private void togAdapterBinding_IsCheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         var tog = sender as global::Avalonia.Controls.ToggleSwitch;
         if (tog != null)
         {
             if (tog.IsChecked == true)
             {
-                if (string.IsNullOrWhiteSpace(_cfg.UpstreamDohUrl))
+                if (string.IsNullOrWhiteSpace(_cfg.SelectedAdapterIp))
                 {
-                    global::Avalonia.Threading.Dispatcher.UIThread.Post(() => {
-                        tog.IsChecked = false;
-                    });
-                    
-                    var pan = this.FindControl<global::Avalonia.Controls.Border>("panDnsSettings");
-                    var ico = this.FindControl<global::Avalonia.Controls.PathIcon>("icoDnsExpander");
-                    
+                    global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { tog.IsChecked = false; });
+                    var pan = this.FindControl<global::Avalonia.Controls.Border>("panAdapterBinding");
                     if (pan != null && pan.MaxHeight == 0)
                     {
-                        pan.MaxHeight = 150;
+                        pan.MaxHeight = 200;
                         pan.Opacity = 1;
-                        if (ico != null)
-                            ico.RenderTransform = new global::Avalonia.Media.RotateTransform(180);
+                        var ico = this.FindControl<global::Avalonia.Controls.PathIcon>("icoAdapterBindingExpander");
+                        if (ico != null) ico.RenderTransform = new global::Avalonia.Media.RotateTransform(180);
                         
-                        var panToggle = this.FindControl<global::Avalonia.Controls.Border>("panDnsToggle");
-                        var btnToggle = this.FindControl<global::Avalonia.Controls.Button>("btnDnsToggle");
-                        if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
-                        if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
+                        var cmb = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbAdapters");
+                        if (cmb != null && cmb.Items.Count == 0)
+                        {
+                            btnScanAdapters_Click(null, null);
+                        }
                     }
+                    return;
                 }
-                else if (!_cfg.EnableUpstreamDoh)
+                else if (!_cfg.EnableAdapterBinding)
                 {
-                    _cfg.EnableUpstreamDoh = true;
+                    _cfg.EnableAdapterBinding = true;
                     RequestConfigSave();
-                    if (_state.IsEngineRunning) SmartRestartXray();
+                    if (_state.IsEngineRunning) ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
                 }
             }
             else
             {
-                if (_cfg.EnableUpstreamDoh)
+                if (_cfg.EnableAdapterBinding)
                 {
-                    _cfg.EnableUpstreamDoh = false;
+                    _cfg.EnableAdapterBinding = false;
                     RequestConfigSave();
-                    if (_state.IsEngineRunning) SmartRestartXray();
+                    if (_state.IsEngineRunning) ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
+                }
+            }
+            UpdateAdapterBindingMutualExclusivity();
+        }
+    }
+
+    private void cmbAdapters_SelectionChanged(object? sender, global::Avalonia.Controls.SelectionChangedEventArgs e)
+    {
+        var cmb = sender as global::Avalonia.Controls.ComboBox;
+        if (cmb != null && cmb.SelectedItem is string selectedText && !string.IsNullOrWhiteSpace(selectedText))
+        {
+            var parts = selectedText.Split(new[] { " - " }, StringSplitOptions.None);
+            if (parts.Length == 2)
+            {
+                _cfg.SelectedAdapterName = parts[0];
+                _cfg.SelectedAdapterIp = parts[1];
+                RequestConfigSave();
+                if (_state.IsEngineRunning)
+                {
+                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
                 }
             }
         }
     }
+
+    private void btnScanAdapters_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs? e = null)
+    {
+        var cmb = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbAdapters");
+        if (cmb == null) return;
+        
+        cmb.Items.Clear();
+        var adapters = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
+        foreach (var adapter in adapters)
+        {
+            if (adapter.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up && 
+                adapter.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Loopback)
+            {
+                var properties = adapter.GetIPProperties();
+                var ipv4 = properties.UnicastAddresses.FirstOrDefault(a => a.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
+                if (ipv4 != null && !string.IsNullOrWhiteSpace(ipv4.Address.ToString()))
+                {
+                    cmb.Items.Add($"{adapter.Name} - {ipv4.Address}");
+                }
+            }
+        }
+        
+        if (!string.IsNullOrWhiteSpace(_cfg.SelectedAdapterName) && !string.IsNullOrWhiteSpace(_cfg.SelectedAdapterIp))
+        {
+            var toSelect = $"{_cfg.SelectedAdapterName} - {_cfg.SelectedAdapterIp}";
+            var itemsList = cmb.Items.Cast<string>().ToList();
+            var index = itemsList.IndexOf(toSelect);
+            if (index >= 0)
+            {
+                cmb.SelectedIndex = index;
+            }
+            else
+            {
+                ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian ? "آداپتور شبکه قبلی شما دیگر در دسترس نیست." : "Your previously selected network adapter is no longer available.");
+                _cfg.SelectedAdapterName = "";
+                _cfg.SelectedAdapterIp = "";
+                RequestConfigSave();
+                
+                if (cmb.Items.Count > 0) cmb.SelectedIndex = 0;
+            }
+        }
+        else if (cmb.Items.Count > 0)
+        {
+            cmb.SelectedIndex = 0;
+        }
+    }
+
+    // ─── System DNS state 
+    private string?   _savedDnsAdapterName;
+    private string[]? _savedDnsServers;
+
+    // ─── DNS Settings panel toggle (expand/collapse) 
+    private void btnDnsToggle_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var src = e.Source as global::Avalonia.Controls.Control;
+        while (src != null)
+        {
+            if (src.Name == "togDnsSettings" || src.Name == "togSysDns")
+                return;
+            src = src.Parent as global::Avalonia.Controls.Control;
+        }
+
+        var panToggle = this.FindControl<global::Avalonia.Controls.Border>("panDnsToggle");
+        var btnToggle = this.FindControl<global::Avalonia.Controls.Button>("btnDnsToggle");
+        var pan       = this.FindControl<global::Avalonia.Controls.Border>("panDnsSettings");
+        var ico       = this.FindControl<global::Avalonia.Controls.PathIcon>("icoDnsExpander");
+        var cmbDohUrl = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbDohUrl");
+
+        if (pan != null && ico != null && cmbDohUrl != null)
+        {
+            if (pan.MaxHeight == 0)
+            {
+                cmbDohUrl.Text = _cfg.UpstreamDohUrl;
+
+                var txtPrimary   = this.FindControl<global::Avalonia.Controls.TextBox>("txtSysDnsPrimary");
+                var txtSecondary = this.FindControl<global::Avalonia.Controls.TextBox>("txtSysDnsSecondary");
+                if (txtPrimary   != null) txtPrimary.Text   = _cfg.SystemDnsPrimary;
+                if (txtSecondary != null) txtSecondary.Text = _cfg.SystemDnsSecondary;
+
+                pan.MaxHeight = 340;
+                pan.Opacity   = 1;
+
+                var transform = new global::Avalonia.Media.RotateTransform(180);
+                ico.RenderTransform = transform;
+
+                if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
+                if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
+            }
+            else
+            {
+                CloseDnsPanel();
+            }
+        }
+    }
+
+    private void CloseDnsPanel()
+    {
+        var pan       = this.FindControl<global::Avalonia.Controls.Border>("panDnsSettings");
+        var ico       = this.FindControl<global::Avalonia.Controls.PathIcon>("icoDnsExpander");
+        var panToggle = this.FindControl<global::Avalonia.Controls.Border>("panDnsToggle");
+        var btnToggle = this.FindControl<global::Avalonia.Controls.Button>("btnDnsToggle");
+        if (pan != null && ico != null)
+        {
+            pan.MaxHeight = 0;
+            pan.Opacity   = 0;
+            var transform = new global::Avalonia.Media.RotateTransform(0);
+            ico.RenderTransform = transform;
+            if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
+            if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
+        }
+    }
+    // ─── DoH URL inline SAVE button 
+    private void btnDohSave_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var cmbDohUrl = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbDohUrl");
+        var tog       = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togDnsSettings");
+
+        if (cmbDohUrl != null && tog != null)
+        {
+            var url = cmbDohUrl.Text?.Trim() ?? "";
+            _cfg.UpstreamDohUrl    = url;
+            _cfg.EnableUpstreamDoh = true;
+
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() => {
+                tog.IsChecked = true;
+            });
+
+            RequestConfigSave();
+            if (_state.IsEngineRunning) SmartRestartXray();
+        }
+    }
+
+    // ─── DoH toggle 
+    private void togDnsSettings_IsCheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var tog = sender as global::Avalonia.Controls.ToggleSwitch;
+        if (tog == null) return;
+
+        if (tog.IsChecked == true)
+        {
+            var cmbDohUrl = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbDohUrl");
+            var liveUrl   = cmbDohUrl?.Text?.Trim() ?? "";
+            if (!string.IsNullOrWhiteSpace(liveUrl))
+                _cfg.UpstreamDohUrl = liveUrl;
+
+            if (string.IsNullOrWhiteSpace(_cfg.UpstreamDohUrl))
+            {
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { tog.IsChecked = false; });
+                return;
+            }
+
+            _cfg.EnableUpstreamDoh = true;
+            RequestConfigSave();
+            if (_state.IsEngineRunning) SmartRestartXray();
+        }
+        else
+        {
+            if (_cfg.EnableUpstreamDoh)
+            {
+                _cfg.EnableUpstreamDoh = false;
+                RequestConfigSave();
+                if (_state.IsEngineRunning) SmartRestartXray();
+            }
+        }
+    }
+
+    // ─── System DNS SAVE button 
+    private void btnSysDnsSave_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var txtPrimary   = this.FindControl<global::Avalonia.Controls.TextBox>("txtSysDnsPrimary");
+        var txtSecondary = this.FindControl<global::Avalonia.Controls.TextBox>("txtSysDnsSecondary");
+        var tog          = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togSysDns");
+
+        var primary   = txtPrimary?.Text?.Trim()   ?? "";
+        var secondary = txtSecondary?.Text?.Trim() ?? "";
+
+        if (!DnsService.IsValidIpv4(primary))
+        {
+            ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
+                ? "لطفاً یک آدرس IPv4 معتبر برای DNS اول وارد کنید."
+                : "Please enter a valid IPv4 address for the primary DNS.");
+            return;
+        }
+        if (!string.IsNullOrWhiteSpace(secondary) && !DnsService.IsValidIpv4(secondary))
+        {
+            ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
+                ? "لطفاً یک آدرس IPv4 معتبر برای DNS دوم وارد کنید."
+                : "Please enter a valid IPv4 address for the secondary DNS.");
+            return;
+        }
+
+        _cfg.SystemDnsPrimary   = primary;
+        _cfg.SystemDnsSecondary = secondary;
+        _cfg.EnableSystemDns    = true;
+
+        global::Avalonia.Threading.Dispatcher.UIThread.Post(() => {
+            if (tog != null) tog.IsChecked = true;
+        });
+
+        RequestConfigSave();
+        if (_state.IsEngineRunning)
+            ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectDns);
+    }
+
+    // ─── System DNS toggle 
+    private void togSysDns_IsCheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var tog = sender as global::Avalonia.Controls.ToggleSwitch;
+        if (tog == null) return;
+
+        if (tog.IsChecked == true)
+        {
+            var txtPrimary   = this.FindControl<global::Avalonia.Controls.TextBox>("txtSysDnsPrimary");
+            var txtSecondary = this.FindControl<global::Avalonia.Controls.TextBox>("txtSysDnsSecondary");
+            var livePrimary   = txtPrimary?.Text?.Trim()   ?? "";
+            var liveSecondary = txtSecondary?.Text?.Trim() ?? "";
+
+            if (!string.IsNullOrWhiteSpace(livePrimary))
+            {
+                if (!DnsService.IsValidIpv4(livePrimary))
+                {
+                    ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
+                        ? "لطفاً یک آدرس IPv4 معتبر برای DNS اول وارد کنید."
+                        : "Please enter a valid IPv4 address for the primary DNS.");
+                    global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { tog.IsChecked = false; });
+                    return;
+                }
+                if (!string.IsNullOrWhiteSpace(liveSecondary) && !DnsService.IsValidIpv4(liveSecondary))
+                {
+                    ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
+                        ? "لطفاً یک آدرس IPv4 معتبر برای DNS دوم وارد کنید."
+                        : "Please enter a valid IPv4 address for the secondary DNS.");
+                    global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { tog.IsChecked = false; });
+                    return;
+                }
+                _cfg.SystemDnsPrimary   = livePrimary;
+                _cfg.SystemDnsSecondary = liveSecondary;
+            }
+
+            if (string.IsNullOrWhiteSpace(_cfg.SystemDnsPrimary))
+            {
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { tog.IsChecked = false; });
+                return;
+            }
+
+            _cfg.EnableSystemDns = true;
+            RequestConfigSave();
+            if (_state.IsEngineRunning)
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectDns);
+        }
+        else
+        {
+            if (_cfg.EnableSystemDns)
+            {
+                _cfg.EnableSystemDns = false;
+                RequestConfigSave();
+                if (_state.IsEngineRunning)
+                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectDns);
+            }
+        }
+    }
+
+    // ─── Allow LAN expandable panel 
+    private void btnLanToggle_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var src = e.Source as global::Avalonia.Controls.Control;
+        while (src != null)
+        {
+            if (src.Name == "btnLanTog" || src.Name == "togLanAuth") return;
+            src = src.Parent as global::Avalonia.Controls.Control;
+        }
+
+        var panToggle = this.FindControl<global::Avalonia.Controls.Border>("panLanToggle");
+        var btnToggle = this.FindControl<global::Avalonia.Controls.Button>("btnLanToggle");
+        var pan       = this.FindControl<global::Avalonia.Controls.Border>("panLanSettings");
+        var ico       = this.FindControl<global::Avalonia.Controls.PathIcon>("icoLanExpander");
+
+        if (pan == null || ico == null) return;
+
+        if (pan.MaxHeight == 0)
+        {
+            var txtUser = this.FindControl<global::Avalonia.Controls.TextBox>("txtLanUser");
+            var txtPass = this.FindControl<global::Avalonia.Controls.TextBox>("txtLanPass");
+            var tog     = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togLanAuth");
+            if (txtUser != null) txtUser.Text = _cfg.LanAuthUsername;
+            if (txtPass != null) txtPass.Text = _cfg.LanAuthPassword;
+            if (tog     != null) tog.IsChecked = _cfg.EnableLanAuth;
+
+            pan.MaxHeight = 160;
+            pan.Opacity   = 1;
+            ico.RenderTransform = new global::Avalonia.Media.RotateTransform(180);
+            if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
+            if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
+        }
+        else
+        {
+            pan.MaxHeight = 0;
+            pan.Opacity   = 0;
+            ico.RenderTransform = new global::Avalonia.Media.RotateTransform(0);
+            if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
+            if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
+        }
+    }
+
+    // ─── LAN auth toggle 
+    private void togLanAuth_IsCheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var tog = sender as global::Avalonia.Controls.ToggleSwitch;
+        if (tog == null) return;
+
+        if (tog.IsChecked == true)
+        {
+            var txtUser = this.FindControl<global::Avalonia.Controls.TextBox>("txtLanUser");
+            var txtPass = this.FindControl<global::Avalonia.Controls.TextBox>("txtLanPass");
+            var liveUser = txtUser?.Text?.Trim() ?? "";
+            var livePass = txtPass?.Text?.Trim() ?? "";
+
+            if (!string.IsNullOrWhiteSpace(liveUser))
+            {
+                _cfg.LanAuthUsername = liveUser;
+                _cfg.LanAuthPassword = livePass;
+            }
+
+            if (string.IsNullOrWhiteSpace(_cfg.LanAuthUsername))
+            {
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { tog.IsChecked = false; });
+                return;
+            }
+
+            _cfg.EnableLanAuth = true;
+            RequestConfigSave();
+
+            if (_state.IsEngineRunning)
+            {
+                if (_pollMode == "VPN Mode")
+                    ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
+                        ? "\u0628\u0631\u0627\u06cc \u0627\u0639\u0645\u0627\u0644 \u062a\u063a\u06cc\u06cc\u0631\u0627\u062a \u062f\u0648\u0628\u0627\u0631\u0647 \u0645\u062a\u0635\u0644 \u0634\u0648\u06cc\u062f."
+                        : "Reconnect to apply the changes.");
+                else
+                    SmartRestartXray();
+            }
+        }
+        else
+        {
+            if (_cfg.EnableLanAuth)
+            {
+                _cfg.EnableLanAuth = false;
+                RequestConfigSave();
+
+                if (_state.IsEngineRunning)
+                {
+                    if (_pollMode == "VPN Mode")
+                        ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
+                            ? "\u0628\u0631\u0627\u06cc \u0627\u0639\u0645\u0627\u0644 \u062a\u063a\u06cc\u06cc\u0631\u0627\u062a \u062f\u0648\u0628\u0627\u0631\u0647 \u0645\u062a\u0635\u0644 \u0634\u0648\u06cc\u062f."
+                        : "Reconnect to apply the changes.");
+                    else
+                        SmartRestartXray();
+                }
+            }
+        }
+    }
+
+    // ─── LAN auth SAVE button 
+    private void btnLanAuthSave_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var txtUser = this.FindControl<global::Avalonia.Controls.TextBox>("txtLanUser");
+        var txtPass = this.FindControl<global::Avalonia.Controls.TextBox>("txtLanPass");
+        var tog     = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togLanAuth");
+
+        var user = txtUser?.Text?.Trim() ?? "";
+        var pass = txtPass?.Text?.Trim() ?? "";
+
+        if (string.IsNullOrWhiteSpace(user))
+        {
+            ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
+                ? "\u0644\u0637\u0641\u0627\u064b \u0646\u0627\u0645 \u06a9\u0627\u0631\u0628\u0631\u06cc \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f."
+                : "Please enter a username.");
+            return;
+        }
+
+        _cfg.LanAuthUsername = user;
+        _cfg.LanAuthPassword = pass;
+        _cfg.EnableLanAuth   = true;
+
+        global::Avalonia.Threading.Dispatcher.UIThread.Post(() => {
+            if (tog != null) tog.IsChecked = true;
+        });
+
+        RequestConfigSave();
+
+        if (_state.IsEngineRunning)
+        {
+            if (_pollMode == "VPN Mode")
+                ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
+                    ? "\u0628\u0631\u0627\u06cc \u0627\u0639\u0645\u0627\u0644 \u062a\u063a\u06cc\u06cc\u0631\u0627\u062a \u062f\u0648\u0628\u0627\u0631\u0647 \u0645\u062a\u0635\u0644 \u0634\u0648\u06cc\u062f."
+                    : "Reconnect to apply the changes.");
+            else
+                SmartRestartXray();
+        }
+        else
+        {
+            ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
+                ? "\u0627\u0637\u0644\u0627\u0639\u0627\u062a \u0648\u0631\u0648\u062f \u0630\u062e\u06cc\u0631\u0647 \u0634\u062f."
+                : "Credentials saved.", success: true);
+        }
+    }
+
+    // ─── LAN password show/hide eye 
+    private bool _lanPassVisible = false;
+    private void btnLanPassEye_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var txtPass = this.FindControl<global::Avalonia.Controls.TextBox>("txtLanPass");
+        var ico     = this.FindControl<global::Avalonia.Controls.PathIcon>("icoLanPassEye");
+        if (txtPass == null) return;
+
+        _lanPassVisible = !_lanPassVisible;
+        txtPass.PasswordChar = _lanPassVisible ? '\0' : '\u2022';
+
+        if (ico != null)
+            ico.Data = _lanPassVisible
+                ? global::Avalonia.Media.Geometry.Parse("M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z")
+                : global::Avalonia.Media.Geometry.Parse("M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z");
+    }
+
+    // ─── Apply system DNS at connect time 
+    private void ApplySystemDns()
+    {
+        if (!_cfg.EnableSystemDns) return;
+        if (string.IsNullOrWhiteSpace(_cfg.SystemDnsPrimary)) return;
+
+        try
+        {
+            System.Net.NetworkInformation.NetworkInterface? nic = null;
+            if (_cfg.EnableAdapterBinding && !string.IsNullOrWhiteSpace(_cfg.SelectedAdapterName))
+            {
+                nic = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+                    .FirstOrDefault(a => a.Name == _cfg.SelectedAdapterName && a.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up);
+            }
+            
+            if (nic == null)
+            {
+                nic = DnsService.GetMainPhysicalAdapter();
+            }
+
+            if (nic == null)
+            {
+                System.Diagnostics.Debug.WriteLine("[DnsService] No valid adapter found for DNS.");
+                return;
+            }
+            _savedDnsAdapterName = nic.Name;
+            _savedDnsServers     = DnsService.GetCurrentDns(nic);
+
+            DnsService.SetDns(nic.Name, _cfg.SystemDnsPrimary, _cfg.SystemDnsSecondary);
+            System.Diagnostics.Debug.WriteLine($"[DnsService] Applied DNS {_cfg.SystemDnsPrimary}/{_cfg.SystemDnsSecondary} to {nic.Name}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[DnsService] ApplySystemDns error: {ex.Message}");
+        }
+    }
+
+    // ─── Restore system DNS at disconnect / app close 
+    private void RestoreSystemDns()
+    {
+        if (_savedDnsAdapterName == null) return;
+
+        try
+        {
+            DnsService.RestoreDns(_savedDnsAdapterName, _savedDnsServers ?? Array.Empty<string>());
+            System.Diagnostics.Debug.WriteLine($"[DnsService] Restored DNS on {_savedDnsAdapterName}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[DnsService] RestoreSystemDns error: {ex.Message}");
+        }
+        finally
+        {
+            _savedDnsAdapterName = null;
+            _savedDnsServers     = null;
+        }
+    }
 }
-
-
-
-
-

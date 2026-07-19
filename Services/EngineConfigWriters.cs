@@ -82,10 +82,19 @@ namespace CrimsonOnion.Services
             string defaultTag = (config.EnableDirect && config.SplitTunnelMode == "INCLUSIVE" && config.LastXrayMode != "VPN Mode") ? "direct" : "proxy";
             rules.Add(new { type = "field", network = "tcp,udp", outboundTag = defaultTag });
 
+            bool lanAuth = config.AllowLanConnections
+                        && config.EnableLanAuth
+                        && !string.IsNullOrWhiteSpace(config.LanAuthUsername)
+                        && !string.IsNullOrWhiteSpace(config.LanAuthPassword);
+
+            object mixedSettings = lanAuth
+                ? (object)new { udp = true, accounts = new[] { new { user = config.LanAuthUsername, pass = config.LanAuthPassword } } }
+                : new { udp = true };
+
             var inbounds = new object[]
             {
                 new { listen = config.AllowLanConnections ? "0.0.0.0" : "127.0.0.1", port = 10818, protocol = "mixed", tag = "mixed-in",
-                      settings = new { udp = true },
+                      settings = mixedSettings,
                       sniffing = new { enabled = true, destOverride = new[] { "http", "tls", "quic", "fakedns" } } },
                 new { listen = "127.0.0.1", port = 10899, protocol = "dokodemo-door", tag = "api",
                       settings = new { address = "127.0.0.1" } }
@@ -149,10 +158,12 @@ namespace CrimsonOnion.Services
 
             outbounds.Add(new { tag = "direct", protocol = "freedom", settings = new { } });
 
-            var allRules = new List<object>
+            var allRules = new List<object>();
+            if (config.EnableDirectUDP)
             {
-                new { type = "field", inboundTag = new[] { "api" }, outboundTag = "api" }
-            };
+                allRules.Add(new { type = "field", network = "udp", outboundTag = "direct" });
+            }
+            allRules.Add(new { type = "field", inboundTag = new[] { "api" }, outboundTag = "api" });
             allRules.AddRange(rules);
 
             var cfg = new Dictionary<string, object>
@@ -242,6 +253,11 @@ namespace CrimsonOnion.Services
                 new { port = new[] { 53 }, network = "tcp", action = "hijack-dns" },
                 new { process_name = systemBypassApps.ToArray(), action = "route", outbound = "direct" }
             };
+
+            if (config.EnableDirectUDP)
+            {
+                sbRules.Add(new { network = "udp", action = "route", outbound = "direct" });
+            }
 
             if (userApps.Count > 0)
             {

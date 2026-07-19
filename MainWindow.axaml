@@ -30,7 +30,82 @@
         Background="Transparent" TransparencyLevelHint="Transparent" 
         Foreground="#E2E8F0" FontFamily="Segoe UI" ToolTip.ShowDelay="1500" ToolTip.BetweenShowDelay="0">
         
+    <Window.Resources>
+        <LinearGradientBrush x:Key="ThemeCrimsonBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#4A0811" Offset="0"/>
+            <GradientStop Color="#B82E42" Offset="0.5"/>
+            <GradientStop Color="#FF6B83" Offset="1"/>
+        </LinearGradientBrush>
+        
+        <LinearGradientBrush x:Key="ThemeBlueBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#1A365D" Offset="0"/>
+            <GradientStop Color="#3182CE" Offset="0.5"/>
+            <GradientStop Color="#90CDF4" Offset="1"/>
+        </LinearGradientBrush>
+        
+        <LinearGradientBrush x:Key="ThemePurpleBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#44337A" Offset="0"/>
+            <GradientStop Color="#805AD5" Offset="0.5"/>
+            <GradientStop Color="#D6BCFA" Offset="1"/>
+        </LinearGradientBrush>
+        
+        <LinearGradientBrush x:Key="ThemeGreenBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#1C4532" Offset="0"/>
+            <GradientStop Color="#38A169" Offset="0.5"/>
+            <GradientStop Color="#9AE6B4" Offset="1"/>
+        </LinearGradientBrush>
+        
+        <LinearGradientBrush x:Key="ThemePinkBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#702459" Offset="0"/>
+            <GradientStop Color="#D53F8C" Offset="0.5"/>
+            <GradientStop Color="#FBB6CE" Offset="1"/>
+        </LinearGradientBrush>
+        
+        <LinearGradientBrush x:Key="ThemeYellowBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#744210" Offset="0"/>
+            <GradientStop Color="#D69E2E" Offset="0.5"/>
+            <GradientStop Color="#FEFCBF" Offset="1"/>
+        </LinearGradientBrush>
+
+        <LinearGradientBrush x:Key="ThemeAllBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#FF6B83" Offset="0"/>
+            <GradientStop Color="#805AD5" Offset="0.5"/>
+            <GradientStop Color="#3182CE" Offset="1"/>
+        </LinearGradientBrush>
+
+        <LinearGradientBrush x:Key="ThemeCurrentBrush" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#4A0811" Offset="0"/>
+            <GradientStop Color="#E53E3E" Offset="0.5"/>
+            <GradientStop Color="#FEB2B2" Offset="1"/>
+        </LinearGradientBrush>
+    </Window.Resources>
+
     <Window.Styles>
+        <Style Selector="Button.ThemeColorButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+                <Style Selector="Rectangle.rectGradient">
+            <Setter Property="RenderTransformOrigin" Value="50%,50%"/>
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.4" Easing="CubicEaseInOut"/>
+                </Transitions>
+            </Setter>
+            <Style.Animations>
+                <Animation Duration="0:0:3" IterationCount="Infinite">
+                    <KeyFrame Cue="0%">
+                        <Setter Property="RotateTransform.Angle" Value="0" />
+                    </KeyFrame>
+                    <KeyFrame Cue="100%">
+                        <Setter Property="RotateTransform.Angle" Value="360" />
+                    </KeyFrame>
+                </Animation>
+            </Style.Animations>
+        </Style>
+        <Style Selector="Button:pointerover Rectangle.rectGradient">
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
         <Style Selector="ComboBox /template/ Popup > Border">
             <Style.Animations>
                 <Animation Duration="0:0:0.2" Easing="CubicEaseOut">
@@ -197,35 +272,44 @@
     <Border CornerRadius="8" ClipToBounds="True" Background="#0A0C0F" BorderBrush="#2D3748" BorderThickness="1">
         <Grid>
             <Canvas Height="0" IsHitTestVisible="False">
-                <Ellipse Width="1000" Height="1000" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-100,-100,0,0" IsHitTestVisible="False">
+                <Ellipse Width="1400" Height="1400" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-150,-350,0,0" IsHitTestVisible="False" Opacity="0.7">
                     <Ellipse.Fill>
-                        <RadialGradientBrush GradientOrigin="50%,50%" Center="50%,50%" RadiusX="50%" RadiusY="50%">
-                            <GradientStop Color="#B3C53030" Offset="0"/>
-                            <GradientStop Color="#001A1A1B" Offset="1"/>
-                        </RadialGradientBrush>
+                        <SolidColorBrush Color="{DynamicResource ThemeGlow}">
+                            <SolidColorBrush.Transitions>
+                                <Transitions>
+                                    <ColorTransition Property="Color" Duration="0:0:0.8" Easing="CubicEaseOut"/>
+                                </Transitions>
+                            </SolidColorBrush.Transitions>
+                        </SolidColorBrush>
                     </Ellipse.Fill>
+                    <Ellipse.OpacityMask>
+                        <RadialGradientBrush GradientOrigin="50%,50%" Center="50%,50%" RadiusX="50%" RadiusY="50%">
+                            <GradientStop Color="#FFFFFFFF" Offset="0"/>
+                            <GradientStop Color="#00FFFFFF" Offset="1"/>
+                        </RadialGradientBrush>
+                    </Ellipse.OpacityMask>
                     <Ellipse.Styles>
                         <Style Selector="Ellipse">
                             <Style.Animations>
                                 <Animation Duration="0:0:45" IterationCount="Infinite" PlaybackDirection="Alternate">
                                     <KeyFrame Cue="0%">
                                         <Setter Property="TranslateTransform.X" Value="0"/>
-                                        <Setter Property="TranslateTransform.Y" Value="0"/>
+                                        <Setter Property="TranslateTransform.Y" Value="100"/>
                                     </KeyFrame>
                                     <KeyFrame Cue="25%">
-                                        <Setter Property="TranslateTransform.X" Value="400"/>
-                                        <Setter Property="TranslateTransform.Y" Value="-150"/>
+                                        <Setter Property="TranslateTransform.X" Value="350"/>
+                                        <Setter Property="TranslateTransform.Y" Value="150"/>
                                     </KeyFrame>
                                     <KeyFrame Cue="50%">
-                                        <Setter Property="TranslateTransform.X" Value="200"/>
-                                        <Setter Property="TranslateTransform.Y" Value="450"/>
+                                        <Setter Property="TranslateTransform.X" Value="100"/>
+                                        <Setter Property="TranslateTransform.Y" Value="250"/>
                                     </KeyFrame>
                                     <KeyFrame Cue="75%">
                                         <Setter Property="TranslateTransform.X" Value="-300"/>
-                                        <Setter Property="TranslateTransform.Y" Value="-200"/>
+                                        <Setter Property="TranslateTransform.Y" Value="150"/>
                                     </KeyFrame>
                                     <KeyFrame Cue="100%">
-                                        <Setter Property="TranslateTransform.X" Value="-100"/>
+                                        <Setter Property="TranslateTransform.X" Value="-150"/>
                                         <Setter Property="TranslateTransform.Y" Value="180"/>
                                     </KeyFrame>
                                 </Animation>
@@ -265,37 +349,150 @@
                             <Button Classes="sidebarControl" Click="SidebarConnection_Click">
                                 <Grid ColumnDefinitions="50, *">
                                     <PathIcon Grid.Column="0" Data="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z" Width="22" Height="22" HorizontalAlignment="Center"/>
-                                    <TextBlock x:Name="lblSidebarConnection" Grid.Column="1" Classes="sidebarText" Text="CONNECTION" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" Margin="5,0,0,0"/>
+                                    <TextBlock x:Name="lblSidebarConnection" Grid.Column="1" Classes="sidebarText" Text="CONNECTION" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" Margin="5,0,3,0"/>
                                 </Grid>
                             </Button>
                             
                             <Button x:Name="btnCountries" Classes="sidebarControl" Click="SidebarCountries_Click" >
                                 <Grid ColumnDefinitions="50, *">
                                     <PathIcon Grid.Column="0" Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" Width="22" Height="22" HorizontalAlignment="Center"/>
-                                    <TextBlock x:Name="lblSidebarCountries" Grid.Column="1" Classes="sidebarText" Text="COUNTRIES" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" Margin="5,0,0,0"/>
+                                    <TextBlock x:Name="lblSidebarCountries" Grid.Column="1" Classes="sidebarText" Text="COUNTRIES" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" Margin="5,0,3,0"/>
                                 </Grid>
                             </Button>
 
                             <Button x:Name="btnSplitTunnel" Classes="sidebarControl" Click="btnSplitTunnel_Click" >
                                 <Grid ColumnDefinitions="50, *">
                                     <PathIcon Grid.Column="0" Data="M15 3l2.3 2.3-2.89 2.87 1.42 1.42L18.7 6.7 21 9V3zM3 9l2.3-2.3 2.87 2.89 1.42-1.42L6.7 5.3 9 3H3zm6 12l-2.3-2.3 2.89-2.87-1.42-1.42L5.3 17.3 3 15v6zm12-6l-2.3 2.3-2.87-2.89-1.42 1.42 2.89 2.87L15 21h6z" Width="20" Height="20" HorizontalAlignment="Center"/>
-                                    <TextBlock x:Name="lblSidebarSplitTunnel" Grid.Column="1" Classes="sidebarText" Text="SPLIT TUNNEL" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" Margin="5,0,0,0"/>
+                                    <TextBlock x:Name="lblSidebarSplitTunnel" Grid.Column="1" Classes="sidebarText" Text="SPLIT TUNNEL" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" Margin="5,0,3,0"/>
                                 </Grid>
                             </Button>
 
                             <Button x:Name="btnSettings" Classes="sidebarControl" Click="btnSettings_Click">
                                 <Grid ColumnDefinitions="50, *">
                                     <PathIcon Grid.Column="0" Data="M19.43 12.98c.04-.32.07-.64.07-.98 0-.34-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65A.488.488 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.5.42h4c.25 0 .46-.18.5-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z" Width="22" Height="22" HorizontalAlignment="Center"/>
-                                    <TextBlock x:Name="lblSidebarSettings" Grid.Column="1" Classes="sidebarText" Text="SETTINGS" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" Margin="5,0,0,0"/>
+                                    <TextBlock x:Name="lblSidebarSettings" Grid.Column="1" Classes="sidebarText" Text="SETTINGS" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" Margin="5,0,3,0"/>
                                 </Grid>
                             </Button>
 
                             <Button Classes="sidebarControl" Click="SidebarAbout_Click">
                                 <Grid ColumnDefinitions="50, *">
                                     <PathIcon Grid.Column="0" Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" Width="22" Height="22" HorizontalAlignment="Center"/>
-                                    <TextBlock x:Name="lblSidebarAbout" Grid.Column="1" Classes="sidebarText" Text="ABOUT" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" Margin="5,0,0,0"/>
+                                    <TextBlock x:Name="lblSidebarAbout" Grid.Column="1" Classes="sidebarText" Text="ABOUT" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" Margin="5,0,3,0"/>
                                 </Grid>
                             </Button>
+                            <Button x:Name="btnThemes" Classes="sidebarControl" Click="SidebarThemes_Click" Height="40" Padding="0">
+                                <Button.Styles>
+                                    <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                    </Style>
+                                </Button.Styles>
+                                <Panel>
+                                    <Border x:Name="rectAllThemes" Opacity="0" CornerRadius="12" ClipToBounds="True">
+                                        <Border.Transitions>
+                                            <Transitions>
+                                                <DoubleTransition Property="Opacity" Duration="0:0:0.3"/>
+                                            </Transitions>
+                                        </Border.Transitions>
+                                        <Panel Classes="animatedGradient" Background="Transparent" ClipToBounds="True">
+                                            <Rectangle Fill="{DynamicResource ThemeAllBrush}" RadiusX="12" RadiusY="12"/>
+                                            <Rectangle Classes="rectGradient" Width="500" Height="500" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{DynamicResource ThemeAllBrush}">
+                                                <Rectangle.RenderTransform><RotateTransform Angle="0"/></Rectangle.RenderTransform>
+                                            </Rectangle>
+                                        </Panel>
+                                    </Border>
+                                    <Grid ColumnDefinitions="50, *" Margin="0,0,0,0">
+                                        <Border x:Name="borderCurrentThemeIcon" Grid.Column="0" Grid.ColumnSpan="2" Height="40" CornerRadius="12" HorizontalAlignment="Stretch" Margin="5,0,5,0" ClipToBounds="True">
+                                            <Panel x:Name="panCurrentThemeIcon" Classes="animatedGradient" Background="Transparent" ClipToBounds="True">
+                                                <Panel.Transitions>
+                                                    <Transitions>
+                                                        <DoubleTransition Property="Opacity" Duration="0:0:0.3"/>
+                                                    </Transitions>
+                                                </Panel.Transitions>
+<Rectangle Fill="{DynamicResource ThemeCurrentBrush}" RadiusX="12" RadiusY="12"/>
+<Rectangle Classes="rectGradient" Width="500" Height="500" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{DynamicResource ThemeCurrentBrush}">
+    <Rectangle.RenderTransform><RotateTransform Angle="0"/></Rectangle.RenderTransform>
+</Rectangle>
+                                            </Panel>
+                                        </Border>
+                                    </Grid>
+                                </Panel>
+                            </Button>
+                            <Border x:Name="panThemeSelector" IsVisible="True" Opacity="0" MaxHeight="0" ClipToBounds="True">
+                                <Border.Transitions>
+                                    <Transitions>
+                                        <DoubleTransition Property="Opacity" Duration="0:0:0.3"/>
+                                        <DoubleTransition Property="MaxHeight" Duration="0:0:0.3" Easing="CubicEaseOut"/>
+                                    </Transitions>
+                                </Border.Transitions>
+                                <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto" Margin="6,5,6,5">
+                                    <!-- Crimson -->
+                                    <Button Classes="ThemeColorButton" Grid.Row="0" Grid.Column="0" Cursor="Hand" Click="ThemeSelect_Click" CommandParameter="Crimson" Margin="0,0,2.5,5" Background="Transparent" Padding="0" BorderThickness="0" HorizontalAlignment="Stretch">
+                                        <Border Height="40" HorizontalAlignment="Stretch" CornerRadius="12" ClipToBounds="True">
+                                            <Panel Classes="animatedGradient" Background="Transparent">
+<Rectangle Fill="{DynamicResource ThemeCrimsonBrush}" RadiusX="12" RadiusY="12"/>
+<Rectangle Classes="rectGradient" Width="200" Height="200" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{DynamicResource ThemeCrimsonBrush}">
+    <Rectangle.RenderTransform><RotateTransform Angle="0"/></Rectangle.RenderTransform>
+</Rectangle>
+                                            </Panel>
+                                        </Border>
+                                    </Button>
+                                    <!-- Blue -->
+                                    <Button Classes="ThemeColorButton" Grid.Row="0" Grid.Column="1" Cursor="Hand" Click="ThemeSelect_Click" CommandParameter="Blue" Margin="2.5,0,0,5" Background="Transparent" Padding="0" BorderThickness="0" HorizontalAlignment="Stretch">
+                                        <Border Height="40" HorizontalAlignment="Stretch" CornerRadius="12" ClipToBounds="True">
+                                            <Panel Classes="animatedGradient" Background="Transparent">
+<Rectangle Fill="{DynamicResource ThemeBlueBrush}" RadiusX="12" RadiusY="12"/>
+<Rectangle Classes="rectGradient" Width="200" Height="200" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{DynamicResource ThemeBlueBrush}">
+    <Rectangle.RenderTransform><RotateTransform Angle="0"/></Rectangle.RenderTransform>
+</Rectangle>
+                                            </Panel>
+                                        </Border>
+                                    </Button>
+                                    <!-- Purple -->
+                                    <Button Classes="ThemeColorButton" Grid.Row="1" Grid.Column="0" Cursor="Hand" Click="ThemeSelect_Click" CommandParameter="Purple" Margin="0,0,2.5,5" Background="Transparent" Padding="0" BorderThickness="0" HorizontalAlignment="Stretch">
+                                        <Border Height="40" HorizontalAlignment="Stretch" CornerRadius="12" ClipToBounds="True">
+                                            <Panel Classes="animatedGradient" Background="Transparent">
+<Rectangle Fill="{DynamicResource ThemePurpleBrush}" RadiusX="12" RadiusY="12"/>
+<Rectangle Classes="rectGradient" Width="200" Height="200" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{DynamicResource ThemePurpleBrush}">
+    <Rectangle.RenderTransform><RotateTransform Angle="0"/></Rectangle.RenderTransform>
+</Rectangle>
+                                            </Panel>
+                                        </Border>
+                                    </Button>
+                                    <!-- Green -->
+                                    <Button Classes="ThemeColorButton" Grid.Row="1" Grid.Column="1" Cursor="Hand" Click="ThemeSelect_Click" CommandParameter="Green" Margin="2.5,0,0,5" Background="Transparent" Padding="0" BorderThickness="0" HorizontalAlignment="Stretch">
+                                        <Border Height="40" HorizontalAlignment="Stretch" CornerRadius="12" ClipToBounds="True">
+                                            <Panel Classes="animatedGradient" Background="Transparent">
+<Rectangle Fill="{DynamicResource ThemeGreenBrush}" RadiusX="12" RadiusY="12"/>
+<Rectangle Classes="rectGradient" Width="200" Height="200" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{DynamicResource ThemeGreenBrush}">
+    <Rectangle.RenderTransform><RotateTransform Angle="0"/></Rectangle.RenderTransform>
+</Rectangle>
+                                            </Panel>
+                                        </Border>
+                                    </Button>
+                                    <!-- Pink -->
+                                    <Button Classes="ThemeColorButton" Grid.Row="2" Grid.Column="0" Cursor="Hand" Click="ThemeSelect_Click" CommandParameter="Pink" Margin="0,0,2.5,0" Background="Transparent" Padding="0" BorderThickness="0" HorizontalAlignment="Stretch">
+                                        <Border Height="40" HorizontalAlignment="Stretch" CornerRadius="12" ClipToBounds="True">
+                                            <Panel Classes="animatedGradient" Background="Transparent">
+<Rectangle Fill="{DynamicResource ThemePinkBrush}" RadiusX="12" RadiusY="12"/>
+<Rectangle Classes="rectGradient" Width="200" Height="200" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{DynamicResource ThemePinkBrush}">
+    <Rectangle.RenderTransform><RotateTransform Angle="0"/></Rectangle.RenderTransform>
+</Rectangle>
+                                            </Panel>
+                                        </Border>
+                                    </Button>
+                                    <!-- Yellow -->
+                                    <Button Classes="ThemeColorButton" Grid.Row="2" Grid.Column="1" Cursor="Hand" Click="ThemeSelect_Click" CommandParameter="Yellow" Margin="2.5,0,0,0" Background="Transparent" Padding="0" BorderThickness="0" HorizontalAlignment="Stretch">
+                                        <Border Height="40" HorizontalAlignment="Stretch" CornerRadius="12" ClipToBounds="True">
+                                            <Panel Classes="animatedGradient" Background="Transparent">
+<Rectangle Fill="{DynamicResource ThemeYellowBrush}" RadiusX="12" RadiusY="12"/>
+<Rectangle Classes="rectGradient" Width="200" Height="200" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{DynamicResource ThemeYellowBrush}">
+    <Rectangle.RenderTransform><RotateTransform Angle="0"/></Rectangle.RenderTransform>
+</Rectangle>
+                                            </Panel>
+                                        </Border>
+                                    </Button>
+                                </Grid>
+                            </Border>
                         </StackPanel>
                     </Border>
                     
@@ -320,13 +517,14 @@
                                       <Panel>
                                           <Panel HorizontalAlignment="Center" VerticalAlignment="Center">
                                               <Rectangle Width="800" Height="800" Margin="-400">
+                                                  <Rectangle.RenderTransform><RotateTransform Angle="0"/></Rectangle.RenderTransform>
                                                   <Rectangle.Fill>
                                                       <ConicGradientBrush Center="50%,50%" Angle="0">
                                                           <GradientStop Color="#00000000" Offset="0"/>
-                                                          <GradientStop Color="#FFDD6B20" Offset="0.1"/>
+                                                          <GradientStop Color="{DynamicResource ThemeGlow}" Offset="0.1"/>
                                                           <GradientStop Color="#00000000" Offset="0.15"/>
                                                           <GradientStop Color="#00000000" Offset="0.5"/>
-                                                          <GradientStop Color="#FFDD6B20" Offset="0.6"/>
+                                                          <GradientStop Color="{DynamicResource ThemeGlow}" Offset="0.6"/>
                                                           <GradientStop Color="#00000000" Offset="0.65"/>
                                                       </ConicGradientBrush>
                                                   </Rectangle.Fill>
@@ -365,9 +563,11 @@
                                               
                                               <Border Grid.Column="1" Width="1" Background="#2D3748" Margin="0,6,0,6"/>
                                               
-                                              <Button x:Name="btnVpnMode" Grid.Column="2" Classes="modeBtn" Background="Transparent" BorderThickness="0" CornerRadius="6" Padding="14,8,14,8" Margin="2,2,2,2" Cursor="Hand" Click="Mode_Click" >
-                                                  <TextBlock x:Name="lblVpnMode" Classes="modeText" Text="VPN MODE" FontSize="11" FontWeight="SemiBold"/>
-                                              </Button>
+                                              <Panel x:Name="panVpnMode" Grid.Column="2" Background="Transparent" Margin="2,2,2,2">
+                                                  <Button x:Name="btnVpnMode" Classes="modeBtn" Background="Transparent" BorderThickness="0" CornerRadius="6" Padding="14,8,14,8" Cursor="Hand" Click="Mode_Click" >
+                                                      <TextBlock x:Name="lblVpnMode" Classes="modeText" Text="VPN MODE" FontSize="11" FontWeight="SemiBold"/>
+                                                  </Button>
+                                              </Panel>
                                               
                                               <Border Grid.Column="3" Width="1" Background="#2D3748" Margin="0,6,0,6"/>
                                               
@@ -508,19 +708,19 @@
                                                 <TextBlock x:Name="lblTorEngines" Text="TOR ENGINES" FontSize="11" FontWeight="SemiBold" Foreground="#8B949E" LetterSpacing="1" VerticalAlignment="Center"/>
                                             </StackPanel>
                                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="15,0,0,0">
-                                                <Slider x:Name="sldEngines" Minimum="1" Maximum="8" Value="1" TickFrequency="1" IsSnapToTickEnabled="True" Width="220" Margin="0,-12,0,-12" VerticalAlignment="Center" ValueChanged="Engines_ValueChanged" Foreground="#B82E42">
+                                                <Slider x:Name="sldEngines" Minimum="1" Maximum="8" Value="1" TickFrequency="1" IsSnapToTickEnabled="True" Width="220" Margin="0,-12,0,-12" VerticalAlignment="Center" ValueChanged="Engines_ValueChanged" Foreground="{DynamicResource ThemeAccent}">
                                                     <Slider.Styles>
                                                         <Style Selector="Slider /template/ Thumb">
                                                             <Setter Property="Template">
                                                                 <ControlTemplate>
-                                                                    <Border Background="#B82E42" Width="24" Height="10" CornerRadius="4" />
+                                                                    <Border Background="{DynamicResource ThemeAccent}" Width="24" Height="10" CornerRadius="4" />
                                                                 </ControlTemplate>
                                                             </Setter>
                                                         </Style>
                                                         <Style Selector="Slider:pointerover /template/ Thumb">
                                                             <Setter Property="Template">
                                                                 <ControlTemplate>
-                                                                    <Border Background="#D13A51" Width="24" Height="10" CornerRadius="4" />
+                                                                    <Border Background="{DynamicResource ThemeAccentPointerOver}" Width="24" Height="10" CornerRadius="4" />
                                                                 </ControlTemplate>
                                                             </Setter>
                                                         </Style>
@@ -596,20 +796,16 @@
                                                             </Panel>
 
                                                             <Button Grid.Row="1" Classes="graphHover" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="-3,0,0,0" Cursor="Hand" HorizontalAlignment="Left" CornerRadius="4" VerticalAlignment="Top">
-                                                                <StackPanel Orientation="Horizontal" Spacing="15">
-                                                                    <StackPanel Orientation="Vertical" Spacing="2">
-                                                                        <TextBlock x:Name="lblLocalPortLabel" Text="OPEN LOCAL PORT:" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0"/>
-                                                                        <TextBlock x:Name="lblLocalIp" Text="Disconnected" FontSize="11" FontWeight="Bold" FontFamily="Consolas" Classes="portHoverText" PointerPressed="CopyIp_PointerPressed"/>
-                                                                    </StackPanel>
-                                                                    <StackPanel Orientation="Vertical" Spacing="2">
-                                                                        <TextBlock x:Name="lblLanPortLabel" Text="OPEN LAN PORT:" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0"/>
-                                                                        <TextBlock x:Name="lblLanIp" Text="Disconnected" FontSize="11" FontWeight="Bold" FontFamily="Consolas" Classes="portHoverText" PointerPressed="CopyIp_PointerPressed"/>
-                                                                    </StackPanel>
-                                                                </StackPanel>
+                                                                <Grid ColumnDefinitions="Auto, 15, Auto" RowDefinitions="Auto, Auto">
+                                                                    <TextBlock Grid.Row="0" Grid.Column="0" x:Name="lblLocalPortLabel" Text="OPEN LOCAL PORT:" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0" Margin="0,0,0,2"/>
+                                                                    <TextBlock Grid.Row="0" Grid.Column="2" x:Name="lblLanPortLabel" Text="OPEN LAN PORT:" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0" Margin="0,0,0,2"/>
+                                                                    <TextBlock Grid.Row="1" Grid.Column="0" x:Name="lblLocalIp" FontSize="11" FontWeight="Bold" FontFamily="Consolas" Classes="portHoverText" PointerPressed="CopyIp_PointerPressed" VerticalAlignment="Center"/>
+                                                                    <TextBlock Grid.Row="1" Grid.Column="2" x:Name="lblLanIp" FontSize="11" FontWeight="Bold" FontFamily="Consolas" Classes="portHoverText" PointerPressed="CopyIp_PointerPressed" VerticalAlignment="Center"/>
+                                                                </Grid>
                                                             </Button>
                                                         </Grid>
 
-                                                        <Button Grid.Column="1" Classes="graphHover" Background="Transparent" BorderThickness="0" Padding="8,4" Cursor="Hand" Click="RefreshPing_Click" VerticalAlignment="Top" HorizontalAlignment="Right" HorizontalContentAlignment="Stretch" ToolTip.Tip="Click to refresh ping">
+                                                        <Button x:Name="btnRefreshPing" Grid.Column="1" Classes="graphHover" Background="Transparent" BorderThickness="0" Padding="8,4" Cursor="Hand" Click="RefreshPing_Click" VerticalAlignment="Top" HorizontalAlignment="Right" HorizontalContentAlignment="Stretch">
                                                             <Grid ColumnDefinitions="Auto,Auto,Auto" Margin="5,0,5,0" VerticalAlignment="Center">
                                                                   
                                                                 <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="8" Margin="0,0,15,0">
@@ -735,7 +931,7 @@
                                     <TextBlock x:Name="lblSectionStartup" Text="START-UP" FontSize="11" FontWeight="SemiBold" Foreground="#8B949E" LetterSpacing="1" Margin="5,0,0,0"/>
                                     <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto">
                                         <Border Grid.Row="0" Grid.Column="0" Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,5,8">
-                                            <Grid ColumnDefinitions="Auto, *, Auto" MinHeight="36">
+                                            <Grid x:Name="panLaunchOnStartup" ColumnDefinitions="Auto, *, Auto" MinHeight="36" Background="Transparent">
                                                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                                     <PathIcon Data="M13.13 22.19L11.5 18.36C13.07 17.78 14.54 17 15.9 16.09L13.13 22.19M5.64 12.5L1.81 10.87L7.91 8.1C7 9.46 6.22 10.93 5.64 12.5M21.61 2.39C21.61 2.39 16.66 .269 11 5.93C8.81 8.12 7.5 10.53 6.65 12.64L3.05 11.33L1.58 12.8L6.47 14.86L3.92 17.41L5 18.5L7.55 15.95L9.61 20.84L11.08 19.37L9.77 15.77C11.88 14.92 14.29 13.61 16.48 11.42C22.14 5.76 20.02 .81 20.02 .81L21.61 2.39Z" Width="14" Height="14" Foreground="#8B949E"/>
                                                     <TextBlock x:Name="lblLaunchOnStartup" Text="LAUNCH ON START-UP" FontSize="11" FontWeight="SemiBold" Foreground="#8B949E" LetterSpacing="1" VerticalAlignment="Center"/>
@@ -744,7 +940,7 @@
                                             </Grid>
                                         </Border>
                                         <Border Grid.Row="0" Grid.Column="1" Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="5,0,0,8">
-                                            <Grid ColumnDefinitions="Auto, *, Auto" MinHeight="36">
+                                            <Grid x:Name="panAutoConnect" ColumnDefinitions="Auto, *, Auto" MinHeight="36" Background="Transparent">
                                                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                                     <PathIcon Data="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z" Width="14" Height="14" Foreground="#8B949E"/>
                                                     <TextBlock x:Name="lblAutoConnect" Text="AUTO-CONNECT" FontSize="11" FontWeight="SemiBold" Foreground="#8B949E" LetterSpacing="1" VerticalAlignment="Center"/>
@@ -753,7 +949,7 @@
                                             </Grid>
                                         </Border>
                                         <Border Grid.Row="1" Grid.Column="0" Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,5,0">
-                                            <Grid ColumnDefinitions="Auto, *, Auto" MinHeight="36">
+                                            <Grid x:Name="panStartMinimized" ColumnDefinitions="Auto, *, Auto" MinHeight="36" Background="Transparent">
                                                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                                     <PathIcon Data="M19 13H5v-2h14v2z" Width="14" Height="14" Foreground="#8B949E"/>
                                                     <TextBlock x:Name="lblStartMinimized" Text="START MINIMIZED" FontSize="11" FontWeight="SemiBold" Foreground="#8B949E" LetterSpacing="1" VerticalAlignment="Center"/>
@@ -762,7 +958,7 @@
                                             </Grid>
                                         </Border>
                                         <Border Grid.Row="1" Grid.Column="1" Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="5,0,0,0">
-                                            <Grid ColumnDefinitions="Auto, *, Auto" MinHeight="36">
+                                            <Grid x:Name="panMinimizeToTray" ColumnDefinitions="Auto, *, Auto" MinHeight="36" Background="Transparent">
                                                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                                     <PathIcon Data="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zm-10-7h2v3h-2z" Width="14" Height="14" Foreground="#8B949E"/>
                                                     <TextBlock x:Name="lblMinimizeToTray" Text="MINIMIZE TO TRAY" FontSize="11" FontWeight="SemiBold" Foreground="#8B949E" LetterSpacing="1" VerticalAlignment="Center"/>
@@ -932,17 +1128,52 @@
                                             </Border>
                                         </StackPanel>
                                         <StackPanel Spacing="0">
+                                            <Border x:Name="panAdapterBindingToggle" Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="0">
+                                                <Button x:Name="btnAdapterBindingToggle" Classes="optBtn" CornerRadius="8" BorderThickness="0" Background="Transparent" Padding="12,8" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="btnAdapterBindingToggle_Click">
+                                                    <Grid ColumnDefinitions="Auto, *, Auto, Auto" MinHeight="36">
+                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                                            <PathIcon Data="M21 3H3C1.89 3 1 3.89 1 5v14c0 1.11.89 2 2 2h18c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm-1 14H4V7h16v10z" Width="14" Height="14" Foreground="#8B949E"/>
+                                                            <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                                                                <TextBlock x:Name="lblAdapterBindingTitle" Classes="settingTitle" Text="BIND ADAPTER" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" VerticalAlignment="Center" ToolTip.Tip="Forces all Tor traffic to exclusively exit through the selected network adapter."/>
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                        <ToggleSwitch Grid.Column="2" x:Name="togAdapterBinding" OnContent="{x:Null}" OffContent="{x:Null}" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="40" Margin="0,0,10,0" IsCheckedChanged="togAdapterBinding_IsCheckedChanged"/>
+                                                        <PathIcon x:Name="icoAdapterBindingExpander" Grid.Column="3" Data="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" Width="12" Height="12" Foreground="#8B949E" VerticalAlignment="Center">
+                                                            <PathIcon.Transitions>
+                                                                <Transitions>
+                                                                    <DoubleTransition Property="RotateTransform.Angle" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+                                                                </Transitions>
+                                                            </PathIcon.Transitions>
+                                                        </PathIcon>
+                                                    </Grid>
+                                                </Button>
+                                            </Border>
+                                            <Border x:Name="panAdapterBinding" Background="#0A0B0E" BorderBrush="#2D3748" BorderThickness="1,0,1,1" CornerRadius="0,0,8,8" MaxHeight="0" Opacity="0" ClipToBounds="True">
+                                                <Border.Transitions>
+                                                    <Transitions>
+                                                        <DoubleTransition Property="MaxHeight" Duration="0:0:0.3" Easing="CubicEaseOut"/>
+                                                        <DoubleTransition Property="Opacity" Duration="0:0:0.3" Easing="CubicEaseOut"/>
+                                                    </Transitions>
+                                                </Border.Transitions>
+                                                <StackPanel Margin="15,15,15,15" Spacing="10">
+                                                    <Grid ColumnDefinitions="*, Auto">
+                                                        <ComboBox Grid.Column="0" x:Name="cmbAdapters" HorizontalAlignment="Stretch" Margin="0,0,10,0" MinHeight="26" Height="26" FontSize="11" VerticalContentAlignment="Center" PlaceholderText="Select an adapter..." SelectionChanged="cmbAdapters_SelectionChanged"/>
+                                                        <Button Grid.Column="1" x:Name="btnScanAdapters" Click="btnScanAdapters_Click" Content="SCAN" Classes="optBtn" FontSize="10" FontWeight="Bold" Background="#1AFFFFFF" Padding="12,6" VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                </StackPanel>
+                                            </Border>
+                                        </StackPanel>
+                                        <StackPanel Spacing="0">
                                             <Border x:Name="panDnsToggle" Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="0">
                                                 <Button x:Name="btnDnsToggle" Classes="optBtn" CornerRadius="8" BorderThickness="0" Background="Transparent" Padding="12,8" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="btnDnsToggle_Click">
-                                                    <Grid ColumnDefinitions="Auto, *, Auto, Auto" MinHeight="36">
+                                                    <Grid ColumnDefinitions="Auto, *, Auto" MinHeight="36">
                                                         <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                                             <PathIcon Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" Width="14" Height="14" Foreground="#8B949E"/>
                                                             <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
                                                                 <TextBlock x:Name="lblDnsSettingTitle" Classes="settingTitle" Text="DNS SETTINGS" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" VerticalAlignment="Center" ToolTip.Tip="Resolve DNS through encrypted DNS-over-HTTPS (DoH) instead of plaintext queries. Reduces DNS leaks and censorship. Pick a provider or enter a custom DoH URL; applies in proxy mode (Xray) and VPN mode (sing-box)."/>
                                                             </StackPanel>
                                                         </StackPanel>
-                                                        <ToggleSwitch Grid.Column="2" x:Name="togDnsSettings" OnContent="{x:Null}" OffContent="{x:Null}" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="40" Margin="0,0,10,0" IsCheckedChanged="togDnsSettings_IsCheckedChanged"/>
-                                                        <PathIcon x:Name="icoDnsExpander" Grid.Column="3" Data="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" Width="12" Height="12" Foreground="#8B949E" VerticalAlignment="Center">
+                                                        <PathIcon x:Name="icoDnsExpander" Grid.Column="2" Data="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" Width="12" Height="12" Foreground="#8B949E" VerticalAlignment="Center">
                                                             <PathIcon.Transitions>
                                                                 <Transitions>
                                                                     <DoubleTransition Property="RotateTransform.Angle" Duration="0:0:0.2" Easing="CubicEaseOut"/>
@@ -959,10 +1190,17 @@
                                                         <DoubleTransition Property="Opacity" Duration="0:0:0.3" Easing="CubicEaseOut"/>
                                                     </Transitions>
                                                 </Border.Transitions>
-                                                <StackPanel Margin="15,15,15,15" Spacing="10">
-                                                    <StackPanel Spacing="5">
-                                                        <TextBlock x:Name="lblUpstreamDoh" Text="UPSTREAM DOH URL" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0"/>
-                                                        <ComboBox x:Name="cmbDohUrl" IsEditable="True" Background="#1A1C20" Foreground="#68D391" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="4" MinHeight="26" Height="26" FontSize="11" VerticalContentAlignment="Center" HorizontalAlignment="Stretch">
+                                                <StackPanel Margin="15,9,15,12" Spacing="7">
+                                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                                        <TextBlock x:Name="lblUpstreamDoh" Grid.Column="0" Text="UPSTREAM DOH URL" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0" VerticalAlignment="Center"/>
+                                                        <ToggleSwitch Grid.Column="2" x:Name="togDnsSettings" OnContent="{x:Null}" OffContent="{x:Null}" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="40" Margin="0,0,-5,0" IsCheckedChanged="togDnsSettings_IsCheckedChanged">
+                                                            <ToggleSwitch.RenderTransform>
+                                                                <ScaleTransform ScaleX="0.78" ScaleY="0.78"/>
+                                                            </ToggleSwitch.RenderTransform>
+                                                        </ToggleSwitch>
+                                                    </Grid>
+                                                    <Grid ColumnDefinitions="*,Auto">
+                                                        <ComboBox x:Name="cmbDohUrl" Grid.Column="0" IsEditable="True" Background="#1A1C20" Foreground="#68D391" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="4,0,0,4" MinHeight="26" Height="26" FontSize="11" VerticalContentAlignment="Center" HorizontalAlignment="Stretch" Margin="0,0,0,0">
                                                             <ComboBox.Styles>
                                                                 <Style Selector="TextBox">
                                                                     <Setter Property="Padding" Value="8,4,8,0" />
@@ -976,29 +1214,39 @@
                                                             <ComboBoxItem Content="https://dns.adguard.com/dns-query" />
                                                             <ComboBoxItem Content="https://doh.opendns.com/dns-query" />
                                                         </ComboBox>
-                                                    </StackPanel>
-                                                    
-                                                    <Grid ColumnDefinitions="Auto, *">
-                                                        <Border Grid.Column="1" Background="#0A0C0F" CornerRadius="3" BorderBrush="#2D3748" BorderThickness="1" HorizontalAlignment="Right" Width="140" Margin="0">
-                                                            <Grid ColumnDefinitions="*, 1, *">
-                                                                <Button x:Name="btnDnsSave" Click="btnDnsSave_Click" Grid.Column="0" Content="SAVE" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0" Background="Transparent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalAlignment="Stretch" Cursor="Hand" BorderThickness="0" CornerRadius="3,0,0,3">
-                                                                    <Button.Styles>
-                                                                        <Style Selector="Button:pointerover /template/ ContentPresenter">
-                                                                            <Setter Property="Background" Value="#2AFFFFFF"/>
-                                                                            <Setter Property="TextBlock.Foreground" Value="#68D391"/>
-                                                                        </Style>
-                                                                    </Button.Styles>
-                                                                </Button>
-                                                                <Border Grid.Column="1" Background="#2D3748"/>
-                                                                <Button x:Name="btnDnsCancel" Click="btnDnsCancel_Click" Grid.Column="2" Content="CANCEL" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0" Background="Transparent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalAlignment="Stretch" Cursor="Hand" BorderThickness="0" CornerRadius="0,3,3,0">
-                                                                    <Button.Styles>
-                                                                        <Style Selector="Button:pointerover /template/ ContentPresenter">
-                                                                            <Setter Property="Background" Value="#2AFFFFFF"/>
-                                                                            <Setter Property="TextBlock.Foreground" Value="#FC8181"/>
-                                                                        </Style>
-                                                                    </Button.Styles>
-                                                                </Button>
-                                                            </Grid>
+                                                        <Border Grid.Column="1" Background="#0A0C0F" CornerRadius="0,4,4,0" BorderBrush="#2D3748" BorderThickness="0,1,1,1" Width="52" MinHeight="26">
+                                                            <Button x:Name="btnDohSave" Click="btnDohSave_Click" Content="SAVE" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0" Background="Transparent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalAlignment="Stretch" VerticalContentAlignment="Center" Cursor="Hand" BorderThickness="0" CornerRadius="0,4,4,0" Padding="0">
+                                                                <Button.Styles>
+                                                                    <Style Selector="Button:pointerover /template/ ContentPresenter">
+                                                                        <Setter Property="Background" Value="#2AFFFFFF"/>
+                                                                        <Setter Property="TextBlock.Foreground" Value="#68D391"/>
+                                                                    </Style>
+                                                                </Button.Styles>
+                                                            </Button>
+                                                        </Border>
+                                                    </Grid>
+                                                    <Border Background="#2D3748" Height="1" Margin="-15,3,-15,0"/>
+                                                    <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,-3,0,0">
+                                                        <TextBlock x:Name="lblSysDnsTitle" Grid.Column="0" Text="SYSTEM DNS" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0" VerticalAlignment="Center" ToolTip.Tip="Changes the Windows DNS of your main network adapter when you connect, so Tor bootstrap benefits from it. Restored to original on disconnect or app close."/>
+                                                        <ToggleSwitch Grid.Column="2" x:Name="togSysDns" OnContent="{x:Null}" OffContent="{x:Null}" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="40" Margin="0,0,-5,0" IsCheckedChanged="togSysDns_IsCheckedChanged">
+                                                            <ToggleSwitch.RenderTransform>
+                                                                <ScaleTransform ScaleX="0.78" ScaleY="0.78"/>
+                                                            </ToggleSwitch.RenderTransform>
+                                                        </ToggleSwitch>
+                                                    </Grid>
+                                                    <Grid ColumnDefinitions="*,6,*,1,Auto">
+                                                        <TextBox x:Name="txtSysDnsPrimary" Grid.Column="0" Background="#1A1C20" Foreground="#68D391" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="4,0,0,4" MinHeight="26" Height="26" FontSize="11" VerticalContentAlignment="Center" Padding="8,4,8,4" PlaceholderText="Primary e.g. 1.1.1.1"/>
+                                                        <TextBox x:Name="txtSysDnsSecondary" Grid.Column="2" Background="#1A1C20" Foreground="#68D391" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="0" MinHeight="26" Height="26" FontSize="11" VerticalContentAlignment="Center" Padding="8,4,8,4" PlaceholderText="Secondary e.g. 1.0.0.1"/>
+                                                        <Border Grid.Column="3" Background="#2D3748" Width="1"/>
+                                                        <Border Grid.Column="4" Background="#0A0C0F" CornerRadius="0,4,4,0" BorderBrush="#2D3748" BorderThickness="0,1,1,1" Width="52" MinHeight="26">
+                                                            <Button x:Name="btnSysDnsSave" Click="btnSysDnsSave_Click" Content="SAVE" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0" Background="Transparent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalAlignment="Stretch" VerticalContentAlignment="Center" Cursor="Hand" BorderThickness="0" CornerRadius="0,4,4,0" Padding="0">
+                                                                <Button.Styles>
+                                                                    <Style Selector="Button:pointerover /template/ ContentPresenter">
+                                                                        <Setter Property="Background" Value="#2AFFFFFF"/>
+                                                                        <Setter Property="TextBlock.Foreground" Value="#68D391"/>
+                                                                    </Style>
+                                                                </Button.Styles>
+                                                            </Button>
                                                         </Border>
                                                     </Grid>
                                                 </StackPanel>
@@ -1015,15 +1263,73 @@
                                                 <ToggleSwitch x:Name="btnAdBlockTog" Grid.Column="2" IsCheckedChanged="SettingTog_CheckedChanged" OnContent="{x:Null}" OffContent="{x:Null}" VerticalAlignment="Center"/>
                                             </Grid>
                                         </Border>
-                                        <Border Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="12,8">
-                                            <Grid ColumnDefinitions="Auto, *, Auto" MinHeight="36">
-                                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                                    <PathIcon Data="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" Width="14" Height="14" Foreground="#8B949E"/>
-                                                    <TextBlock x:Name="lblAllowLanSetting" Classes="settingTitle" Text="ALLOW LAN CONNECTIONS" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" VerticalAlignment="Center" ToolTip.Tip="Let other devices on your network use this PC as a proxy. When on, the local proxy listens on all interfaces (0.0.0.0); when off, only this machine (127.0.0.1) can connect. Turn on only on networks you trust."/>
+                                        <StackPanel Spacing="0">
+                                            <Border x:Name="panLanToggle" Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="0">
+                                                <Button x:Name="btnLanToggle" Classes="optBtn" CornerRadius="8" BorderThickness="0" Background="Transparent" Padding="12,8" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="btnLanToggle_Click">
+                                                    <Grid ColumnDefinitions="Auto, *, Auto" MinHeight="36">
+                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                                            <PathIcon Data="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" Width="14" Height="14" Foreground="#8B949E"/>
+                                                            <TextBlock x:Name="lblAllowLanSetting" Classes="settingTitle" Text="ALLOW LAN CONNECTIONS" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                            <ToggleSwitch x:Name="btnLanTog" IsCheckedChanged="SettingTog_CheckedChanged" OnContent="{x:Null}" OffContent="{x:Null}" VerticalAlignment="Center"/>
+                                                            <PathIcon x:Name="icoLanExpander" Data="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" Width="12" Height="12" Foreground="#8B949E" VerticalAlignment="Center">
+                                                                <PathIcon.Transitions>
+                                                                    <Transitions>
+                                                                        <DoubleTransition Property="RotateTransform.Angle" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+                                                                    </Transitions>
+                                                                </PathIcon.Transitions>
+                                                            </PathIcon>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Button>
+                                            </Border>
+                                            <Border x:Name="panLanSettings" Background="#0A0B0E" BorderBrush="#2D3748" BorderThickness="1,0,1,1" CornerRadius="0,0,8,8" MaxHeight="0" Opacity="0" ClipToBounds="True">
+                                                <Border.Transitions>
+                                                    <Transitions>
+                                                        <DoubleTransition Property="MaxHeight" Duration="0:0:0.3" Easing="CubicEaseOut"/>
+                                                        <DoubleTransition Property="Opacity" Duration="0:0:0.3" Easing="CubicEaseOut"/>
+                                                    </Transitions>
+                                                </Border.Transitions>
+                                                <StackPanel Margin="15,12,15,12" Spacing="2">
+                                                    <!-- Authentication toggle row -->
+                                                    <Grid ColumnDefinitions="Auto,*,Auto" MinHeight="30">
+                                                        <TextBlock x:Name="lblLanAuthTitle" Grid.Column="0" Text="AUTHENTICATION" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0" VerticalAlignment="Center"/>
+                                                        <ToggleSwitch x:Name="togLanAuth" Grid.Column="2" OnContent="{x:Null}" OffContent="{x:Null}" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="40" Margin="0,0,-5,0" IsCheckedChanged="togLanAuth_IsCheckedChanged">
+                                                            <ToggleSwitch.RenderTransform>
+                                                                <ScaleTransform ScaleX="0.78" ScaleY="0.78"/>
+                                                            </ToggleSwitch.RenderTransform>
+                                                        </ToggleSwitch>
+                                                    </Grid>
+                                                    <!-- Username / Password / Save -->
+                                                    <Grid ColumnDefinitions="*,6,*,1,Auto">
+                                                        <TextBox x:Name="txtLanUser" Grid.Column="0" Background="#1A1C20" Foreground="#68D391" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="4,0,0,4" MinHeight="26" Height="26" FontSize="11" VerticalContentAlignment="Center" Padding="8,4,8,4" PlaceholderText="Username"/>
+                                                        <Grid Grid.Column="2">
+                                                            <TextBox x:Name="txtLanPass" Background="#1A1C20" Foreground="#68D391" BorderBrush="#2D3748" BorderThickness="1,1,0,1" CornerRadius="0" MinHeight="26" Height="26" FontSize="11" VerticalContentAlignment="Center" Padding="8,4,30,4" PlaceholderText="Password" PasswordChar="&#x2022;"/>
+                                                            <Button x:Name="btnLanPassEye" Click="btnLanPassEye_Click" Background="Transparent" BorderThickness="0" Width="26" Height="24" HorizontalAlignment="Right" Margin="0,0,1,0" Padding="0" Cursor="Hand" VerticalContentAlignment="Center" HorizontalContentAlignment="Center">
+                                                                <PathIcon x:Name="icoLanPassEye" Data="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" Width="13" Height="13" Foreground="#718096"/>
+                                                                <Button.Styles>
+                                                                    <Style Selector="Button:pointerover /template/ ContentPresenter">
+                                                                        <Setter Property="Background" Value="#1AFFFFFF"/>
+                                                                    </Style>
+                                                                </Button.Styles>
+                                                            </Button>
+                                                        </Grid>
+                                                        <Border Grid.Column="3" Background="#2D3748" Width="1"/>
+                                                        <Border Grid.Column="4" Background="#0A0C0F" CornerRadius="0,4,4,0" BorderBrush="#2D3748" BorderThickness="0,1,1,1" Width="52" MinHeight="26">
+                                                            <Button x:Name="btnLanAuthSave" Click="btnLanAuthSave_Click" Content="SAVE" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0" Background="Transparent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalAlignment="Stretch" VerticalContentAlignment="Center" Cursor="Hand" BorderThickness="0" CornerRadius="0,4,4,0" Padding="0">
+                                                                <Button.Styles>
+                                                                    <Style Selector="Button:pointerover /template/ ContentPresenter">
+                                                                        <Setter Property="Background" Value="#2AFFFFFF"/>
+                                                                        <Setter Property="TextBlock.Foreground" Value="#68D391"/>
+                                                                    </Style>
+                                                                </Button.Styles>
+                                                            </Button>
+                                                        </Border>
+                                                    </Grid>
                                                 </StackPanel>
-                                                <ToggleSwitch x:Name="btnLanTog" Grid.Column="2" IsCheckedChanged="SettingTog_CheckedChanged" OnContent="{x:Null}" OffContent="{x:Null}" VerticalAlignment="Center"/>
-                                            </Grid>
-                                        </Border>
+                                            </Border>
+                                        </StackPanel>
                                     </StackPanel>
                                     
                                     <TextBlock x:Name="lblSectionSystem" Text="SYSTEM" FontSize="11" FontWeight="SemiBold" Foreground="#8B949E" LetterSpacing="1" Margin="5,15,0,0"/>
@@ -1183,13 +1489,16 @@
                                                                 <Border Margin="0,3,0,0">
                                                                     <TextBox x:Name="txtSplitApps" Height="20" LineHeight="17" Background="Transparent" BorderThickness="0" PlaceholderText="app.exe, game.exe" FontSize="11" Foreground="#E2E8F0" AcceptsReturn="True" TextWrapping="Wrap"/>
                                                                 </Border>
-                                                                <Border Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="6" HorizontalAlignment="Right" Margin="0,10,0,0" Width="140">
-                                                                    <Grid ColumnDefinitions="*, 1, *">
-                                                                        <Button Grid.Column="0" x:Name="btnSaveApps" Content="SAVE" FontSize="10" FontWeight="Bold" Background="Transparent" Foreground="#E2E8F0" Padding="0,4" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="SplitSave_Click"/>
-                                                                        <Border Grid.Column="1" Background="#2D3748" Width="1"/>
-                                                                        <Button Grid.Column="2" x:Name="btnCancelApps" Content="CANCEL" FontSize="10" FontWeight="Bold" Background="Transparent" Foreground="#8B949E" Padding="0,4" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="SplitCancel_Click"/>
-                                                                    </Grid>
-                                                                </Border>
+                                                                <Grid Margin="0,10,0,0">
+                                                                    <TextBlock x:Name="lblSplitAppsWarning" Text="Warning: Case sensitive" FontSize="10" Foreground="#E53E3E" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="2,0,0,0"/>
+                                                                    <Border Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="6" HorizontalAlignment="Right" Width="140">
+                                                                        <Grid ColumnDefinitions="*, 1, *">
+                                                                            <Button Grid.Column="0" x:Name="btnSaveApps" Content="SAVE" FontSize="10" FontWeight="Bold" Background="Transparent" Foreground="#E2E8F0" Padding="0,4" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="SplitSave_Click"/>
+                                                                            <Border Grid.Column="1" Background="#2D3748" Width="1"/>
+                                                                            <Button Grid.Column="2" x:Name="btnCancelApps" Content="CANCEL" FontSize="10" FontWeight="Bold" Background="Transparent" Foreground="#8B949E" Padding="0,4" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="SplitCancel_Click"/>
+                                                                        </Grid>
+                                                                    </Border>
+                                                                </Grid>
                                                             </StackPanel>
                                                         </Border>
 </StackPanel>
@@ -1231,6 +1540,16 @@
                                             
                                         </StackPanel>
                                     </Border>
+
+                                    <Border Background="#1A1B1E" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="15,7" Margin="0,-5,0,0">
+                                        <Grid ColumnDefinitions="*, Auto">
+                                            <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                                <TextBlock x:Name="lblDirectUdpHeader" Classes="settingTitle" Text="DIRECT UDP" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" HorizontalAlignment="Left" TextAlignment="Left" />
+                                                <TextBlock x:Name="lblDirectUdpDesc" Text="This option can help with video games, discord voice or other udp dependant platforms." FontSize="10" Foreground="#A0AEC0" TextWrapping="Wrap" HorizontalAlignment="Left" TextAlignment="Left" />
+                                            </StackPanel>
+                                            <ToggleSwitch Grid.Column="1" x:Name="togDirectUDP" IsCheckedChanged="togDirectUDP_IsCheckedChanged" Theme="{DynamicResource FluentToggleSwitchTheme}" OnContent="{x:Null}" OffContent="{x:Null}" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="40" Margin="0,0,-5,0" />
+                                        </Grid>
+                                    </Border>
                                     
                                 </StackPanel>
                             </ScrollViewer>
@@ -1258,8 +1577,8 @@
                                           <Image Source="avares://CrimsonOnion/Assets/icon.ico" Width="40" Height="40" RenderOptions.BitmapInterpolationMode="HighQuality"/>
                                           <StackPanel VerticalAlignment="Center">
                                               <TextBlock Text="CrimsonOnion" FontSize="20" FontWeight="Bold" Foreground="#E2E8F0"/>
-                                              <TextBlock Text="Creator: @RichTitan" FontSize="12" FontWeight="SemiBold" Foreground="#8B949E" Margin="0,2,0,0"/>
-                                              <TextBlock Text="License: GPL-3.0 license" FontSize="11" FontWeight="Normal" Foreground="#A0AEC0" Margin="0,1,0,0"/>
+                                              <TextBlock x:Name="lblAboutCreator" Text="Creator: @RichTitan" FontSize="12" FontWeight="SemiBold" Foreground="#8B949E" Margin="0,2,0,0"/>
+                                              <TextBlock x:Name="lblAboutLicense" Text="License: GPL-3.0 license" FontSize="11" FontWeight="Normal" Foreground="#A0AEC0" Margin="0,1,0,0"/>
                                           </StackPanel>
                                       </StackPanel>
 
@@ -1356,7 +1675,7 @@
                                             <Border Width="24" Height="16">
                                                 <PathIcon Data="M7 2v11h3v9l7-12h-4l4-8z" Width="14" Height="14" Foreground="#E2E8F0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
-                                            <TextBlock Text="OPTIMIZED" VerticalAlignment="Center" Foreground="#E2E8F0" FontSize="14" FontWeight="SemiBold"/>
+                                            <TextBlock x:Name="lblCountriesOptimized" Text="OPTIMIZED" VerticalAlignment="Center" Foreground="#E2E8F0" FontSize="14" FontWeight="SemiBold"/>
                                         </StackPanel>
                                     </Button>
 
@@ -1365,7 +1684,7 @@
                                             <Border Width="24" Height="16">
                                                 <PathIcon Data="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z" Width="16" Height="16" Foreground="#E2E8F0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             </Border>
-                                            <TextBlock Text="EXPERT" VerticalAlignment="Center" Foreground="#E2E8F0" FontSize="14" FontWeight="SemiBold"/>
+                                            <TextBlock x:Name="lblCountriesExpert" Text="EXPERT" VerticalAlignment="Center" Foreground="#E2E8F0" FontSize="14" FontWeight="SemiBold"/>
                                         </StackPanel>
                                     </Button>
 

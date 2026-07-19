@@ -35,11 +35,24 @@ using CrimsonOnion.Localization;
 
 namespace CrimsonOnion;
 
-public class CountryItem
+public class CountryItem : System.ComponentModel.INotifyPropertyChanged
 {
-    public string Name { get; set; } = string.Empty;
+    public string OriginalName { get; set; } = string.Empty;
+    public string Name 
+    { 
+        get => AppStrings.IsPersian ? GeoTranslation.GetCountryFa(Tag, OriginalName) : OriginalName; 
+        set 
+        { 
+            OriginalName = value; 
+            OnPropertyChanged(nameof(Name)); 
+        }
+    }
     public string Tag { get; set; } = string.Empty;
     public Bitmap? Flag { get; set; }
+    
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+    public void UpdateLanguage() => OnPropertyChanged(nameof(Name));
+    protected virtual void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
 }
 
 public partial class MainWindow : Window
@@ -50,7 +63,7 @@ public partial class MainWindow : Window
     private int?[] _torPids = new int?[8];
     private int? _xrayDebugPid, _sbDebugPid;
     private DispatcherTimer? _bootstrapTimer;
-    private DispatcherTimer? _autoBootTimer; // H-15 FIX: tracked so it can be stopped in OnClosing
+    private DispatcherTimer? _autoBootTimer; 
     private int _pollSelCount = 6;
     private string _pollMode = "Proxy Mode";
     private string _pollSelBridge = "Direct";
@@ -127,6 +140,7 @@ public partial class MainWindow : Window
         _cfg.SbDir   = System.IO.Path.Combine(_cfg.BaseDir, @"Data\sing_box");
 
         ConfigService.Load(_cfg, _state, _cfg.CfgFile);
+        ApplyTheme(_cfg.ThemeColor);
 
         _activeBridge = string.IsNullOrEmpty(_cfg.LastBridge) ? "Direct" : _cfg.LastBridge;
         if (int.TryParse(_cfg.LastCount, out int cnt)) _activeTorEngines = cnt;
@@ -159,12 +173,15 @@ public partial class MainWindow : Window
                     Hide();
                 }
             }
+            if (isFirstOpen && _cfg.EnableAdapterBinding)
+            {
+                btnScanAdapters_Click(null, null);
+            }
             isFirstOpen = false;
         };
 
         if (_cfg.AutoStart && !_state.IsFirstLaunch)
         {
-            // H-15 FIX: store in named field so it can be cancelled in OnClosing
             _autoBootTimer = new global::Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
             _autoBootTimer.Tick += (s, ev) =>
             {
@@ -175,44 +192,44 @@ public partial class MainWindow : Window
             _autoBootTimer.Start();
         }
 
+
         CheckUpdateSilent();
     }
 
 
-    private bool _isAnimatingPopup = false;
-
     private async Task ClosePopupAnimatedAsync()
     {
-        if (_isAnimatingPopup) return;
-        _isAnimatingPopup = true;
+        bool closeCountries = CountriesPopup != null && CountriesPopup.IsOpen;
+        bool closeLanguage = LanguagePopup != null && LanguagePopup.IsOpen;
 
-        var border = CountriesPopup?.Child as Border;
-        if (border != null) border.Classes.Remove("popupOpen");
+        if (!closeCountries && !closeLanguage) return;
 
-        var langBorder = LanguagePopup?.Child as Border;
-        if (langBorder != null) langBorder.Classes.Remove("popupOpen");
+        if (closeCountries && CountriesPopup?.Child is Border cBorder) cBorder.Classes.Remove("popupOpen");
+        if (closeLanguage && LanguagePopup?.Child is Border lBorder) lBorder.Classes.Remove("popupOpen");
 
-        if (border != null || langBorder != null) await Task.Delay(200);
+        await Task.Delay(200);
 
-        if (CountriesPopup != null) CountriesPopup.IsOpen = false;
-        if (LanguagePopup != null) LanguagePopup.IsOpen = false;
+        if (closeCountries && CountriesPopup != null) CountriesPopup.IsOpen = false;
+        if (closeLanguage && LanguagePopup != null) LanguagePopup.IsOpen = false;
         
-        var sld = this.FindControl<Border>("SettingsLightDismiss");
-        if (sld != null) sld.IsVisible = false;
-        
-        var panSettings = this.FindControl<Border>("panSettingsOverlay");
-        var panSplit = this.FindControl<Border>("panSplitOverlay");
-        var panExpert = this.FindControl<Border>("panExpertOverlay");
-        var panAbout = this.FindControl<Border>("panAboutOverlay");
-        if ((panSettings == null || !panSettings.IsVisible) &&
-            (panSplit == null || !panSplit.IsVisible) &&
-            (panExpert == null || !panExpert.IsVisible) &&
-            (panAbout == null || !panAbout.IsVisible))
+        bool anyPopupOpen = (CountriesPopup != null && CountriesPopup.IsOpen) || (LanguagePopup != null && LanguagePopup.IsOpen);
+        if (!anyPopupOpen)
         {
-            LightDismissOverlay.IsVisible = false;
+            var sld = this.FindControl<Border>("SettingsLightDismiss");
+            if (sld != null) sld.IsVisible = false;
+            
+            var panSettings = this.FindControl<Border>("panSettingsOverlay");
+            var panSplit = this.FindControl<Border>("panSplitOverlay");
+            var panExpert = this.FindControl<Border>("panExpertOverlay");
+            var panAbout = this.FindControl<Border>("panAboutOverlay");
+            if ((panSettings == null || !panSettings.IsVisible) &&
+                (panSplit == null || !panSplit.IsVisible) &&
+                (panExpert == null || !panExpert.IsVisible) &&
+                (panAbout == null || !panAbout.IsVisible))
+            {
+                LightDismissOverlay.IsVisible = false;
+            }
         }
-        
-        _isAnimatingPopup                 = false;
     }
 
     private void CloseAllOverlays()
@@ -298,7 +315,7 @@ public partial class MainWindow : Window
             if (clipboard != null)
             {
                 await clipboard.SetTextAsync(address);
-                ShowToast("Address copied to clipboard!", success: true);
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastAddressCopied, success: true);
             }
         }
     }
@@ -346,7 +363,7 @@ public partial class MainWindow : Window
         }
         catch (OperationCanceledException)
         {
-            ShowToast("Update cancelled.");
+            ShowToast(CrimsonOnion.Localization.AppStrings.ToastUpdateCancelled);
             btnTitleUpdate.Content = "NEW UPDATE AVAILABLE";
         }
             catch (Exception ex)
@@ -374,7 +391,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        btnCheckUpdate.Content = "CHECKING FOR UPDATES...";
+        btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.UpdateChecking;
         _updateCts = new CancellationTokenSource();
         var token = _updateCts.Token;
 
@@ -383,10 +400,10 @@ public partial class MainWindow : Window
             var (remoteVer, remoteMin) = await Services.UpdateService.CheckForUpdatesAsync(token);
             if (remoteVer == null)
             {
-                ShowToast("You are already on the latest version!", success: true);
-                btnCheckUpdate.Content = "LATEST VERSION INSTALLED";
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastLatestVersion, success: true);
+                btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.UpdateLatest;
                 await Task.Delay(3000, token);
-                btnCheckUpdate.Content = "CHECK FOR UPDATES";
+                btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.CheckForUpdates;
                 _updateCts?.Dispose();
                 _updateCts = null;
                 return;
@@ -394,7 +411,7 @@ public partial class MainWindow : Window
 
             if (Version.Parse(Services.UpdateService.AppVersion) < Version.Parse(remoteMin ?? "0.0.0"))
             {
-                btnCheckUpdate.Content = "MANUAL UPDATE REQUIRED";
+                btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.UpdateManual;
                 System.Windows.Forms.MessageBox.Show(
                     $"A major update (v{remoteVer}) is available!\n\nYour current version ({Services.UpdateService.AppVersion}) is too old to update automatically.\n\nPlease download the latest release manually from GitHub.", 
                     "Update Required", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
@@ -408,7 +425,7 @@ public partial class MainWindow : Window
             
             if (result != System.Windows.Forms.DialogResult.Yes)
             {
-                btnCheckUpdate.Content = "CHECK FOR UPDATES";
+                btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.CheckForUpdates;
                 _updateCts?.Dispose();
                 _updateCts = null;
                 return;
@@ -425,15 +442,15 @@ public partial class MainWindow : Window
         }
         catch (OperationCanceledException)
         {
-            ShowToast("Update cancelled.");
-            btnCheckUpdate.Content = "UPDATE CANCELLED";
+            ShowToast(CrimsonOnion.Localization.AppStrings.ToastUpdateCancelled);
+            btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.UpdateCancelled;
             await Task.Delay(2000);
-            btnCheckUpdate.Content = "CHECK FOR UPDATES";
+            btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.CheckForUpdates;
         }
         catch (Exception ex)
         {
             System.Windows.Forms.MessageBox.Show($"Failed to update: {ex.Message}", "Update Error", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
-            btnCheckUpdate.Content = "CHECK FOR UPDATES";
+            btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.CheckForUpdates;
         }
         finally
         {
@@ -444,31 +461,34 @@ public partial class MainWindow : Window
 
     private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
     {
-        if (CountriesPopup != null && CountriesPopup.IsOpen) await ClosePopupAnimatedAsync();
+        bool isSelf = LanguagePopup != null && LanguagePopup.IsOpen && LanguagePopup.PlacementTarget?.Name == "btnLanguage";
+        if (isSelf)
+        {
+            _ = ClosePopupAnimatedAsync();
+            return;
+        }
+
+        if (LanguagePopup != null && LanguagePopup.IsOpen)
+        {
+            LanguagePopup.IsOpen = false;
+            if (LanguagePopup.Child is Border oldBorder) oldBorder.Classes.Remove("popupOpen");
+        }
+
+        _ = ClosePopupAnimatedAsync();
 
         if (LanguagePopup != null)
         {
-            if (LanguagePopup.IsOpen && LanguagePopup.PlacementTarget?.Name == "btnLanguage")
-            {
-                await ClosePopupAnimatedAsync();
-            }
-            else
-            {
-                if (LanguagePopup.IsOpen) LanguagePopup.IsOpen = false;
-                LanguagePopup.PlacementTarget  = this.FindControl<Control>("btnLanguage");
-                LanguagePopup.Placement        = PlacementMode.Bottom;
-                LanguagePopup.HorizontalOffset = 0;
-                LanguagePopup.VerticalOffset   = 5;
-                LanguagePopup.IsOpen           = true;
-                
-                var sld = this.FindControl<Border>("SettingsLightDismiss");
-                if (sld != null) sld.IsVisible = true;
-                
-                if (LanguagePopup.Child is Border border)
-                {
-                    global::Avalonia.Threading.DispatcherTimer.RunOnce(() => { border.Classes.Add("popupOpen"); }, TimeSpan.FromMilliseconds(10));
-                }
-            }
+            LanguagePopup.PlacementTarget  = this.FindControl<Control>("btnLanguage");
+            LanguagePopup.Placement        = PlacementMode.Bottom;
+            LanguagePopup.HorizontalOffset = 0;
+            LanguagePopup.VerticalOffset   = 5;
+            LanguagePopup.IsOpen           = true;
+            
+            var sld = this.FindControl<Border>("SettingsLightDismiss");
+            if (sld != null) sld.IsVisible = true;
+            
+            await Task.Delay(10);
+            if (LanguagePopup.Child is Border border) border.Classes.Add("popupOpen");
         }
     }
 
@@ -551,8 +571,8 @@ public partial class MainWindow : Window
             {
                 bool connected = _state.IsConnected;
                 txt.Text = connected
-                    ? (fa ? "قطع اتصال" : "DISCONNECT")
-                    : (fa ? "اتصال"     : "CONNECT");
+                    ? CrimsonOnion.Localization.AppStrings.ConnectedBtn
+                    : CrimsonOnion.Localization.AppStrings.Connect;
                 txt.FlowDirection = fa
                     ? global::Avalonia.Media.FlowDirection.RightToLeft
                     : global::Avalonia.Media.FlowDirection.LeftToRight;
@@ -565,6 +585,12 @@ public partial class MainWindow : Window
         AppStrings.Apply(F("lblStartMinimized"), AppStrings.StartMinimized);
         AppStrings.Apply(F("lblMinimizeToTray"), AppStrings.MinimizeToTray);
 
+        AppStrings.ApplyToolTip(this.FindControl<Grid>("panLaunchOnStartup"), AppStrings.TtLaunchOnStartup);
+        AppStrings.ApplyToolTip(this.FindControl<Grid>("panAutoConnect"), AppStrings.TtAutoConnect);
+        AppStrings.ApplyToolTip(this.FindControl<Grid>("panStartMinimized"), AppStrings.TtStartMinimized);
+        AppStrings.ApplyToolTip(this.FindControl<Grid>("panMinimizeToTray"), AppStrings.TtMinimizeToTray);
+        AppStrings.ApplyToolTip(this.FindControl<Button>("btnRefreshPing"), AppStrings.TtPingRefresh);
+
         AppStrings.Apply(F("lblSectionConnection"), AppStrings.SectionConnection, forceLtr: true);
 
 
@@ -575,6 +601,11 @@ public partial class MainWindow : Window
         var tbOutboundProxy = this.FindControl<TextBlock>("lblOutboundProxySetting");
         AppStrings.Apply(tbOutboundProxy, AppStrings.OutboundProxy);
         AppStrings.ApplyToolTip(tbOutboundProxy, AppStrings.TtOutboundProxy);
+
+        var tbAdapterBinding = this.FindControl<TextBlock>("lblAdapterBindingTitle");
+        AppStrings.Apply(tbAdapterBinding, AppStrings.AdapterBinding);
+        AppStrings.ApplyToolTip(tbAdapterBinding, AppStrings.TtAdapterBinding);
+        AppStrings.ApplyBtn(B("btnScanAdapters"), AppStrings.ScanAdapters);
         
         var tbDnsSetting = this.FindControl<TextBlock>("lblDnsSettingTitle");
         AppStrings.Apply(tbDnsSetting, AppStrings.DnsSettings);
@@ -587,6 +618,8 @@ public partial class MainWindow : Window
         var tbAllowLan = this.FindControl<TextBlock>("lblAllowLanSetting");
         AppStrings.Apply(tbAllowLan, AppStrings.AllowLan);
         AppStrings.ApplyToolTip(tbAllowLan, AppStrings.TtAllowLan);
+        AppStrings.Apply(this.FindControl<TextBlock>("lblLanAuthTitle"), AppStrings.LanAuth);
+        AppStrings.ApplyToolTip(this.FindControl<global::Avalonia.Controls.TextBlock>("lblLanAuthTitle"), AppStrings.TtLanAuth);
 
         AppStrings.Apply(F("lblOutboundType"), AppStrings.ProxyType);
         AppStrings.Apply(F("lblOutboundAddress"), AppStrings.AddressIp);
@@ -595,6 +628,9 @@ public partial class MainWindow : Window
         AppStrings.Apply(F("lblOutboundUsername"), AppStrings.Username);
         AppStrings.Apply(F("lblOutboundPassword"), AppStrings.Password);
         AppStrings.Apply(F("lblUpstreamDoh"), AppStrings.UpstreamDohUrl);
+        AppStrings.Apply(F("lblSysDnsTitle"), AppStrings.SystemDns);
+        AppStrings.ApplyToolTip(this.FindControl<global::Avalonia.Controls.TextBlock>("lblSysDnsTitle"), AppStrings.TtSystemDns);
+
 
         AppStrings.Apply(F("lblSectionSystem"),    AppStrings.SectionSystem, forceLtr: true);
         
@@ -615,7 +651,12 @@ public partial class MainWindow : Window
         AppStrings.Apply(F("lblSplitTunnelingHeader"), AppStrings.SplitTunneling, forceLtr: true);
         AppStrings.Apply(F("lblDomainsAndIps"), AppStrings.DomainsAndIps);
         AppStrings.Apply(F("lblApplications"), AppStrings.Applications);
+        var lblSplitAppsWarning = this.FindControl<TextBlock>("lblSplitAppsWarning");
+        if (lblSplitAppsWarning != null) lblSplitAppsWarning.Text = AppStrings.IsPersian ? "هشدار: به حروف بزرگ و کوچک حساس است" : "Warning: Case sensitive";
         AppStrings.Apply(F("lblBlockedDomainsIps"), AppStrings.BlockedDomains);
+        AppStrings.Apply(F("lblDirectUdpHeader"), AppStrings.SplitTunnelDirectUDP);
+        AppStrings.ApplyToolTip(F("lblDirectUdpHeader"), AppStrings.SplitTunnelDirectUDPTooltip);
+        AppStrings.Apply(F("lblDirectUdpDesc"), AppStrings.SplitTunnelDirectUDPDesc);
         
         UpdateSplitTunnelUI();
 
@@ -645,65 +686,113 @@ public partial class MainWindow : Window
         if (btnBrowseApp != null) btnBrowseApp.Content = fa ? "مرور" : "BROWSE";
 
         AppStrings.Apply(F("lblAboutVersion"),  AppStrings.AboutVersion);
-        AppStrings.Apply(F("lblDonations"),     AppStrings.Donations);
+        AppStrings.Apply(F("lblAboutCreator"),  AppStrings.AboutCreator);
+        AppStrings.Apply(F("lblAboutLicense"),  AppStrings.AboutLicense);
+        AppStrings.Apply(F("lblDonations"), AppStrings.DonationsTitle);
         AppStrings.Apply(F("lblDonationsDesc"), AppStrings.DonationsDesc);
         AppStrings.ApplyBtn(B("btnCheckUpdate"), AppStrings.CheckForUpdates);
 
         AppStrings.Apply(F("lblExpertTitle"), AppStrings.ExpertTitle);
-        AppStrings.Apply(F("lblHardwareAccel"), AppStrings.HardwareAccel);
-        AppStrings.Apply(F("lblFascistFirewall"), AppStrings.FascistFirewall);
-        AppStrings.Apply(F("lblStrictNodes"), AppStrings.StrictNodes);
-        AppStrings.Apply(F("lblCustomTorrc"), AppStrings.CustomTorrcLabel);
+        
+        AppStrings.ApplyBtn(B("btnExpertSave"), AppStrings.Save);
+        AppStrings.ApplyBtn(B("btnExpertCancel"), AppStrings.Cancel);
+        AppStrings.ApplyBtn(B("btnXraySave"), AppStrings.Save);
+        AppStrings.ApplyBtn(B("btnXrayCancel"), AppStrings.Cancel);
+        AppStrings.ApplyBtn(B("btnOutboundSave"), AppStrings.Save);
+        AppStrings.ApplyBtn(B("btnOutboundCancel"), AppStrings.Cancel);
+        AppStrings.ApplyBtn(B("btnDohSave"), AppStrings.Save);
+        AppStrings.ApplyBtn(B("btnSysDnsSave"), AppStrings.Save);
+        AppStrings.ApplyBtn(B("btnLanAuthSave"), AppStrings.Save);
+        AppStrings.ApplyBtn(B("btnSaveDomains"), AppStrings.Save);
+        AppStrings.ApplyBtn(B("btnCancelDomains"), AppStrings.Cancel);
+        AppStrings.ApplyBtn(B("btnSaveApps"), AppStrings.Save);
+        AppStrings.ApplyBtn(B("btnCancelApps"), AppStrings.Cancel);
+        AppStrings.ApplyBtn(B("btnSaveBlock"), AppStrings.Save);
+        AppStrings.ApplyBtn(B("btnCancelBlock"), AppStrings.Cancel);
+        
+        AppStrings.ApplyBtn(B("btnCaptchaSubmit"), AppStrings.Submit);
+        AppStrings.ApplyBtn(B("btnCaptchaCancel"), AppStrings.Cancel);
+        AppStrings.ApplyBtn(B("btnCustomSave"), AppStrings.Save);
+        AppStrings.ApplyBtn(B("btnCustomCancel"), AppStrings.Cancel);
+
+        AppStrings.Apply(F("lblCountriesOptimized"), AppStrings.RoutingOptimized);
+        AppStrings.Apply(F("lblCountriesExpert"), AppStrings.RoutingExpert);
+
+        foreach (var c in Countries) c.UpdateLanguage();
+        ApplyRoutingUI(false);
 
         if (_trayWidget != null)
             _trayWidget.ApplyLanguage(fa);
+            
+        UpdateLanPortUI();
+        UpdateLocalPortUI();
+        
+        UpdateAdapterBindingMutualExclusivity();
+        ApplyModeUI(_cfg.LastXrayMode);
+        
+        if (_state.IsConnected)
+            StartGeoPing();
     }
 
     private async void SidebarCountries_Click(object? sender, RoutedEventArgs e)
     {
+        bool isSelf = CountriesPopup != null && CountriesPopup.IsOpen && CountriesPopup.PlacementTarget?.Name == "SidebarBorder";
+        if (isSelf)
+        {
+            _ = ClosePopupAnimatedAsync();
+            return;
+        }
+
+        if (CountriesPopup != null && CountriesPopup.IsOpen)
+        {
+            CountriesPopup.IsOpen = false;
+            if (CountriesPopup.Child is Border oldBorder) oldBorder.Classes.Remove("popupOpen");
+        }
+
+        _ = ClosePopupAnimatedAsync();
         CloseAllOverlays();
 
         if (CountriesPopup != null)
         {
-            if (CountriesPopup.IsOpen && CountriesPopup.PlacementTarget?.Name == "SidebarBorder")
-            {
-                await ClosePopupAnimatedAsync();
-            }
-            else
-            {
-                if (CountriesPopup.IsOpen) CountriesPopup.IsOpen = false;
-                CountriesPopup.PlacementTarget  = this.FindControl<Control>("SidebarBorder");
-                CountriesPopup.Placement        = PlacementMode.RightEdgeAlignedTop;
-                CountriesPopup.HorizontalOffset = 10;
-                CountriesPopup.VerticalOffset   = 0;
-                CountriesPopup.IsOpen           = true;
-                if (CountriesPopup.Child is Border border) border.Classes.Add("popupOpen");
-                LightDismissOverlay.IsVisible   = true;
-            }
+            CountriesPopup.PlacementTarget  = this.FindControl<Control>("SidebarBorder");
+            CountriesPopup.Placement        = PlacementMode.RightEdgeAlignedTop;
+            CountriesPopup.HorizontalOffset = 10;
+            CountriesPopup.VerticalOffset   = 0;
+            CountriesPopup.IsOpen           = true;
+            await Task.Delay(10);
+            if (CountriesPopup.Child is Border border) border.Classes.Add("popupOpen");
+            LightDismissOverlay.IsVisible   = true;
         }
     }
 
     private async void MainCountries_Click(object? sender, RoutedEventArgs e)
     {
+        bool isSelf = CountriesPopup != null && CountriesPopup.IsOpen && CountriesPopup.PlacementTarget?.Name == "btnCurrentCountry";
+        if (isSelf)
+        {
+            _ = ClosePopupAnimatedAsync();
+            return;
+        }
+
+        if (CountriesPopup != null && CountriesPopup.IsOpen)
+        {
+            CountriesPopup.IsOpen = false;
+            if (CountriesPopup.Child is Border oldBorder) oldBorder.Classes.Remove("popupOpen");
+        }
+
+        _ = ClosePopupAnimatedAsync();
         CloseAllOverlays();
 
         if (CountriesPopup != null)
         {
-            if (CountriesPopup.IsOpen && CountriesPopup.PlacementTarget?.Name == "btnCurrentCountry")
-            {
-                await ClosePopupAnimatedAsync();
-            }
-            else
-            {
-                if (CountriesPopup.IsOpen) CountriesPopup.IsOpen = false;
-                CountriesPopup.PlacementTarget  = this.FindControl<Control>("btnCurrentCountry");
-                CountriesPopup.Placement        = PlacementMode.Bottom;
-                CountriesPopup.HorizontalOffset = 0;
-                CountriesPopup.VerticalOffset   = 5;
-                CountriesPopup.IsOpen           = true;
-                if (CountriesPopup.Child is Border border) border.Classes.Add("popupOpen");
-                LightDismissOverlay.IsVisible   = true;
-            }
+            CountriesPopup.PlacementTarget  = this.FindControl<Control>("btnCurrentCountry");
+            CountriesPopup.Placement        = PlacementMode.Bottom;
+            CountriesPopup.HorizontalOffset = 0;
+            CountriesPopup.VerticalOffset   = 5;
+            CountriesPopup.IsOpen           = true;
+            await Task.Delay(10);
+            if (CountriesPopup.Child is Border border) border.Classes.Add("popupOpen");
+            LightDismissOverlay.IsVisible   = true;
         }
     }
 
@@ -758,7 +847,7 @@ public partial class MainWindow : Window
             {
                 _cfg.LastXrayMode = "Proxy Mode";
                 _pollMode         = "Proxy Mode";
-                ShowToast("VPN Mode disabled for Snowflake bridge.");
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastVpnDisabledSnowflake);
             }
 
             ApplyModeUI(_pollMode);
@@ -783,7 +872,7 @@ public partial class MainWindow : Window
             }
 
             if (_state.IsEngineRunning)
-                ShowToast("Please reconnect to apply the new bridge.");
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectBridge);
         }
     }
 
@@ -855,12 +944,24 @@ public partial class MainWindow : Window
         
         var cmbDohUrl = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbDohUrl");
         if (cmbDohUrl != null) cmbDohUrl.Text = _cfg.UpstreamDohUrl;
+
+        var togSysDns = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togSysDns");
+        if (togSysDns != null) togSysDns.IsChecked = _cfg.EnableSystemDns;
+
+        var txtSysDnsPrimary = this.FindControl<global::Avalonia.Controls.TextBox>("txtSysDnsPrimary");
+        if (txtSysDnsPrimary != null) txtSysDnsPrimary.Text = _cfg.SystemDnsPrimary;
+
+        var txtSysDnsSecondary = this.FindControl<global::Avalonia.Controls.TextBox>("txtSysDnsSecondary");
+        if (txtSysDnsSecondary != null) txtSysDnsSecondary.Text = _cfg.SystemDnsSecondary;
         
         var btnAdBlockTog = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("btnAdBlockTog");
         if (btnAdBlockTog != null) btnAdBlockTog.IsChecked = _cfg.EnableAdBlock;
         
         var btnLanTog = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("btnLanTog");
         if (btnLanTog != null) btnLanTog.IsChecked = _cfg.AllowLanConnections;
+
+        var togLanAuth = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togLanAuth");
+        if (togLanAuth != null) togLanAuth.IsChecked = _cfg.EnableLanAuth;
         
         var btnDebugTog = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("btnDebugTog");
         if (btnDebugTog != null) btnDebugTog.IsChecked = _cfg.DebugMode;
@@ -871,23 +972,52 @@ public partial class MainWindow : Window
         var togXrayExitNode = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togXrayExitNode");
         if (togXrayExitNode != null) togXrayExitNode.IsChecked = _cfg.EnableV2rayChain;
 
-        var txtOutboundAddr = this.FindControl<global::Avalonia.Controls.TextBox>("txtOutboundAddr");
-        if (txtOutboundAddr != null) txtOutboundAddr.Text = _cfg.OutboundProxyAddress;
-        var txtOutboundPort = this.FindControl<global::Avalonia.Controls.TextBox>("txtOutboundPort");
-        if (txtOutboundPort != null) txtOutboundPort.Text = _cfg.OutboundProxyPort;
+        var togDirectUDP = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togDirectUDP");
+        if (togDirectUDP != null) togDirectUDP.IsChecked = _cfg.EnableDirectUDP;
+
+        var panOutboundProxy = this.FindControl<global::Avalonia.Controls.Border>("panOutboundProxy");
+        var icoOutboundExpander = this.FindControl<global::Avalonia.Controls.PathIcon>("icoOutboundExpander");
         var cmbOutboundType = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbOutboundType");
-        if (cmbOutboundType != null) cmbOutboundType.SelectedIndex = _cfg.OutboundProxyType == "HTTPS" ? 1 : 0;
+        var txtOutboundAddr = this.FindControl<global::Avalonia.Controls.TextBox>("txtOutboundAddr");
+        var txtOutboundPort = this.FindControl<global::Avalonia.Controls.TextBox>("txtOutboundPort");
         var togOutboundAuth = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togOutboundAuth");
-        if (togOutboundAuth != null) togOutboundAuth.IsChecked = _cfg.EnableOutboundAuth;
+        var panOutboundAuth = this.FindControl<global::Avalonia.Controls.Border>("panOutboundAuth");
         var txtOutboundUser = this.FindControl<global::Avalonia.Controls.TextBox>("txtOutboundUser");
-        if (txtOutboundUser != null) txtOutboundUser.Text = _cfg.OutboundProxyUser;
         var txtOutboundPass = this.FindControl<global::Avalonia.Controls.TextBox>("txtOutboundPass");
-        if (txtOutboundPass != null) txtOutboundPass.Text = _cfg.OutboundProxyPass;
+        var togAdapterBinding = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togAdapterBinding");
+        var panAdapterBinding = this.FindControl<global::Avalonia.Controls.Border>("panAdapterBinding");
+        var icoAdapterBindingExpander = this.FindControl<global::Avalonia.Controls.PathIcon>("icoAdapterBindingExpander");
+
+        if (togOutboundProxy != null)
+        {
+            togOutboundProxy.IsChecked = _cfg.EnableOutboundProxy;
+            if (_cfg.EnableOutboundProxy && panOutboundProxy != null && icoOutboundExpander != null)
+            {
+            }
+            if (cmbOutboundType != null) cmbOutboundType.SelectedIndex = _cfg.OutboundProxyType == "HTTPS" ? 1 : 0;
+            if (txtOutboundAddr != null) txtOutboundAddr.Text = _cfg.OutboundProxyAddress;
+            if (txtOutboundPort != null) txtOutboundPort.Text = _cfg.OutboundProxyPort;
+            if (togOutboundAuth != null)
+            {
+                togOutboundAuth.IsChecked = _cfg.EnableOutboundAuth;
+                if (_cfg.EnableOutboundAuth && panOutboundAuth != null)
+                {
+                }
+            }
+            if (txtOutboundUser != null) txtOutboundUser.Text = _cfg.OutboundProxyUser;
+            if (txtOutboundPass != null) txtOutboundPass.Text = _cfg.OutboundProxyPass;
+        }
+
+        if (togAdapterBinding != null)
+        {
+            togAdapterBinding.IsChecked = _cfg.EnableAdapterBinding;
+            UpdateAdapterBindingMutualExclusivity();
+        }
         
         _isInitializingSettings = false;
 
         ApplyModeUI(_pollMode);
-        ApplyRoutingUI();
+        ApplyRoutingUI(false);
         UpdateLanPortUI();
 
         var langLbl = this.FindControl<TextBlock>("lblCurrentLanguage");
@@ -901,6 +1031,7 @@ public partial class MainWindow : Window
         this.FindControl<global::Avalonia.Controls.Button>("btnVpnMode")?.Classes.Remove("activeMode");
         this.FindControl<global::Avalonia.Controls.Button>("btnClearProxy")?.Classes.Remove("activeMode");
 
+        var panVpnMode = this.FindControl<global::Avalonia.Controls.Panel>("panVpnMode");
         var btnVpnMode = this.FindControl<global::Avalonia.Controls.Button>("btnVpnMode");
         if (btnVpnMode != null)
         {
@@ -908,11 +1039,13 @@ public partial class MainWindow : Window
             {
                 btnVpnMode.IsEnabled = false;
                 btnVpnMode.Opacity = 0.3;
+                AppStrings.ApplyToolTip(panVpnMode, AppStrings.TtDisabledVpnSnowflake);
             }
             else
             {
                 btnVpnMode.IsEnabled = true;
                 btnVpnMode.Opacity = 1.0;
+                if (panVpnMode != null) global::Avalonia.Controls.ToolTip.SetTip(panVpnMode, null);
             }
         }
 
@@ -959,6 +1092,10 @@ public partial class MainWindow : Window
                 lblSplitExplanation.Text = CrimsonOnion.Localization.AppStrings.SplitExplanationExclusive;
             else if (modeStr == "INCLUSIVE")
                 lblSplitExplanation.Text = CrimsonOnion.Localization.AppStrings.SplitExplanationInclusive;
+                
+            lblSplitExplanation.FlowDirection = CrimsonOnion.Localization.AppStrings.IsPersian 
+                ? global::Avalonia.Media.FlowDirection.RightToLeft 
+                : global::Avalonia.Media.FlowDirection.LeftToRight;
         }
 
         var panSplitDomains = this.FindControl<global::Avalonia.Controls.StackPanel>("panSplitDomains");
@@ -1204,12 +1341,55 @@ public partial class MainWindow : Window
     }
 
     // ---------------------------------------------------------------------
-    // ---------------------------------------------------------------------
 
     private void TitleBar_PointerPressed(object? sender, global::Avalonia.Input.PointerPressedEventArgs e)
     {
         if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
             BeginMoveDrag(e);
+    }
+
+
+    
+    private void UpdateAdapterBindingMutualExclusivity()
+    {
+        var togAdapterBinding = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togAdapterBinding");
+        var togOutboundProxy = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togOutboundProxy");
+        var btnOutboundToggle = this.FindControl<global::Avalonia.Controls.Button>("btnOutboundToggle");
+        var btnAdapterBindingToggle = this.FindControl<global::Avalonia.Controls.Button>("btnAdapterBindingToggle");
+        
+        var panOutboundToggle = this.FindControl<global::Avalonia.Controls.Border>("panOutboundToggle");
+        var panAdapterBindingToggle = this.FindControl<global::Avalonia.Controls.Border>("panAdapterBindingToggle");
+        
+        if (togAdapterBinding != null && togOutboundProxy != null && btnOutboundToggle != null && btnAdapterBindingToggle != null)
+        {
+            if (togAdapterBinding.IsChecked == true)
+            {
+                togOutboundProxy.IsChecked = false;
+                btnOutboundToggle.IsEnabled = false;
+                btnOutboundToggle.Opacity = 0.5;
+                AppStrings.ApplyToolTip(panOutboundToggle, AppStrings.TtDisabledOutboundProxy);
+            }
+            else
+            {
+                btnOutboundToggle.IsEnabled = true;
+                btnOutboundToggle.Opacity = 1.0;
+                if (panOutboundToggle != null) global::Avalonia.Controls.ToolTip.SetTip(panOutboundToggle, null);
+            }
+            
+            if (togOutboundProxy.IsChecked == true)
+            {
+                togAdapterBinding.IsChecked = false;
+                btnAdapterBindingToggle.IsEnabled = false;
+                btnAdapterBindingToggle.Opacity = 0.5;
+                AppStrings.ApplyToolTip(panAdapterBindingToggle, AppStrings.TtDisabledAdapterBinding);
+            }
+            else
+            {
+                btnAdapterBindingToggle.IsEnabled = true;
+                btnAdapterBindingToggle.Opacity = 1.0;
+                if (panAdapterBindingToggle != null) global::Avalonia.Controls.ToolTip.SetTip(panAdapterBindingToggle, null);
+            }
+        }
     }
 
     private void Minimize_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
@@ -1236,8 +1416,8 @@ public partial class MainWindow : Window
             ConfigService.Save(_cfg, _state, _cfg.CfgFile, _cfg.LastConfig, _cfg.LastBridge, _cfg.LastCount);
         }
 
-        _autoBootTimer?.Stop(); // H-15 FIX: cancel tracked boot timer
-        _staggerTimer?.Stop(); // C-7 FIX: stagger timer was missing from OnClosing
+        _autoBootTimer?.Stop(); 
+        _staggerTimer?.Stop(); 
         _statsTimer?.Stop();
         _sessionClockTimer?.Stop();
         _logTimer?.Stop();
@@ -1249,10 +1429,11 @@ public partial class MainWindow : Window
         _xrayBootTimer?.Stop();
         _xrayRestartTimer?.Stop();
         if (_geoCts != null) { try { _geoCts.Cancel(); _geoCts.Dispose(); } catch { } _geoCts = null; }
-        // C-9 FIX: dispose _httpClient (bridge fetch) if window closed mid-captcha
         try { _httpClient?.Dispose(); _httpClient = null; } catch { }
         try { _cts?.Dispose(); _cts = null; } catch { }
         StopAllEngines(isClosing: true);
+        foreach (var country in Countries)
+            country.Flag?.Dispose();
         DisposeTrayIcon();
     }
 
@@ -1261,27 +1442,130 @@ public partial class MainWindow : Window
         var panLeftStats = this.FindControl<Grid>("panLeftStats");
         if (panLeftStats != null)
         {
-            panLeftStats.Opacity = 0.05; // Fade out almost entirely
+            panLeftStats.Opacity = 0.05; 
             panLeftStats.IsHitTestVisible = false;
         }
+        var rectAllThemes = this.FindControl<global::Avalonia.Controls.Border>("rectAllThemes");
+        if (rectAllThemes != null) rectAllThemes.Opacity = 1.0;
+        var panCurrentThemeIcon = this.FindControl<global::Avalonia.Controls.Panel>("panCurrentThemeIcon");
+        if (panCurrentThemeIcon != null) { panCurrentThemeIcon.Opacity = 0.0; }
     }
 
-    private void SidebarBorder_PointerExited(object? sender, PointerEventArgs e)
+    internal void ApplyTheme(string themeName)
     {
-        var panLeftStats = this.FindControl<Grid>("panLeftStats");
-        if (panLeftStats != null)
+        if (string.IsNullOrWhiteSpace(themeName)) themeName = "Crimson";
+        global::Avalonia.Media.SolidColorBrush accent = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.Parse("#B82E42"));
+        global::Avalonia.Media.SolidColorBrush accentHover = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.Parse("#D13A51"));
+        global::Avalonia.Media.SolidColorBrush accentPressed = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.Parse("#932535"));
+        global::Avalonia.Media.Color glow = global::Avalonia.Media.Color.Parse("#FFE64A62");
+        switch (themeName)
         {
-            panLeftStats.Opacity = 1.0; // Fade back in
-            panLeftStats.IsHitTestVisible = true;
+            case "Blue":
+                accent = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.Parse("#2B6CB0"));
+                accentHover = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.Parse("#3182CE"));
+                accentPressed = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.Parse("#2C5282"));
+                glow = global::Avalonia.Media.Color.Parse("#63B3ED");
+                break;
+            case "Purple":
+                accent = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.Parse("#6B46C1"));
+                accentHover = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.Parse("#805AD5"));
+                accentPressed = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.Parse("#553C9A"));
+                glow = global::Avalonia.Media.Color.Parse("#B794F4");
+                break;
+            case "Green":
+                accent = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.Parse("#2F855A"));
+                accentHover = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.Parse("#38A169"));
+                accentPressed = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.Parse("#276749"));
+                glow = global::Avalonia.Media.Color.Parse("#68D391");
+                break;
+            case "Pink":
+                accent = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.Parse("#B83280"));
+                accentHover = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.Parse("#D53F8C"));
+                accentPressed = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.Parse("#97266D"));
+                glow = global::Avalonia.Media.Color.Parse("#F687B3");
+                break;
+            case "Yellow":
+                accent = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.Parse("#B7791F"));
+                accentHover = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.Parse("#D69E2E"));
+                accentPressed = new global::Avalonia.Media.SolidColorBrush(global::Avalonia.Media.Color.Parse("#975A16"));
+                glow = global::Avalonia.Media.Color.Parse("#F6E05E");
+                break;
+            case "Crimson":
+            default:
+                break; 
+        }
+
+        if (global::Avalonia.Application.Current != null)
+        {
+            global::Avalonia.Application.Current.Resources["ThemeAccent"] = accent;
+            global::Avalonia.Application.Current.Resources["ThemeAccentPointerOver"] = accentHover;
+            global::Avalonia.Application.Current.Resources["ThemeAccentPressed"] = accentPressed;
+            global::Avalonia.Application.Current.Resources["ThemeGlow"] = glow;
+            global::Avalonia.Application.Current.Resources["ToggleSwitchFillOn"] = accent;
+            global::Avalonia.Application.Current.Resources["ToggleSwitchFillOnPointerOver"] = accentHover;
+            global::Avalonia.Application.Current.Resources["ToggleSwitchFillOnPressed"] = accentPressed;
+            global::Avalonia.Application.Current.Resources["SliderThumbBackground"] = accent;
+            global::Avalonia.Application.Current.Resources["SliderThumbBackgroundPointerOver"] = accentHover;
+            global::Avalonia.Application.Current.Resources["SliderThumbBackgroundPressed"] = accentPressed;
+            global::Avalonia.Application.Current.Resources["SliderTrackValueFill"] = accent;
+            global::Avalonia.Application.Current.Resources["SliderTrackValueFillPointerOver"] = accentHover;
+            global::Avalonia.Application.Current.Resources["SliderTrackValueFillPressed"] = accentPressed;
+        }
+
+        if (this.Resources.ContainsKey($"Theme{themeName}Brush"))
+        {
+            this.Resources["ThemeCurrentBrush"] = this.Resources[$"Theme{themeName}Brush"];
         }
     }
+
+    private void SidebarBorder_PointerExited(object? sender, global::Avalonia.Input.PointerEventArgs e)
+    {
+        var panLeftStats = this.FindControl<global::Avalonia.Controls.Grid>("panLeftStats");
+        if (panLeftStats != null)
+        {
+            panLeftStats.Opacity = 1.0; 
+            panLeftStats.IsHitTestVisible = true;
+        }
+        var rectAllThemes = this.FindControl<global::Avalonia.Controls.Border>("rectAllThemes");
+        if (rectAllThemes != null) rectAllThemes.Opacity = 0.0;
+        var panCurrentThemeIcon = this.FindControl<global::Avalonia.Controls.Panel>("panCurrentThemeIcon");
+        if (panCurrentThemeIcon != null) { panCurrentThemeIcon.Opacity = 1.0; }
+        
+        var panThemeSelector = this.FindControl<global::Avalonia.Controls.Border>("panThemeSelector");
+        if (panThemeSelector != null) { panThemeSelector.Opacity = 0.0; panThemeSelector.MaxHeight = 0; }
+    }
+
+    private void SidebarThemes_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var panThemeSelector = this.FindControl<global::Avalonia.Controls.Border>("panThemeSelector");
+        if (panThemeSelector != null)
+        {
+            if (panThemeSelector.MaxHeight == 0) {
+                panThemeSelector.MaxHeight = 200;
+                panThemeSelector.Opacity = 1.0;
+            } else {
+                panThemeSelector.MaxHeight = 0;
+                panThemeSelector.Opacity = 0.0;
+            }
+        }
+    }
+
+    private void ThemeSelect_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var btn = sender as global::Avalonia.Controls.Button;
+        if (btn == null) return;
+        
+        string themeName = btn.CommandParameter?.ToString() ?? "Crimson";
+        
+        
+        var panThemeSelector = this.FindControl<global::Avalonia.Controls.Border>("panThemeSelector");
+        if (panThemeSelector != null) { panThemeSelector.Opacity = 0.0; panThemeSelector.MaxHeight = 0; }
+        
+        _cfg.ThemeColor = themeName;
+        RequestConfigSave();
+
+        global::Avalonia.Threading.DispatcherTimer.RunOnce(() => {
+            ApplyTheme(themeName);
+        }, System.TimeSpan.FromMilliseconds(300));
+    }
 }
-
-
-
-
-
-
-
-
-

@@ -18,6 +18,8 @@
 
 using System.IO;
 using CrimsonOnion.Models;
+using System.Collections.Generic;
+using System;
 
 namespace CrimsonOnion.Services
 {
@@ -175,7 +177,11 @@ namespace CrimsonOnion.Services
             cleanCfg.Add("# --- MANAGED BRIDGES ---");
             cleanCfg.Add("Log notice file ./tor.log");
 
-            if (config.EnableOutboundProxy && !string.IsNullOrEmpty(config.OutboundProxyAddress) && !string.IsNullOrEmpty(config.OutboundProxyPort))
+            if (config.EnableAdapterBinding && !string.IsNullOrWhiteSpace(config.SelectedAdapterIp))
+            {
+                cleanCfg.Add("Socks5Proxy 127.0.0.1:10819");
+            }
+            else if (config.EnableOutboundProxy && !string.IsNullOrEmpty(config.OutboundProxyAddress) && !string.IsNullOrEmpty(config.OutboundProxyPort))
             {
                 if (config.OutboundProxyType == "SOCKS5")
                 {

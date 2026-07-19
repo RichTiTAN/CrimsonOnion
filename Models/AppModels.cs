@@ -24,7 +24,6 @@ namespace CrimsonOnion.Models
     {
 
         [JsonIgnore] public string BaseDir { get; set; } = "";
-        [JsonIgnore] public string ScriptPath { get; set; } = "";
         [JsonIgnore] public string CfgFile { get; set; } = "";
         [JsonIgnore] public string XrayDir { get; set; } = "";
         [JsonIgnore] public string HaPath { get; set; } = "";
@@ -40,11 +39,12 @@ namespace CrimsonOnion.Models
         public string LastBridge { get; set; } = "Direct";
         public string LastCount { get; set; } = "6";
         public string LastXrayMode { get; set; } = "Proxy Mode";
-        public string SplitTunnelMode { get; set; } = "DISABLED"; // "DISABLED", "INCLUSIVE", "EXCLUSIVE"
+        public string SplitTunnelMode { get; set; } = "DISABLED"; 
         public string LastManualSplit { get; set; } = "";
         public string LastAppSplit { get; set; } = "";
         public string LastBlockSplit { get; set; } = "";
         public bool EnableDirect { get; set; } = false;
+        public bool EnableDirectUDP { get; set; } = false;
         public string CustomBridgeLine { get; set; } = "";
         public string V2rayChainJson { get; set; } = "";
         public bool EnableV2rayChain { get; set; } = false;
@@ -55,13 +55,25 @@ namespace CrimsonOnion.Models
         public string OutboundProxyUser { get; set; } = "";
         public string OutboundProxyPass { get; set; } = "";
         public bool EnableOutboundAuth { get; set; } = false;
+
+        public bool EnableAdapterBinding { get; set; } = false;
+        public string SelectedAdapterName { get; set; } = "";
+        public string SelectedAdapterIp { get; set; } = "";
+
         public bool EnableUpstreamDoh { get; set; } = false;
         public string UpstreamDohUrl { get; set; } = "https://cloudflare-dns.com/dns-query";
+        public bool EnableSystemDns { get; set; } = false;
+        public string SystemDnsPrimary { get; set; } = "";
+        public string SystemDnsSecondary { get; set; } = "";
         public string CustomExitCountry { get; set; } = "us";
         public bool MinimizeToTray { get; set; } = false;
         public bool EnableAdBlock { get; set; } = false;
         public bool AllowLanConnections { get; set; } = false;
+        public bool EnableLanAuth       { get; set; } = false;
+        public string LanAuthUsername   { get; set; } = "";
+        public string LanAuthPassword   { get; set; } = "";
         public string Language { get; set; } = "ENGLISH";
+        public string ThemeColor { get; set; } = "Crimson";
 
         public bool ExpertHardwareAccel { get; set; } = false;
         public bool ExpertStrictNodes { get; set; } = false;

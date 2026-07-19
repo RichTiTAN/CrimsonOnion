@@ -34,9 +34,13 @@ namespace CrimsonOnion.Services
                 WindowLeft = config.WindowLeft,
                 EnableAdBlock = config.EnableAdBlock,
                 AllowLanConnections = config.AllowLanConnections,
+                EnableLanAuth = config.EnableLanAuth,
+                LanAuthUsername = config.LanAuthUsername,
+                LanAuthPassword = config.LanAuthPassword,
                 Language = config.Language,
                 IsLogsOpen = state.IsLogsOpen,
                 DebugMode = config.DebugMode,
+                ThemeColor = config.ThemeColor,
                 LastConfig = lastConfig,
                 SelectedBridge = lastBridge,
                 InstanceCount = lastCount,
@@ -47,18 +51,25 @@ namespace CrimsonOnion.Services
                 AppSplit = config.LastAppSplit,
                 BlockSplit = config.LastBlockSplit,
                 EnableDirect = config.EnableDirect,
+                EnableDirectUDP = config.EnableDirectUDP,
                 CustomBridgeLine = config.CustomBridgeLine,
                 EnableV2rayChain = config.EnableV2rayChain,
                 V2rayChainJson = config.V2rayChainJson,
                 EnableOutboundProxy = config.EnableOutboundProxy,
+                OutboundProxyType = config.OutboundProxyType,
                 OutboundProxyAddress = config.OutboundProxyAddress,
                 OutboundProxyPort = config.OutboundProxyPort,
-                OutboundProxyType = config.OutboundProxyType,
+                EnableOutboundAuth = config.EnableOutboundAuth,
                 OutboundProxyUser = config.OutboundProxyUser,
                 OutboundProxyPass = config.OutboundProxyPass,
-                EnableOutboundAuth = config.EnableOutboundAuth,
+                EnableAdapterBinding = config.EnableAdapterBinding,
+                SelectedAdapterName = config.SelectedAdapterName,
+                SelectedAdapterIp = config.SelectedAdapterIp,
                 EnableUpstreamDoh = config.EnableUpstreamDoh,
                 UpstreamDohUrl = config.UpstreamDohUrl,
+                EnableSystemDns = config.EnableSystemDns,
+                SystemDnsPrimary = config.SystemDnsPrimary,
+                SystemDnsSecondary = config.SystemDnsSecondary,
                 CustomExitCountry = config.CustomExitCountry,
                 MinimizeToTray = config.MinimizeToTray,
                 ExpertHardwareAccel = config.ExpertHardwareAccel,
@@ -106,7 +117,11 @@ namespace CrimsonOnion.Services
                 TrySet(s, "WindowLeft", (Action<dynamic>)(v => config.WindowLeft = (double)v));
                 TrySet(s, "EnableAdBlock", (Action<dynamic>)(v => config.EnableAdBlock = (bool)v));
                 TrySet(s, "AllowLanConnections", (Action<dynamic>)(v => config.AllowLanConnections = (bool)v));
+                TrySet(s, "EnableLanAuth",        (Action<dynamic>)(v => config.EnableLanAuth       = (bool)v));
+                TrySet(s, "LanAuthUsername",       (Action<dynamic>)(v => config.LanAuthUsername    = (string)v));
+                TrySet(s, "LanAuthPassword",       (Action<dynamic>)(v => config.LanAuthPassword    = (string)v));
                 TrySet(s, "Language", (Action<dynamic>)(v => config.Language = (string)v));
+                TrySet(s, "ThemeColor", (Action<dynamic>)(v => config.ThemeColor = (string)v));
                 TrySet(s, "IsLogsOpen", (Action<dynamic>)(v => state.IsLogsOpen = (bool)v));
                 TrySet(s, "DebugMode", (Action<dynamic>)(v => config.DebugMode = (bool)v));
                 TrySet(s, "LastConfig", (Action<dynamic>)(v => config.LastConfig = (string)v));
@@ -119,18 +134,25 @@ namespace CrimsonOnion.Services
                 TrySet(s, "AppSplit", (Action<dynamic>)(v => config.LastAppSplit = (string)v));
                 TrySet(s, "BlockSplit", (Action<dynamic>)(v => config.LastBlockSplit = (string)v));
                 TrySet(s, "EnableDirect", (Action<dynamic>)(v => config.EnableDirect = (bool)v));
+                TrySet(s, "EnableDirectUDP", (Action<dynamic>)(v => config.EnableDirectUDP = (bool)v));
                 TrySet(s, "CustomBridgeLine", (Action<dynamic>)(v => config.CustomBridgeLine = (string)v));
                 TrySet(s, "EnableV2rayChain", (Action<dynamic>)(v => config.EnableV2rayChain = (bool)v));
                 TrySet(s, "V2rayChainJson", (Action<dynamic>)(v => config.V2rayChainJson = (string)v));
                 TrySet(s, "EnableOutboundProxy", (Action<dynamic>)(v => config.EnableOutboundProxy = (bool)v));
+                TrySet(s, "OutboundProxyType", (Action<dynamic>)(v => config.OutboundProxyType = (string)v));
                 TrySet(s, "OutboundProxyAddress", (Action<dynamic>)(v => config.OutboundProxyAddress = (string)v));
                 TrySet(s, "OutboundProxyPort", (Action<dynamic>)(v => config.OutboundProxyPort = (string)v));
-                TrySet(s, "OutboundProxyType", (Action<dynamic>)(v => config.OutboundProxyType = (string)v));
+                TrySet(s, "EnableOutboundAuth", (Action<dynamic>)(v => config.EnableOutboundAuth = (bool)v));
                 TrySet(s, "OutboundProxyUser", (Action<dynamic>)(v => config.OutboundProxyUser = (string)v));
                 TrySet(s, "OutboundProxyPass", (Action<dynamic>)(v => config.OutboundProxyPass = (string)v));
-                TrySet(s, "EnableOutboundAuth", (Action<dynamic>)(v => config.EnableOutboundAuth = (bool)v));
+                TrySet(s, "EnableAdapterBinding", (Action<dynamic>)(v => config.EnableAdapterBinding = (bool)v));
+                TrySet(s, "SelectedAdapterName", (Action<dynamic>)(v => config.SelectedAdapterName = (string)v));
+                TrySet(s, "SelectedAdapterIp", (Action<dynamic>)(v => config.SelectedAdapterIp = (string)v));
                 TrySet(s, "EnableUpstreamDoh", (Action<dynamic>)(v => config.EnableUpstreamDoh = (bool)v));
                 TrySet(s, "UpstreamDohUrl", (Action<dynamic>)(v => config.UpstreamDohUrl = (string)v));
+                TrySet(s, "EnableSystemDns", (Action<dynamic>)(v => config.EnableSystemDns = (bool)v));
+                TrySet(s, "SystemDnsPrimary", (Action<dynamic>)(v => config.SystemDnsPrimary = (string)v));
+                TrySet(s, "SystemDnsSecondary", (Action<dynamic>)(v => config.SystemDnsSecondary = (string)v));
                 TrySet(s, "CustomExitCountry", (Action<dynamic>)(v => config.CustomExitCountry = (string)v));
                 TrySet(s, "MinimizeToTray", (Action<dynamic>)(v => config.MinimizeToTray = (bool)v));
                 TrySet(s, "ExpertHardwareAccel", (Action<dynamic>)(v => config.ExpertHardwareAccel = (bool)v));

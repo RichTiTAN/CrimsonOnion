@@ -23,6 +23,12 @@
              RequestedThemeVariant="Default">
 
     <Application.Resources>
+        <!-- Theme Colors (Default to Crimson) -->
+        <SolidColorBrush x:Key="ThemeAccent" Color="#B82E42"/>
+        <SolidColorBrush x:Key="ThemeAccentPointerOver" Color="#D13A51"/>
+        <SolidColorBrush x:Key="ThemeAccentPressed" Color="#932535"/>
+        <Color x:Key="ThemeGlow">#FFE64A62</Color>
+
         <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#B82E42"/>
         <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#D13A51"/>
         <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#932535"/>

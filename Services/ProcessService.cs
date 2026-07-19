@@ -18,6 +18,7 @@
 
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace CrimsonOnion.Services
 {
@@ -83,7 +84,7 @@ namespace CrimsonOnion.Services
             }
         }
 
-        public static void UpdateBootScheduledTask(bool enable, string exePath)
+        public static async Task UpdateBootScheduledTask(bool enable, string exePath)
         {
             const string taskName = "CrimsonOnion_AutoStart";
             try
@@ -101,9 +102,9 @@ namespace CrimsonOnion.Services
                     using var p = Process.Start(psi);
                     if (p != null)
                     {
-                        var stderrTask = p.StandardError.ReadToEndAsync();
-                        p.WaitForExit();
-                        string err = stderrTask.GetAwaiter().GetResult();
+                    var stderrTask = p.StandardError.ReadToEndAsync();
+                    await p.WaitForExitAsync();
+                    string err = await stderrTask;
                         if (p.ExitCode != 0)
                             throw new Exception("schtasks exit code " + p.ExitCode + " " + err);
                     }
@@ -121,9 +122,9 @@ namespace CrimsonOnion.Services
                     using var p = Process.Start(psi);
                     if (p != null)
                     {
-                        var stderrTask = p.StandardError.ReadToEndAsync();
-                        p.WaitForExit();
-                        string err = stderrTask.GetAwaiter().GetResult();
+                    var stderrTask = p.StandardError.ReadToEndAsync();
+                    await p.WaitForExitAsync();
+                    string err = await stderrTask;
                         if (p.ExitCode != 0)
                             throw new Exception("schtasks exit code " + p.ExitCode + " " + err);
                     }
