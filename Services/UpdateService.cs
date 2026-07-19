@@ -95,6 +95,9 @@ namespace CrimsonOnion.Services
                         }
                     }
                 }
+                
+                // FIX: Close the file stream so the zip file isn't locked by the app when we try to extract it!
+                fs.Close();
 
                 Dispatcher.UIThread.Post(() => progressCallback("EXTRACTING UPDATE..."));
                 
