@@ -119,6 +119,44 @@ public partial class MainWindow : Window
         return $"⬇ {down} | ⬆ {up}\nTotal: {total}";
     }
 
+    private bool _wasLanguagePopupOpen = false;
+    private bool _wasCountriesPopupOpen = false;
+
+    protected override void OnPropertyChanged(global::Avalonia.AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property.Name == "IsActive")
+        {
+            if (change.NewValue is bool isActive)
+            {
+                if (isActive)
+                {
+                    if (_wasLanguagePopupOpen && LanguagePopup != null)
+                    {
+                        LanguagePopup.IsOpen = true;
+                    }
+                    if (_wasCountriesPopupOpen && CountriesPopup != null)
+                    {
+                        CountriesPopup.IsOpen = true;
+                    }
+                }
+                else
+                {
+                    if (LanguagePopup != null)
+                    {
+                        _wasLanguagePopupOpen = LanguagePopup.IsOpen;
+                        if (LanguagePopup.IsOpen) LanguagePopup.IsOpen = false;
+                    }
+                    if (CountriesPopup != null)
+                    {
+                        _wasCountriesPopupOpen = CountriesPopup.IsOpen;
+                        if (CountriesPopup.IsOpen) CountriesPopup.IsOpen = false;
+                    }
+                }
+            }
+        }
+    }
+
     public MainWindow()
     {
         InitializeComponent();
@@ -140,6 +178,8 @@ public partial class MainWindow : Window
         _cfg.SbDir   = System.IO.Path.Combine(_cfg.BaseDir, @"Data\sing_box");
 
         ConfigService.Load(_cfg, _state, _cfg.CfgFile);
+        CrimsonOnion.Services.SimpleLogger.EnableLogging = _cfg.DebugMode;
+        CrimsonOnion.Services.SimpleLogger.Log($"[Startup] CrimsonOnion v{Services.UpdateService.AppVersion} — Bridge={_cfg.LastBridge}, Config={_cfg.LastConfig}, Mode={_cfg.LastXrayMode}");
         ApplyTheme(_cfg.ThemeColor);
 
         _activeBridge = string.IsNullOrEmpty(_cfg.LastBridge) ? "Direct" : _cfg.LastBridge;
@@ -193,7 +233,7 @@ public partial class MainWindow : Window
         }
 
 
-        CheckUpdateSilent();
+        _ = CheckUpdateSilentAsync();
     }
 
 
@@ -285,15 +325,43 @@ public partial class MainWindow : Window
 
     private void SidebarAbout_Click(object? sender, RoutedEventArgs e)
     {
-        CloseAllOverlays();
-        var ldo = this.FindControl<Border>("LightDismissOverlay");
-        if (ldo != null) ldo.IsVisible = true;
-        
-        var pan = this.FindControl<Border>("panAboutOverlay");
-        if (pan != null)
+        var panAboutOverlay = this.FindControl<Border>("panAboutOverlay");
+        if (panAboutOverlay != null)
         {
-            pan.IsVisible = true;
-            global::Avalonia.Threading.DispatcherTimer.RunOnce(() => { pan.Classes.Add("popupOpen"); }, TimeSpan.FromMilliseconds(10));
+            if (panAboutOverlay.IsVisible) return;
+
+            panAboutOverlay.IsVisible = true;
+            panAboutOverlay.Classes.Add("popupOpen");
+            var ldo = this.FindControl<Border>("LightDismissOverlay");
+            if (ldo != null) ldo.IsVisible = true;
+        }
+
+        var pSplitOv = this.FindControl<Border>("panSplitOverlay");
+        if (pSplitOv != null && pSplitOv.IsVisible)
+        {
+            pSplitOv.Classes.Remove("popupOpen");
+            global::Avalonia.Threading.DispatcherTimer.RunOnce(() => { pSplitOv.IsVisible = false; }, TimeSpan.FromMilliseconds(200));
+        }
+
+        var pSettingsOv = this.FindControl<Border>("panSettingsOverlay");
+        if (pSettingsOv != null && pSettingsOv.IsVisible)
+        {
+            pSettingsOv.Classes.Remove("popupOpen");
+            global::Avalonia.Threading.DispatcherTimer.RunOnce(() => { pSettingsOv.IsVisible = false; }, TimeSpan.FromMilliseconds(200));
+        }
+
+        var pExpertOv = this.FindControl<Border>("panExpertOverlay");
+        if (pExpertOv != null && pExpertOv.IsVisible)
+        {
+            pExpertOv.Classes.Remove("popupOpen");
+            global::Avalonia.Threading.DispatcherTimer.RunOnce(() => { pExpertOv.IsVisible = false; }, TimeSpan.FromMilliseconds(200));
+        }
+
+        var countriesPopup = this.FindControl<global::Avalonia.Controls.Primitives.Popup>("CountriesPopup");
+        var languagePopup = this.FindControl<global::Avalonia.Controls.Primitives.Popup>("LanguagePopup");
+        if ((countriesPopup != null && countriesPopup.IsOpen) || (languagePopup != null && languagePopup.IsOpen))
+        {
+            _ = ClosePopupAnimatedAsync();
         }
     }
 
@@ -322,23 +390,41 @@ public partial class MainWindow : Window
 
     private CancellationTokenSource? _updateCts;
     private string _remoteUpdateVersion = "0.0.0";
+    private string _remoteMinUpdateVersion = "0.0.0";
 
-    private async void CheckUpdateSilent()
+        private void SetUpdateUIStatus(string status)
     {
-        var (remoteVer, _) = await Services.UpdateService.CheckForUpdatesAsync();
-        if (remoteVer != null)
+        var btnTitleUpdate = this.FindControl<global::Avalonia.Controls.Button>("btnTitleUpdate");
+        if (btnTitleUpdate != null) btnTitleUpdate.Content = status;
+        
+        var btnCheckUpdate = this.FindControl<global::Avalonia.Controls.Button>("btnCheckUpdate");
+        if (btnCheckUpdate != null) btnCheckUpdate.Content = status;
+    }
+
+    private async Task CheckUpdateSilentAsync()
+    {
+        try
         {
-            _remoteUpdateVersion = remoteVer;
-            var btnTitleUpdate = this.FindControl<Button>("btnTitleUpdate");
-            if (btnTitleUpdate != null) btnTitleUpdate.IsVisible = true;
+            var (remoteVer, remoteMin) = await Services.UpdateService.CheckForUpdatesAsync();
+            if (remoteVer != null)
+            {
+                _remoteUpdateVersion = remoteVer;
+                _remoteMinUpdateVersion = remoteMin ?? "0.0.0";
+                var btnTitleUpdate = this.FindControl<global::Avalonia.Controls.Button>("btnTitleUpdate");
+                if (btnTitleUpdate != null) btnTitleUpdate.IsVisible = true;
+                
+                string msg = CrimsonOnion.Localization.AppStrings.IsPersian ? "بروزرسانی جدید در دسترس است" : "NEW UPDATE AVAILABLE";
+                SetUpdateUIStatus(msg);
+            }
+        }
+        catch (Exception ex)
+        {
+            CrimsonOnion.Services.SimpleLogger.Log(ex);
         }
     }
 
-    private async void BtnTitleUpdate_Click(object? sender, RoutedEventArgs e)
+    private async Task StartUpdateDownloadAsync()
     {
-        var btnTitleUpdate = this.FindControl<Button>("btnTitleUpdate");
-        if (btnTitleUpdate == null) return;
-
         if (_updateCts != null)
         {
             _updateCts.Cancel();
@@ -346,15 +432,17 @@ public partial class MainWindow : Window
             _updateCts = null;
             return;
         }
-        
-        _updateCts = new CancellationTokenSource();
+
+        if (string.IsNullOrEmpty(_remoteUpdateVersion) || _remoteUpdateVersion == "0.0.0") return;
+
+        _updateCts = new System.Threading.CancellationTokenSource();
         var token = _updateCts.Token;
-        
+
         try
         {
             await Services.UpdateService.DownloadAndInstallUpdateAsync(_remoteUpdateVersion, _cfg.BaseDir, (status) => 
             {
-                btnTitleUpdate.Content = status;
+                SetUpdateUIStatus(status);
             }, token);
 
             ProxyService.SetSystemProxy(false);
@@ -363,14 +451,23 @@ public partial class MainWindow : Window
         }
         catch (OperationCanceledException)
         {
-            ShowToast(CrimsonOnion.Localization.AppStrings.ToastUpdateCancelled);
-            btnTitleUpdate.Content = "NEW UPDATE AVAILABLE";
-        }
-            catch (Exception ex)
+            if (token.IsCancellationRequested)
             {
-                System.Windows.Forms.MessageBox.Show($"Failed to update: {ex.Message}", "Update Error", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
-                btnTitleUpdate.Content = "NEW UPDATE AVAILABLE";
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastUpdateCancelled);
             }
+            else
+            {
+                System.Windows.Forms.MessageBox.Show("Connection timed out while downloading the update.", "Update Error", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+            }
+            string msg = CrimsonOnion.Localization.AppStrings.IsPersian ? "بروزرسانی جدید در دسترس است" : "NEW UPDATE AVAILABLE";
+            SetUpdateUIStatus(msg);
+        }
+        catch (Exception ex)
+        {
+            System.Windows.Forms.MessageBox.Show($"Failed to update: {ex.Message}", "Update Error", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+            string msg = CrimsonOnion.Localization.AppStrings.IsPersian ? "بروزرسانی جدید در دسترس است" : "NEW UPDATE AVAILABLE";
+            SetUpdateUIStatus(msg);
+        }
         finally
         {
             _updateCts?.Dispose();
@@ -378,9 +475,36 @@ public partial class MainWindow : Window
         }
     }
 
-    private async void BtnCheckUpdate_Click(object? sender, RoutedEventArgs e)
+    private async void BtnTitleUpdate_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
     {
-        var btnCheckUpdate = this.FindControl<Button>("btnCheckUpdate");
+        if (_updateCts != null)
+        {
+            _updateCts.Cancel();
+            _updateCts.Dispose();
+            _updateCts = null;
+            return;
+        }
+
+        bool isManual = Version.Parse(Services.UpdateService.AppVersion) < Version.Parse(_remoteMinUpdateVersion);
+        var dialog = new Dialogs.UpdateDialog(isManual: isManual, _remoteUpdateVersion);
+        var result = await dialog.ShowDialog<string>(this);
+        
+        if (result == "Primary")
+        {
+            if (isManual)
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://github.com/RichTiTAN/CrimsonOnion/releases") { UseShellExecute = true });
+            else
+                _ = StartUpdateDownloadAsync();
+        }
+        else if (result == "Secondary")
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://github.com/RichTiTAN/CrimsonOnion/releases") { UseShellExecute = true });
+        }
+    }
+
+    private async void BtnCheckUpdate_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var btnCheckUpdate = this.FindControl<global::Avalonia.Controls.Button>("btnCheckUpdate");
         if (btnCheckUpdate == null) return;
 
         if (_updateCts != null)
@@ -391,8 +515,28 @@ public partial class MainWindow : Window
             return;
         }
 
-        btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.UpdateChecking;
-        _updateCts = new CancellationTokenSource();
+        if (!string.IsNullOrEmpty(_remoteUpdateVersion) && _remoteUpdateVersion != "0.0.0")
+        {
+            bool isManual = Version.Parse(Services.UpdateService.AppVersion) < Version.Parse(_remoteMinUpdateVersion);
+            var dialog = new Dialogs.UpdateDialog(isManual: isManual, _remoteUpdateVersion);
+            var result = await dialog.ShowDialog<string>(this);
+            
+            if (result == "Primary")
+            {
+                if (isManual)
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://github.com/RichTiTAN/CrimsonOnion/releases") { UseShellExecute = true });
+                else
+                    _ = StartUpdateDownloadAsync();
+            }
+            else if (result == "Secondary")
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://github.com/RichTiTAN/CrimsonOnion/releases") { UseShellExecute = true });
+            }
+            return;
+        }
+
+        if (btnCheckUpdate != null) btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.UpdateChecking;
+        _updateCts = new System.Threading.CancellationTokenSource();
         var token = _updateCts.Token;
 
         try
@@ -401,9 +545,9 @@ public partial class MainWindow : Window
             if (remoteVer == null)
             {
                 ShowToast(CrimsonOnion.Localization.AppStrings.ToastLatestVersion, success: true);
-                btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.UpdateLatest;
-                await Task.Delay(3000, token);
-                btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.CheckForUpdates;
+                if (btnCheckUpdate != null) btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.UpdateLatest;
+                try { await Task.Delay(3000, token); } catch { }
+                if (btnCheckUpdate != null) btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.CheckForUpdates;
                 _updateCts?.Dispose();
                 _updateCts = null;
                 return;
@@ -411,55 +555,73 @@ public partial class MainWindow : Window
 
             if (Version.Parse(Services.UpdateService.AppVersion) < Version.Parse(remoteMin ?? "0.0.0"))
             {
-                btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.UpdateManual;
-                System.Windows.Forms.MessageBox.Show(
-                    $"A major update (v{remoteVer}) is available!\n\nYour current version ({Services.UpdateService.AppVersion}) is too old to update automatically.\n\nPlease download the latest release manually from GitHub.", 
-                    "Update Required", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
-                Process.Start(new ProcessStartInfo("https://github.com/RichTiTAN/CrimsonOnion/releases") { UseShellExecute = true });
+                if (btnCheckUpdate != null) btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.UpdateManual;
+                
+                var dialog = new Dialogs.UpdateDialog(isManual: true, remoteVer);
+                var result = await dialog.ShowDialog<string>(this);
+                
+                if (result == "Primary" || result == "Secondary")
+                {
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://github.com/RichTiTAN/CrimsonOnion/releases") { UseShellExecute = true });
+                }
+                
                 _updateCts?.Dispose();
                 _updateCts = null;
                 return;
             }
 
-            var result = System.Windows.Forms.MessageBox.Show($"Version {remoteVer} is available! Update now?", "Update Available", System.Windows.Forms.MessageBoxButtons.YesNo, System.Windows.Forms.MessageBoxIcon.Information);
-            
-            if (result != System.Windows.Forms.DialogResult.Yes)
-            {
-                btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.CheckForUpdates;
-                _updateCts?.Dispose();
-                _updateCts = null;
-                return;
-            }
+            _remoteUpdateVersion = remoteVer;
+            var btnTitleUpdate = this.FindControl<global::Avalonia.Controls.Button>("btnTitleUpdate");
+            if (btnTitleUpdate != null) btnTitleUpdate.IsVisible = true;
 
-            await Services.UpdateService.DownloadAndInstallUpdateAsync(remoteVer, _cfg.BaseDir, (status) => 
-            {
-                btnCheckUpdate.Content = status;
-            }, token);
+            string msg = CrimsonOnion.Localization.AppStrings.IsPersian ? "بروزرسانی جدید در دسترس است" : "NEW UPDATE AVAILABLE";
+            SetUpdateUIStatus(msg);
+
+            _updateCts?.Dispose();
+            _updateCts = null;
+
+            var dialog2 = new Dialogs.UpdateDialog(isManual: false, remoteVer);
+            var result2 = await dialog2.ShowDialog<string>(this);
             
-            ProxyService.SetSystemProxy(false);
-            StopAllEngines(true);
-            System.Environment.Exit(0);
+            if (result2 == "Primary")
+            {
+                _ = StartUpdateDownloadAsync();
+            }
+            else if (result2 == "Secondary")
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://github.com/RichTiTAN/CrimsonOnion/releases") { UseShellExecute = true });
+            }
         }
         catch (OperationCanceledException)
         {
-            ShowToast(CrimsonOnion.Localization.AppStrings.ToastUpdateCancelled);
-            btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.UpdateCancelled;
-            await Task.Delay(2000);
-            btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.CheckForUpdates;
+            if (token.IsCancellationRequested)
+            {
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastUpdateCancelled);
+                if (btnCheckUpdate != null) btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.UpdateCancelled;
+                try { await Task.Delay(2000); } catch { }
+            }
+            else
+            {
+                System.Windows.Forms.MessageBox.Show("Connection timed out while checking for updates.", "Update Error", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+            }
+            if (btnCheckUpdate != null) btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.CheckForUpdates;
         }
         catch (Exception ex)
         {
             System.Windows.Forms.MessageBox.Show($"Failed to update: {ex.Message}", "Update Error", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
-            btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.CheckForUpdates;
+            if (btnCheckUpdate != null) btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.CheckForUpdates;
         }
         finally
         {
-            _updateCts?.Dispose();
-            _updateCts = null;
+            if (_updateCts != null)
+            {
+                _updateCts?.Dispose();
+                _updateCts = null;
+            }
         }
     }
 
-    private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
+private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
     {
         bool isSelf = LanguagePopup != null && LanguagePopup.IsOpen && LanguagePopup.PlacementTarget?.Name == "btnLanguage";
         if (isSelf)
@@ -542,7 +704,7 @@ public partial class MainWindow : Window
         var panTimerContent = this.FindControl<StackPanel>("panTimerContent");
         if (panTimerContent != null)
         {
-            panTimerContent.FlowDirection = AppStrings.IsPersian 
+            panTimerContent.FlowDirection = fa 
                 ? global::Avalonia.Media.FlowDirection.RightToLeft 
                 : global::Avalonia.Media.FlowDirection.LeftToRight;
         }
@@ -585,10 +747,10 @@ public partial class MainWindow : Window
         AppStrings.Apply(F("lblStartMinimized"), AppStrings.StartMinimized);
         AppStrings.Apply(F("lblMinimizeToTray"), AppStrings.MinimizeToTray);
 
-        AppStrings.ApplyToolTip(this.FindControl<Grid>("panLaunchOnStartup"), AppStrings.TtLaunchOnStartup);
-        AppStrings.ApplyToolTip(this.FindControl<Grid>("panAutoConnect"), AppStrings.TtAutoConnect);
-        AppStrings.ApplyToolTip(this.FindControl<Grid>("panStartMinimized"), AppStrings.TtStartMinimized);
-        AppStrings.ApplyToolTip(this.FindControl<Grid>("panMinimizeToTray"), AppStrings.TtMinimizeToTray);
+        AppStrings.ApplyToolTip(this.FindControl<TextBlock>("lblLaunchOnStartup"), AppStrings.TtLaunchOnStartup);
+        AppStrings.ApplyToolTip(this.FindControl<TextBlock>("lblAutoConnect"), AppStrings.TtAutoConnect);
+        AppStrings.ApplyToolTip(this.FindControl<TextBlock>("lblStartMinimized"), AppStrings.TtStartMinimized);
+        AppStrings.ApplyToolTip(this.FindControl<TextBlock>("lblMinimizeToTray"), AppStrings.TtMinimizeToTray);
         AppStrings.ApplyToolTip(this.FindControl<Button>("btnRefreshPing"), AppStrings.TtPingRefresh);
 
         AppStrings.Apply(F("lblSectionConnection"), AppStrings.SectionConnection, forceLtr: true);
@@ -826,6 +988,15 @@ public partial class MainWindow : Window
     {
         if (sender is Button clickedBtn)
         {
+            string targetBridge = _activeBridge;
+            if (clickedBtn.Name == "btnBridgeDirect")         targetBridge = "Direct";
+            else if (clickedBtn.Name == "btnBridgeObfs4")     targetBridge = "obfs4";
+            else if (clickedBtn.Name == "btnBridgeSnowflake") targetBridge = "snowflake";
+            else if (clickedBtn.Name == "btnBridgeMeek")      targetBridge = "meek_lite";
+
+            if (clickedBtn.Name != "btnBridgeCustom" && _activeBridge == targetBridge)
+                return;
+
             this.FindControl<Button>("btnBridgeDirect")?.Classes.Remove("activeOpt");
             this.FindControl<Button>("btnBridgeObfs4")?.Classes.Remove("activeOpt");
             this.FindControl<Button>("btnBridgeSnowflake")?.Classes.Remove("activeOpt");
@@ -834,11 +1005,29 @@ public partial class MainWindow : Window
 
             clickedBtn.Classes.Add("activeOpt");
 
+            if (clickedBtn.Name == "btnBridgeCustom")
+            {
+                var customPan = this.FindControl<global::Avalonia.Controls.Border>("panCustomBridge");
+                if (customPan != null)
+                {
+                    if (customPan.MaxHeight > 0)
+                    {
+                        btnCustomSave_Click(null!, null!);
+                        return;
+                    }
+                    customPan.MaxHeight       = 500;
+                    customPan.Opacity         = 1;
+                    customPan.BorderThickness = new global::Avalonia.Thickness(1);
+                    var txtCustom = this.FindControl<global::Avalonia.Controls.TextBox>("txtCustomBridge");
+                    if (txtCustom != null) txtCustom.Text = _cfg?.CustomBridgeLine;
+                }
+                return;
+            }
+
             if (clickedBtn.Name == "btnBridgeDirect")         _activeBridge = "Direct";
             else if (clickedBtn.Name == "btnBridgeObfs4")     _activeBridge = "obfs4";
             else if (clickedBtn.Name == "btnBridgeSnowflake") _activeBridge = "snowflake";
             else if (clickedBtn.Name == "btnBridgeMeek")      _activeBridge = "meek_lite";
-            else if (clickedBtn.Name == "btnBridgeCustom")    _activeBridge = "Custom";
 
             _cfg.LastBridge = _activeBridge;
             RequestConfigSave();
@@ -848,6 +1037,11 @@ public partial class MainWindow : Window
                 _cfg.LastXrayMode = "Proxy Mode";
                 _pollMode         = "Proxy Mode";
                 ShowToast(CrimsonOnion.Localization.AppStrings.ToastVpnDisabledSnowflake);
+            }
+
+            if (_activeBridge == "snowflake" && _cfg.EnableAdapterBinding)
+            {
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastAdapterBindingSnowflake);
             }
 
             ApplyModeUI(_pollMode);
@@ -876,7 +1070,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void Engines_ValueChanged(object? sender, global::Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    private async void Engines_ValueChanged(object? sender, global::Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)
     {
         if (sender is global::Avalonia.Controls.Slider slider)
         {
@@ -890,7 +1084,7 @@ public partial class MainWindow : Window
             _cfg.LastCount    = engines.ToString();
 
             if (_state.IsEngineRunning)
-                OnEngineCountChanged(engines);
+                await OnEngineCountChanged(engines);
             else
             {
                 UpdateDisconnectedTorLabels();
@@ -1352,44 +1546,6 @@ public partial class MainWindow : Window
     
     private void UpdateAdapterBindingMutualExclusivity()
     {
-        var togAdapterBinding = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togAdapterBinding");
-        var togOutboundProxy = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togOutboundProxy");
-        var btnOutboundToggle = this.FindControl<global::Avalonia.Controls.Button>("btnOutboundToggle");
-        var btnAdapterBindingToggle = this.FindControl<global::Avalonia.Controls.Button>("btnAdapterBindingToggle");
-        
-        var panOutboundToggle = this.FindControl<global::Avalonia.Controls.Border>("panOutboundToggle");
-        var panAdapterBindingToggle = this.FindControl<global::Avalonia.Controls.Border>("panAdapterBindingToggle");
-        
-        if (togAdapterBinding != null && togOutboundProxy != null && btnOutboundToggle != null && btnAdapterBindingToggle != null)
-        {
-            if (togAdapterBinding.IsChecked == true)
-            {
-                togOutboundProxy.IsChecked = false;
-                btnOutboundToggle.IsEnabled = false;
-                btnOutboundToggle.Opacity = 0.5;
-                AppStrings.ApplyToolTip(panOutboundToggle, AppStrings.TtDisabledOutboundProxy);
-            }
-            else
-            {
-                btnOutboundToggle.IsEnabled = true;
-                btnOutboundToggle.Opacity = 1.0;
-                if (panOutboundToggle != null) global::Avalonia.Controls.ToolTip.SetTip(panOutboundToggle, null);
-            }
-            
-            if (togOutboundProxy.IsChecked == true)
-            {
-                togAdapterBinding.IsChecked = false;
-                btnAdapterBindingToggle.IsEnabled = false;
-                btnAdapterBindingToggle.Opacity = 0.5;
-                AppStrings.ApplyToolTip(panAdapterBindingToggle, AppStrings.TtDisabledAdapterBinding);
-            }
-            else
-            {
-                btnAdapterBindingToggle.IsEnabled = true;
-                btnAdapterBindingToggle.Opacity = 1.0;
-                if (panAdapterBindingToggle != null) global::Avalonia.Controls.ToolTip.SetTip(panAdapterBindingToggle, null);
-            }
-        }
     }
 
     private void Minimize_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
@@ -1418,19 +1574,19 @@ public partial class MainWindow : Window
 
         _autoBootTimer?.Stop(); 
         _staggerTimer?.Stop(); 
-        _statsTimer?.Stop();
+        if (_statsCts != null) { try { _statsCts.Cancel(); _statsCts.Dispose(); } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); } _statsCts = null; }
         _sessionClockTimer?.Stop();
         _logTimer?.Stop();
         _logClearTimer?.Stop();
         _bootstrapTimer?.Stop();
-        _pingTimer?.Stop();
-        _saveDebounceTimer?.Stop();
+        if (_pingCts != null) { try { _pingCts.Cancel(); _pingCts.Dispose(); } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); } _pingCts = null; }
+        _saveDebounceTimer?.Stop(); _saveDebounceTimer = null;
         _toastTimer?.Stop();
         _xrayBootTimer?.Stop();
         _xrayRestartTimer?.Stop();
-        if (_geoCts != null) { try { _geoCts.Cancel(); _geoCts.Dispose(); } catch { } _geoCts = null; }
-        try { _httpClient?.Dispose(); _httpClient = null; } catch { }
-        try { _cts?.Dispose(); _cts = null; } catch { }
+        if (_geoCts != null) { try { _geoCts.Cancel(); _geoCts.Dispose(); } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); } _geoCts = null; }
+        try { _httpClient?.Dispose(); _httpClient = null; } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
+        try { _cts?.Dispose(); _cts = null; } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
         StopAllEngines(isClosing: true);
         foreach (var country in Countries)
             country.Flag?.Dispose();
@@ -1501,6 +1657,7 @@ public partial class MainWindow : Window
             global::Avalonia.Application.Current.Resources["ThemeAccentPointerOver"] = accentHover;
             global::Avalonia.Application.Current.Resources["ThemeAccentPressed"] = accentPressed;
             global::Avalonia.Application.Current.Resources["ThemeGlow"] = glow;
+            global::Avalonia.Application.Current.Resources["ThemeGlowBrush"] = new global::Avalonia.Media.SolidColorBrush(glow);
             global::Avalonia.Application.Current.Resources["ToggleSwitchFillOn"] = accent;
             global::Avalonia.Application.Current.Resources["ToggleSwitchFillOnPointerOver"] = accentHover;
             global::Avalonia.Application.Current.Resources["ToggleSwitchFillOnPressed"] = accentPressed;
@@ -1510,6 +1667,13 @@ public partial class MainWindow : Window
             global::Avalonia.Application.Current.Resources["SliderTrackValueFill"] = accent;
             global::Avalonia.Application.Current.Resources["SliderTrackValueFillPointerOver"] = accentHover;
             global::Avalonia.Application.Current.Resources["SliderTrackValueFillPressed"] = accentPressed;
+        }
+
+        if (_state != null && _state.IsEngineRunning)
+        {
+            var txtConnectBtn = this.FindControl<global::Avalonia.Controls.TextBlock>("txtConnectBtn");
+            if (txtConnectBtn != null && txtConnectBtn.Text == CrimsonOnion.Localization.AppStrings.ConnectedBtn) 
+                txtConnectBtn.Foreground = new global::Avalonia.Media.SolidColorBrush(glow);
         }
 
         if (this.Resources.ContainsKey($"Theme{themeName}Brush"))
@@ -1569,3 +1733,7 @@ public partial class MainWindow : Window
         }, System.TimeSpan.FromMilliseconds(300));
     }
 }
+
+
+
+

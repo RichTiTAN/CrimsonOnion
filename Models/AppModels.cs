@@ -36,12 +36,18 @@ namespace CrimsonOnion.Models
         public double WindowLeft { get; set; } = double.NaN;
         public double WindowTop { get; set; } = double.NaN;
         public string LastConfig { get; set; } = "Optimized";
+        [JsonProperty("SelectedBridge")]
         public string LastBridge { get; set; } = "Direct";
+        [JsonProperty("InstanceCount")]
         public string LastCount { get; set; } = "6";
+        [JsonProperty("XrayMode")]
         public string LastXrayMode { get; set; } = "Proxy Mode";
         public string SplitTunnelMode { get; set; } = "DISABLED"; 
+        [JsonProperty("ManualSplit")]
         public string LastManualSplit { get; set; } = "";
+        [JsonProperty("AppSplit")]
         public string LastAppSplit { get; set; } = "";
+        [JsonProperty("BlockSplit")]
         public string LastBlockSplit { get; set; } = "";
         public bool EnableDirect { get; set; } = false;
         public bool EnableDirectUDP { get; set; } = false;

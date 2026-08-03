@@ -176,6 +176,8 @@ namespace CrimsonOnion.Services
             cleanCfg.Add("");
             cleanCfg.Add("# --- MANAGED BRIDGES ---");
             cleanCfg.Add("Log notice file ./tor.log");
+            if (config.DebugMode)
+                cleanCfg.Add("Log warn stdout");
 
             if (config.EnableAdapterBinding && !string.IsNullOrWhiteSpace(config.SelectedAdapterIp))
             {

@@ -41,13 +41,14 @@ public partial class MainWindow
     private global::Avalonia.Threading.DispatcherTimer? _staggerTimer;
     private global::Avalonia.Threading.DispatcherTimer? _xrayBootTimer;
     private System.Collections.Generic.List<int> _staggerQueue = new();
+    private long _lastEngineCountToastTick = 0;
 
-    private global::Avalonia.Threading.DispatcherTimer? _statsTimer;
-    private global::Avalonia.Threading.DispatcherTimer? _pingTimer;
+    private System.Threading.CancellationTokenSource? _statsCts;
+    private System.Threading.CancellationTokenSource? _pingCts;
     private static readonly System.Net.Http.HttpClient _geoPingClient = new System.Net.Http.HttpClient(
         new System.Net.Http.HttpClientHandler { Proxy = new System.Net.WebProxy("http://127.0.0.1:10818"), UseProxy = true })
     {
-        Timeout = TimeSpan.FromSeconds(15)
+        Timeout = TimeSpan.FromSeconds(30)
     };
     
     private static readonly System.Net.Http.HttpClient _grpcClient = new System.Net.Http.HttpClient
@@ -57,7 +58,15 @@ public partial class MainWindow
     };
 
     private static readonly SolidColorBrush BrGray   = new SolidColorBrush(Color.FromRgb(160, 174, 192)); // #A0AEC0
-    private static readonly SolidColorBrush BrGreen  = new SolidColorBrush(Color.FromRgb(104, 211, 145)); // #68D391
+    internal static SolidColorBrush BrGreen
+    {
+        get
+        {
+            if (global::Avalonia.Application.Current?.Resources.TryGetValue("ThemeGlowBrush", out var res) == true && res is SolidColorBrush b)
+                return b;
+            return new SolidColorBrush(Color.FromRgb(104, 211, 145));
+        }
+    }
     private static readonly SolidColorBrush BrOrange = new SolidColorBrush(Color.FromRgb(246, 173, 85));  // #F6AD55
     private static readonly SolidColorBrush BrRed    = new SolidColorBrush(Color.FromRgb(245, 101, 101)); // #F56565
     private static readonly SolidColorBrush BrWhite  = new SolidColorBrush(Color.FromRgb(226, 232, 240)); // #E2E8F0
@@ -72,7 +81,8 @@ public partial class MainWindow
         };
 
     private System.Threading.CancellationTokenSource? _geoCts;
-    private volatile bool _isFetchingStats = false; 
+    private System.Threading.CancellationTokenSource? _graphAnimCts;
+    private int _isFetchingStatsInt = 0; 
     private System.Collections.Generic.Queue<double> _upHistory = new();
     private System.Collections.Generic.Queue<double> _dnHistory = new();
     private double _upSum = 0;
@@ -107,8 +117,9 @@ public partial class MainWindow
     }
 
     private static void TryDeleteFile(string path)
+
     {
-        try { if (File.Exists(path)) File.Delete(path); } catch { }
+        try { if (File.Exists(path)) File.Delete(path); } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
     }
 
     private void KillPidRef(ref int? pidRef)
@@ -120,26 +131,46 @@ public partial class MainWindow
                 using var p = Process.GetProcessById(pidRef.Value);
                 if (!p.HasExited) { p.Kill(); p.WaitForExit(1000); }
             }
-            catch { }
+            catch (ArgumentException) { } 
+            catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
             pidRef = null;
         }
     }
 
-    private void KillManagedProcess(string name)
+    private void KillPid(int? pid)
     {
+        if (pid.HasValue)
+        {
+            try
+            {
+                using var p = Process.GetProcessById(pid.Value);
+                if (!p.HasExited) { p.Kill(); p.WaitForExit(1000); }
+            }
+            catch (ArgumentException) { } 
+            catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
+        }
+    }
+
+    private void KillManagedProcesses(params string[] names)
+    {
+        if (names == null || names.Length == 0) return;
         var paths = new[]
         {
             GetAppPath(@"Data\Xray\xray.exe"),
             GetAppPath(@"Data\HAproxy\haproxy.exe"),
             GetAppPath(@"Data\sing_box\sing-box.exe"),
-            GetAppPath(@"Data\TorBin\tor.exe")
+            GetAppPath(@"Data\TorBin\tor.exe"),
+            GetAppPath(@"Data\TorBin\lyrebird.exe")
         };
         try
         {
-            foreach (var p in Process.GetProcessesByName(name))
+            foreach (var p in Process.GetProcesses())
             {
                 using (p)
                 {
+                    if (!names.Contains(p.ProcessName, StringComparer.OrdinalIgnoreCase))
+                        continue;
+
                     try
                     {
                         var exePath = p.MainModule?.FileName ?? "";
@@ -150,11 +181,86 @@ public partial class MainWindow
                             p.WaitForExit(1000);
                         }
                     }
-                    catch { }
+                    catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
                 }
             }
         }
-        catch { }
+        catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
+    }
+
+    private int? StartDebugProcess(string exePath, string args, string workingDir, string label, bool warnOnly = true)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName         = exePath,
+                Arguments        = args,
+                WorkingDirectory = workingDir,
+                UseShellExecute  = false,
+                CreateNoWindow   = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError  = true,
+            };
+            var proc = new Process { StartInfo = psi };
+            proc.Start();
+            try { CrimsonOnion.Services.JobManager.AddProcess(proc); } catch { }
+
+            int pid = proc.Id;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var outTask = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            string? line;
+                            while ((line = await proc.StandardOutput.ReadLineAsync()) != null)
+                                if (!string.IsNullOrWhiteSpace(line) && ShouldLog(line, warnOnly))
+                                    CrimsonOnion.Services.SimpleLogger.Log($"[{label}] {line}");
+                        }
+                        catch { }
+                    });
+                    var errTask = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            string? line;
+                            while ((line = await proc.StandardError.ReadLineAsync()) != null)
+                                if (!string.IsNullOrWhiteSpace(line) && ShouldLog(line, warnOnly))
+                                    CrimsonOnion.Services.SimpleLogger.Log($"[{label}] {line}");
+                        }
+                        catch { }
+                    });
+                    await Task.WhenAll(outTask, errTask);
+                }
+                catch { }
+                finally { try { proc.Dispose(); } catch { } }
+            });
+
+            return pid;
+        }
+        catch (Exception ex)
+        {
+            CrimsonOnion.Services.SimpleLogger.Log(ex);
+            return null;
+        }
+    }
+
+    private static bool ShouldLog(string line, bool warnOnly)
+    {
+        if (!warnOnly) return true;
+
+        if (line.IndexOf("is relative and will resolve to", StringComparison.OrdinalIgnoreCase) >= 0)
+            return false;
+
+        return line.IndexOf("warn",  StringComparison.OrdinalIgnoreCase) >= 0
+            || line.IndexOf("error", StringComparison.OrdinalIgnoreCase) >= 0
+            || line.IndexOf("fatal", StringComparison.OrdinalIgnoreCase) >= 0
+            || line.IndexOf("alert", StringComparison.OrdinalIgnoreCase) >= 0
+            || line.IndexOf("emerg", StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
     private void UpdateLanIp()
@@ -165,10 +271,9 @@ public partial class MainWindow
                 .Where(ni => ni.OperationalStatus == OperationalStatus.Up
                           && ni.NetworkInterfaceType != NetworkInterfaceType.Loopback)
                 .SelectMany(ni => ni.GetIPProperties().UnicastAddresses)
-                .Where(ua => ua.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork
-                          && !ua.Address.ToString().StartsWith("127.")
-                          && !ua.Address.ToString().StartsWith("169.254."))
+                .Where(ua => ua.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
                 .Select(ua => ua.Address.ToString())
+                .Where(ipStr => !ipStr.StartsWith("127.") && !ipStr.StartsWith("169.254."))
                 .FirstOrDefault();
             _state.LanIp = ip ?? "UNKNOWN";
         }
@@ -177,7 +282,7 @@ public partial class MainWindow
 
     private void UpdateLocalPortUI()
     {
-        var lblLocalIp = this.FindControl<global::Avalonia.Controls.TextBlock>("lblLocalIp");
+
         if (lblLocalIp == null) return;
         
         lblLocalIp.ClearValue(global::Avalonia.Controls.TextBlock.ForegroundProperty);
@@ -251,21 +356,18 @@ public partial class MainWindow
         }
     }
 
+    private global::Avalonia.Controls.TextBlock?[]? _torLabels;
+
     private void UpdateTorLabel(int torIdx)
     {
         if (torIdx < 1 || torIdx > 8) return;
-        TextBlock? lbl = torIdx switch
+        
+        if (_torLabels == null)
         {
-            1 => lblTor1,
-            2 => lblTor2,
-            3 => lblTor3,
-            4 => lblTor4,
-            5 => lblTor5,
-            6 => lblTor6,
-            7 => lblTor7,
-            8 => lblTor8,
-            _ => null
-        };
+            _torLabels = new[] { lblTor1, lblTor2, lblTor3, lblTor4, lblTor5, lblTor6, lblTor7, lblTor8 };
+        }
+        
+        var lbl = _torLabels[torIdx - 1];
         if (lbl == null) return;
 
         var padded = torIdx.ToString().PadLeft(2, '0');
@@ -318,13 +420,15 @@ public partial class MainWindow
 
             _toastTimer?.Stop();
 
-            toastText.Text = CrimsonOnion.Localization.AppStrings.IsPersian
+            bool isFa = CrimsonOnion.Localization.AppStrings.IsPersian;
+
+            toastText.Text = isFa
                 ? message
                 : message.ToUpperInvariant();
-            toastText.FontFamily = CrimsonOnion.Localization.AppStrings.IsPersian
+            toastText.FontFamily = isFa
                 ? new global::Avalonia.Media.FontFamily("Segoe UI")
                 : global::Avalonia.Media.FontFamily.Default;
-            toastText.FlowDirection = CrimsonOnion.Localization.AppStrings.IsPersian
+            toastText.FlowDirection = isFa
                 ? global::Avalonia.Media.FlowDirection.RightToLeft
                 : global::Avalonia.Media.FlowDirection.LeftToRight;
             toastText.FontWeight = global::Avalonia.Media.FontWeight.Bold;
@@ -335,19 +439,22 @@ public partial class MainWindow
             toast.IsVisible = true;
             global::Avalonia.Threading.DispatcherTimer.RunOnce(() => { toast.Opacity = 1; }, TimeSpan.FromMilliseconds(20));
 
-            _toastTimer = new global::Avalonia.Threading.DispatcherTimer
+            if (_toastTimer == null)
             {
-                Interval = TimeSpan.FromSeconds(3)
-            };
-            _toastTimer.Tick += (s, e) =>
-            {
-                _toastTimer?.Stop();
-                if (toast != null)
+                _toastTimer = new global::Avalonia.Threading.DispatcherTimer
                 {
-                    toast.Opacity = 0;
-                    global::Avalonia.Threading.DispatcherTimer.RunOnce(() => { toast.IsVisible = false; }, TimeSpan.FromMilliseconds(300));
-                }
-            };
+                    Interval = TimeSpan.FromSeconds(3)
+                };
+                _toastTimer.Tick += (s, e) =>
+                {
+                    _toastTimer?.Stop();
+                    if (toast != null)
+                    {
+                        toast.Opacity = 0;
+                        global::Avalonia.Threading.DispatcherTimer.RunOnce(() => { toast.IsVisible = false; }, TimeSpan.FromMilliseconds(300));
+                    }
+                };
+            }
             _toastTimer.Start();
         });
     }
@@ -355,14 +462,18 @@ public partial class MainWindow
 
 
 
-
-    internal void OnEngineCountChanged(int newCount)
+    internal async Task OnEngineCountChanged(int newCount)
     {
         RequestConfigSave();
 
         if (_state.IsConnected)
         {
-            ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
+            long now = Environment.TickCount64;
+            if (now - _lastEngineCountToastTick > 3000)
+            {
+                _lastEngineCountToastTick = now;
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
+            }
             return;
         }
 
@@ -376,15 +487,15 @@ public partial class MainWindow
             for (int i = newCount + 1; i <= 8; i++)
             {
                 KillPidRef(ref _torPids[i - 1]);
-                _staggerQueue.Remove(i);
+                lock (_staggerQueue) { _staggerQueue.Remove(i); }
                 UpdateTorLabel(i);
             }
-            FormatHAProxyConfig(newCount);
+            await FormatHAProxyConfigAsync(newCount);
         }
         else if (newCount > curCount)
         {
             _pollSelCount = newCount;
-            FormatHAProxyConfig(newCount);
+            await FormatHAProxyConfigAsync(newCount);
 
             bool isBootstrapping = _bootstrapTimer?.IsEnabled == true;
 
@@ -401,37 +512,45 @@ public partial class MainWindow
 
                 TryDeleteFile(GetAppPath($@"Data\Tors\Tor{i}\tor.log"));
                 TryDeleteFile(GetAppPath($@"Data\Tors\Tor{i}\Data\control_auth_cookie"));
-
-                if (isBootstrapping) _staggerQueue.Add(i);
+                if (isBootstrapping) { lock (_staggerQueue) { _staggerQueue.Add(i); } }
             }
 
-            if (isBootstrapping && _staggerQueue.Count > 0)
+            bool hasStaggerItems = false;
+            lock (_staggerQueue) { hasStaggerItems = _staggerQueue.Count > 0; }
+            if (isBootstrapping && hasStaggerItems)
             {
                 if (_staggerTimer?.IsEnabled != true)
                 {
-                    _staggerTimer = new global::Avalonia.Threading.DispatcherTimer
-                    {
-                        Interval = TimeSpan.FromMilliseconds(1500)
-                    };
-                    _staggerTimer.Tick += (s, e) =>
-                    {
-                        if (_state.AbortBoot || !_state.IsEngineRunning || _staggerQueue.Count == 0)
-                        {
-                            _staggerTimer?.Stop();
-                            return;
-                        }
-                        int idx = _staggerQueue[0];
-                        _staggerQueue.RemoveAt(0);
-                        LaunchSingleTor(idx);
-                        if (_staggerQueue.Count == 0) _staggerTimer?.Stop();
-                    };
+                    _staggerTimer = new global::Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
                     _staggerTimer.Start();
+                    
+                    _ = Task.Run(async () =>
+                    {
+                        while (true)
+                        {
+                            await Task.Delay(1500);
+                            if (_state.AbortBoot || !_state.IsEngineRunning) break;
+                            
+                            int idx = -1;
+                            lock (_staggerQueue)
+                            {
+                                if (_staggerQueue.Count > 0)
+                                {
+                                    idx = _staggerQueue[0];
+                                    _staggerQueue.RemoveAt(0);
+                                }
+                            }
+                            if (idx == -1) break;
+                            await LaunchSingleTorAsync(idx);
+                        }
+                        global::Avalonia.Threading.Dispatcher.UIThread.Post(() => _staggerTimer?.Stop());
+                    });
                 }
             }
         }
     }
 
-    private void LaunchSingleTor(int i)
+    private async Task LaunchSingleTorAsync(int i)
     {
         var torPath   = GetAppPath($@"Data\Tors\Tor{i}");
         var torrcFile = "torrc";
@@ -442,13 +561,70 @@ public partial class MainWindow
         if (!Directory.Exists(torPath)) Directory.CreateDirectory(torPath);
 
         var lines = TorrcBuilder.BuildTorrcConfig(torrcFile, _pollSelBridge, _cfg.LastConfig, torPath, _cfg);
-        File.WriteAllLines(Path.Combine(torPath, torrcFile), lines);
+        await File.WriteAllLinesAsync(Path.Combine(torPath, torrcFile), lines);
 
+        if (_cfg.DebugMode)
+        {
+            int? pid = StartDebugProcess(
+                GetAppPath(@"Data\TorBin\tor.exe"),
+                $"-f {torrcFile}",
+                torPath,
+                $"Tor{i}");
+            if (pid.HasValue)
+            {
+                _torPids[i - 1] = pid.Value;
+
+                var existing = _torControlClients.FirstOrDefault(c => c.TorIndex == i);
+                if (existing != null)
+                {
+                    existing.Dispose();
+                    _torControlClients.Remove(existing);
+                }
+
+                var controlClient = new TorControlClient(
+                    20050 + i,
+                    Path.Combine(torPath, "Data", "control_auth_cookie"),
+                    i);
+
+                controlClient.BootstrapProgressUpdated += (torIdx, pct) =>
+                {
+                    Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        if (torIdx >= 1 && torIdx <= 8 && _state.TorPcts[torIdx - 1] != 100)
+                        {
+                            _state.TorPcts[torIdx - 1] = Math.Max(_state.TorPcts[torIdx - 1], pct);
+                            UpdateTorLabel(torIdx);
+                        }
+                    });
+                };
+
+                controlClient.ConnectionDropped += (torIdx) =>
+                {
+                    Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        if (torIdx >= 1 && torIdx <= 8)
+                        {
+                            if (_state.TorPcts[torIdx - 1] != 100)
+                            {
+                                _state.TorPcts[torIdx - 1] = -2; 
+                                UpdateTorLabel(torIdx);
+                            }
+                        }
+                    });
+                };
+
+                _torControlClients.Add(controlClient);
+                controlClient.Start();
+                
+                UpdateTorLabel(i);
+            }
+        }
+        else
+        {
         using (var proc = ProcessService.StartProcessDirect(
             GetAppPath(@"Data\TorBin\tor.exe"),
             $"-f {torrcFile}",
-            torPath,
-            hidden: !_cfg.DebugMode))
+            torPath))
         {
         if (proc != null)
         {
@@ -499,6 +675,7 @@ public partial class MainWindow
             UpdateTorLabel(i);
         }
         }
+        }
     }
 
 
@@ -508,45 +685,68 @@ public partial class MainWindow
         _state.IsEngineRunning = false;
         _bootstrapTimer?.Stop();
         _staggerTimer?.Stop();
-        _staggerQueue.Clear();
+        _xrayBootTimer?.Stop();
+        lock (_staggerQueue) { _staggerQueue.Clear(); }
         _sessionClockTimer?.Stop();
-        _statsTimer?.Stop();
-        _pingTimer?.Stop();
-        if (_geoCts != null) { try { _geoCts.Cancel(); _geoCts.Dispose(); } catch { } _geoCts = null; } 
+        if (_statsCts != null) { try { _statsCts.Cancel(); _statsCts.Dispose(); } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); } _statsCts = null; }
+        if (_pingCts != null) { try { _pingCts.Cancel(); _pingCts.Dispose(); } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); } _pingCts = null; }
+        if (_geoCts != null) { try { _geoCts.Cancel(); _geoCts.Dispose(); } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); } _geoCts = null; } 
+        if (_graphAnimCts != null) { try { _graphAnimCts.Cancel(); _graphAnimCts.Dispose(); } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); } _graphAnimCts = null; } 
         _logTimer?.Stop(); 
         _logClearTimer?.Stop(); 
         ProxyService.SetSystemProxy(false);
-        RestoreSystemDns();
+        _ = RestoreSystemDnsAsync();
 
         foreach (var client in _torControlClients) client.Dispose();
         _torControlClients.Clear();
 
-        KillManagedProcess("tor");
-        KillManagedProcess("haproxy");
-        KillManagedProcess("xray");
-        KillManagedProcess("sing-box");
-        KillPidRef(ref _xrayDebugPid);
-        KillPidRef(ref _sbDebugPid);
-        KillPidRef(ref _adapterXrayDebugPid);
+        int? xrayPid = _xrayDebugPid; _xrayDebugPid = null;
+        int? sbPid = _sbDebugPid; _sbDebugPid = null;
+        int? adapterPid = _adapterXrayDebugPid; _adapterXrayDebugPid = null;
 
+        var killTask = Task.Run(() => {
+            KillManagedProcesses("tor", "lyrebird", "haproxy", "xray", "sing-box");
+            KillPid(xrayPid);
+            KillPid(sbPid);
+            KillPid(adapterPid);
+            for (int i = 1; i <= 8; i++)
+            {
+                TryDeleteFile(GetAppPath($@"Data\Tors\Tor{i}\tor.log"));
+                TryDeleteFile(GetAppPath($@"Data\Tors\Tor{i}\Data\control_auth_cookie"));
+            }
+            TryDeleteFile(GetAppPath(@"Data\Xray\access.log"));
+            TryDeleteFile(GetAppPath(@"Data\Xray\error.log"));
+            TryDeleteFile(GetAppPath(@"Data\Xray\access.log.tmp"));
+        });
+        if (isClosing)
+        {
+            killTask.Wait(3000);
+            CrimsonOnion.Services.JobManager.Shutdown();
+        }
+
+        CrimsonOnion.Services.SimpleLogger.Log($"[Disconnect] Bridge={_activeBridge}, Mode={_pollMode}, isClosing={isClosing}");
 
         _state.IsConnected      = false;
         _state.LastTotalBytes   = 0;
         _state.SessionDataBytes = 0;
         _state.SessionStartTime = null;
-        _state.SpeedSamples     = new double[5];
+        _state.SpeedSamples     = _state.SpeedSamples ?? new double[5]; Array.Clear(_state.SpeedSamples, 0, _state.SpeedSamples.Length);
 
         global::Avalonia.Threading.Dispatcher.UIThread.Post(() => {
             _upHistory.Clear();
             _dnHistory.Clear();
             _upSum = 0;
             _dnSum = 0;
-            var graphUpload = this.FindControl<global::Avalonia.Controls.Shapes.Polyline>("graphUpload");
-            var graphDownload = this.FindControl<global::Avalonia.Controls.Shapes.Polyline>("graphDownload");
-            if (graphUpload != null) graphUpload.Points = new global::Avalonia.Collections.AvaloniaList<global::Avalonia.Point>();
-            if (graphDownload != null) graphDownload.Points = new global::Avalonia.Collections.AvaloniaList<global::Avalonia.Point>();
+            var graphUpload = this.FindControl<global::Avalonia.Controls.Shapes.Path>("graphUpload");
+        var graphDownload = this.FindControl<global::Avalonia.Controls.Shapes.Path>("graphDownload");
+        var graphUploadFill = this.FindControl<global::Avalonia.Controls.Shapes.Path>("graphUploadFill");
+        var graphDownloadFill = this.FindControl<global::Avalonia.Controls.Shapes.Path>("graphDownloadFill");
+        if (graphUpload != null) graphUpload.Data = null;
+        if (graphDownload != null) graphDownload.Data = null;
+        if (graphUploadFill != null) graphUploadFill.Data = null;
+        if (graphDownloadFill != null) graphDownloadFill.Data = null;
 
-            var panTimerContent = this.FindControl<StackPanel>("panTimerContent");
+        var panTimerContent = this.FindControl<global::Avalonia.Controls.StackPanel>("panTimerContent");
             if (panTimerContent != null) panTimerContent.IsVisible = false;
             var lblDisconnected = this.FindControl<TextBlock>("lblDisconnected");
             if (lblDisconnected != null) lblDisconnected.IsVisible = true;
@@ -563,14 +763,6 @@ public partial class MainWindow
             if (lblCountryName != null) lblCountryName.Text = "UNKNOWN";
         });
 
-        for (int i = 1; i <= 8; i++)
-        {
-            TryDeleteFile(GetAppPath($@"Data\Tors\Tor{i}\tor.log"));
-            TryDeleteFile(GetAppPath($@"Data\Tors\Tor{i}\Data\control_auth_cookie"));
-        }
-        TryDeleteFile(GetAppPath(@"Data\Xray\access.log"));
-        TryDeleteFile(GetAppPath(@"Data\Xray\error.log"));
-        TryDeleteFile(GetAppPath(@"Data\Xray\access.log.tmp"));
 
         if (!isClosing)
         {
@@ -602,24 +794,27 @@ public partial class MainWindow
     }
 
 
-    private void FormatHAProxyConfig(int activeCount)
+    private static readonly System.Text.RegularExpressions.Regex _reHAProxyIgnore = new System.Text.RegularExpressions.Regex(@"^\s*(listen stats|bind 127\.0\.0\.1:10888|mode http|stats enable|stats uri /stats)", System.Text.RegularExpressions.RegexOptions.Compiled);
+    private static readonly System.Text.RegularExpressions.Regex _reHAProxyServer = new System.Text.RegularExpressions.Regex(@"^\s*(?:#\s*)*server\s+tor(\d+)", System.Text.RegularExpressions.RegexOptions.Compiled);
+    private static readonly System.Text.RegularExpressions.Regex _reHAProxyClean = new System.Text.RegularExpressions.Regex(@"^\s*(?:#\s*)*", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    private async Task FormatHAProxyConfigAsync(int activeCount)
     {
         var cfgPath = GetAppPath(@"Data\HAproxy\haproxy.cfg");
         if (!File.Exists(cfgPath)) return;
-        var lines    = File.ReadAllLines(cfgPath).ToList();
+        var lines    = await File.ReadAllLinesAsync(cfgPath);
         var newLines = new System.Collections.Generic.List<string>();
 
         foreach (var line in lines)
         {
-            if (System.Text.RegularExpressions.Regex.IsMatch(line,
-                @"^\s*(listen stats|bind 127\.0\.0\.1:10888|mode http|stats enable|stats uri /stats)"))
+            if (_reHAProxyIgnore.IsMatch(line))
                 continue;
 
-            var m = System.Text.RegularExpressions.Regex.Match(line, @"^\s*(?:#\s*)*server\s+tor(\d+)");
+            var m = _reHAProxyServer.Match(line);
             if (m.Success)
             {
                 int idx = int.Parse(m.Groups[1].Value);
-                string cleanLine = System.Text.RegularExpressions.Regex.Replace(line, @"^\s*(?:#\s*)*", "");
+                string cleanLine = _reHAProxyClean.Replace(line, "");
 
                 if (idx <= activeCount)
                     newLines.Add("    " + cleanLine);
@@ -636,7 +831,7 @@ public partial class MainWindow
             newLines.RemoveAt(newLines.Count - 1);
 
         if (!lines.SequenceEqual(newLines))
-            File.WriteAllLines(cfgPath, newLines);
+            await File.WriteAllLinesAsync(cfgPath, newLines);
     }
 
     private void CopyIp_PointerPressed(object? sender, global::Avalonia.Input.PointerPressedEventArgs e)
@@ -668,6 +863,28 @@ public partial class MainWindow
         {
             StopAllEngines();
             return;
+        }
+
+        if (_cfg.LastXrayMode == "VPN Mode")
+        {
+            try
+            {
+                bool tunExists = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+                    .Any(ni => (ni.Name.IndexOf("singbox", StringComparison.OrdinalIgnoreCase) >= 0 
+                             || ni.Name.IndexOf("wintun", StringComparison.OrdinalIgnoreCase) >= 0
+                             || ni.Description.IndexOf("wintun", StringComparison.OrdinalIgnoreCase) >= 0)
+                            && ni.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up);
+
+                if (tunExists)
+                {
+                    bool isFa = CrimsonOnion.Localization.AppStrings.IsPersian;
+                    ShowToast(isFa
+                        ? "آداپتور VPN از قبل توسط برنامه دیگری در حال استفاده است!"
+                        : "VPN adapter is already in use by another app!");
+                    return;
+                }
+            }
+            catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
         }
 
         if (!File.Exists(GetAppPath(@"Data\Tors\Tor1\Data\state")))
@@ -709,7 +926,7 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"StartEnginesAsync failed: {ex.Message}\n{ex.StackTrace}");
+            CrimsonOnion.Services.SimpleLogger.Log(ex);
             ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
                 ? $"خطا در شروع موتور: {ex.Message}"
                 : $"Engine start failed: {ex.Message}");
@@ -719,38 +936,48 @@ public partial class MainWindow
 
     private async Task StartEnginesAsyncCore()
     {
+        _bootstrapTimer?.Stop();
+        _staggerTimer?.Stop();
+        _xrayBootTimer?.Stop();
+        lock (_staggerQueue) { _staggerQueue.Clear(); }
+
         _state.IsEngineRunning = true;
-        UpdateLanIp();
+        _state.AbortBoot = false;
 
-        ApplySystemDns();
-
-        txtConnectBtn.Text = CrimsonOnion.Localization.AppStrings.IsPersian ? "در حال اتصال..." : "CONNECTING";
-        txtConnectBtn.Foreground = BrAmber;
+        if (txtConnectBtn != null)
+        {
+            txtConnectBtn.Text = CrimsonOnion.Localization.AppStrings.IsPersian ? "در حال اتصال..." : "CONNECTING";
+            txtConnectBtn.Foreground = BrAmber;
+        }
         UpdateRingAnimation("Connecting");
+
+        UpdateLanIp();
+        await ApplySystemDnsAsync();
 
         foreach (var client in _torControlClients) client.Dispose();
         _torControlClients.Clear();
-        for (int i = 0; i < 8; i++) KillPidRef(ref _torPids[i]);
-        KillManagedProcess("tor");
-        KillManagedProcess("haproxy");
-        KillManagedProcess("xray");
-        KillManagedProcess("sing-box");
-        KillPidRef(ref _xrayDebugPid);
-        KillPidRef(ref _sbDebugPid);
-        KillPidRef(ref _adapterXrayDebugPid);
+        var torPidsSnapshot = _torPids;
+        _torPids = new int?[8];
+        int? xrayPid = _xrayDebugPid; _xrayDebugPid = null;
+        int? sbPid = _sbDebugPid; _sbDebugPid = null;
+        int? adapterPid = _adapterXrayDebugPid; _adapterXrayDebugPid = null;
 
-        _bootstrapTimer?.Stop();
-        _staggerTimer?.Stop();
-        _staggerQueue.Clear();
+        var killTask = Task.Run(() => {
+            foreach (var pid in torPidsSnapshot) KillPid(pid);
+            KillManagedProcesses("tor", "lyrebird", "haproxy", "xray", "sing-box");
+            KillPid(xrayPid);
+            KillPid(sbPid);
+            KillPid(adapterPid);
+        });
+        await killTask;
+
         ProxyService.SetSystemProxy(false);
 
         _state.IsConnected      = false;
         _state.LastTotalBytes   = 0;
         _state.SessionDataBytes = 0;
         _state.SessionStartTime = null;
-        _state.SpeedSamples     = new double[5];
-        _torPids                = new int?[8];
-        _state.AbortBoot        = false;
+        Array.Clear(_state.SpeedSamples, 0, _state.SpeedSamples.Length);
 
         _pollSelCount  = _activeTorEngines;
         _pollSelBridge = _activeBridge;
@@ -762,18 +989,18 @@ public partial class MainWindow
         TryDeleteFile(GetAppPath(@"Data\Xray\access.log"));
         var txtXrayLogs = this.FindControl<TextBox>("txtXrayLogs");
         if (txtXrayLogs != null) txtXrayLogs.Text = "";
-        _lastXrayLogPos = 0;
+        Interlocked.Exchange(ref _lastXrayLogPos, 0);
         _xrayLogLines.Clear();
 
         await Task.Delay(800);
         if (_state.AbortBoot) return;
 
-        StartAdapterXray();
+        await StartAdapterXrayAsync();
 
         for (int i = 1; i <= 8; i++)
             TryDeleteFile(GetAppPath($@"Data\Tors\Tor{i}\tor.log"));
 
-        FormatHAProxyConfig(_pollSelCount);
+        await FormatHAProxyConfigAsync(_pollSelCount);
 
         for (int i = 1; i <= _pollSelCount; i++)
         {
@@ -786,19 +1013,33 @@ public partial class MainWindow
             if (!Directory.Exists(torPath)) Directory.CreateDirectory(torPath);
 
             var lines = TorrcBuilder.BuildTorrcConfig(torrcFile, _pollSelBridge, _cfg.LastConfig, torPath, _cfg);
-            File.WriteAllLines(Path.Combine(torPath, torrcFile), lines);
+            await File.WriteAllLinesAsync(Path.Combine(torPath, torrcFile), lines);
 
             var idx = i;
             TryDeleteFile(Path.Combine(torPath, "Data", "control_auth_cookie"));
-            using (var proc = ProcessService.StartProcessDirect(
-                        GetAppPath(@"Data\TorBin\tor.exe"),
-                        $"-f {torrcFile}",
-                        torPath,
-                        hidden: !_cfg.DebugMode))
+
+            if (_cfg.DebugMode)
             {
-            if (proc != null)
+                int? pid = StartDebugProcess(
+                    GetAppPath(@"Data\TorBin\tor.exe"),
+                    $"-f {torrcFile}",
+                    torPath,
+                    $"Tor{idx}");
+                if (pid.HasValue) _torPids[idx - 1] = pid.Value;
+            }
+            else
             {
-                _torPids[idx - 1] = proc.Id;
+                using (var proc = ProcessService.StartProcessDirect(
+                            GetAppPath(@"Data\TorBin\tor.exe"),
+                            $"-f {torrcFile}",
+                            torPath))
+                {
+                if (proc != null) _torPids[idx - 1] = proc.Id;
+                }
+            }
+
+            if (_torPids[idx - 1].HasValue)
+            {
                 var controlClient = new TorControlClient(20050 + idx,
                     Path.Combine(torPath, "Data", "control_auth_cookie"), idx);
                 controlClient.BootstrapProgressUpdated += (torIdx, pct) =>
@@ -831,30 +1072,33 @@ public partial class MainWindow
                 
                 UpdateTorLabel(idx);
             }
-            }
 
             await Task.Delay(1500);
         }
 
         if (_state.AbortBoot) return;
 
-        FormatHAProxyConfig(_pollSelCount);
+        await FormatHAProxyConfigAsync(_pollSelCount);
 
         bool isBridged  = _pollSelBridge != "Direct";
-        int hardTimeout = isBridged ? 300 : 180;
-        var deadline    = DateTime.Now.AddSeconds(hardTimeout);
+        int warningInterval = isBridged ? 300 : 180;
+        DateTime startTime = DateTime.Now;
+        DateTime[] nextWarningTime = new[] { DateTime.Now.AddSeconds(warningInterval) };
 
         _bootstrapTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
-        _bootstrapTimer.Tick += (s, e) => BootstrapTick("Optimized", deadline);
+        _bootstrapTimer.Tick += (s, e) => BootstrapTick("Optimized", nextWarningTime, warningInterval, startTime);
         _bootstrapTimer.Start();
     }
 
 
-    private void BootstrapTick(string selConfig, DateTime deadline)
+    private void BootstrapTick(string selConfig, DateTime[] nextWarningTime, int warningInterval, DateTime startTime)
     {
+        if (_bootstrapTimer == null) return; 
+
         if (_state.AbortBoot)
         {
             _bootstrapTimer?.Stop();
+            _bootstrapTimer = null;
             if (txtConnectBtn != null)
             {
                 txtConnectBtn.Text = CrimsonOnion.Localization.AppStrings.Connect;
@@ -880,28 +1124,39 @@ public partial class MainWindow
 
         if (!oneReady)
         {
-            if (DateTime.Now >= deadline)
+            if (DateTime.Now >= nextWarningTime[0])
             {
-                _bootstrapTimer?.Stop();
-                double elapsed = Math.Round((DateTime.Now - (_state.SessionStartTime ?? DateTime.Now)).TotalSeconds, 1);
-                ShowToast($"Bootstrap timed out after {elapsed}s. Try a different bridge type.");
-                StopAllEngines();
+                double elapsed = Math.Round((DateTime.Now - startTime).TotalSeconds, 1);
+                CrimsonOnion.Services.SimpleLogger.Log($"[Bootstrap] Still waiting after {elapsed}s. Bridge={_activeBridge}, Config={_cfg.LastConfig}, Mode={_pollMode}");
+                
+                int elapsedMins = (int)Math.Round(elapsed / 60.0);
+                ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
+                    ? $"اتصال هنوز برقرار نشده است ({elapsedMins} دقیقه). در حال تلاش مجدد..."
+                    : $"Still bootstrapping after {elapsedMins} minutes. Continuing to try...");
+                
+                nextWarningTime[0] = DateTime.Now.AddSeconds(warningInterval);
             }
             return;
         }
 
         _bootstrapTimer?.Stop();
+        _bootstrapTimer = null;
 
         TryDeleteFile(GetAppPath(@"Data\Xray\access.log"));
         TryDeleteFile(GetAppPath(@"Data\Xray\error.log"));
 
         var haExe = GetAppPath(@"Data\HAproxy\haproxy.exe");
         if (File.Exists(haExe))
-            ProcessService.StartProcessDirect(haExe, "-f haproxy.cfg", _cfg.HaPath, hidden: !_cfg.DebugMode)?.Dispose();
+        {
+            if (_cfg.DebugMode)
+                StartDebugProcess(haExe, "-f haproxy.cfg", _cfg.HaPath, "HAProxy");
+            else
+                ProcessService.StartProcessDirect(haExe, "-f haproxy.cfg", _cfg.HaPath)?.Dispose();
+        }
         _xrayBootTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
         _xrayBootTimer.Tick += (s2, e2) =>
         {
-            _xrayBootTimer?.Stop();
+            if (s2 is DispatcherTimer timer) timer.Stop();
             if (_state.AbortBoot) return;
 
             if (!XrayConfigWriter.Write(_cfg, _cfg.XrayDir)) return;
@@ -912,36 +1167,23 @@ public partial class MainWindow
             }
 
             if (_cfg.DebugMode)
-            {
-                using var p = Process.Start(new ProcessStartInfo("cmd.exe",
-                    $"/c \"title XrayDebug & .\\xray.exe run -c config.json || pause\"")
-                    { WorkingDirectory = _cfg.XrayDir, UseShellExecute = true });
-                _xrayDebugPid = p?.Id;
-            }
+                _xrayDebugPid = StartDebugProcess(GetAppPath(@"Data\Xray\xray.exe"), "run -c config.json", _cfg.XrayDir, "Xray");
             else
-            {
                 ProcessService.StartProcessDirect(GetAppPath(@"Data\Xray\xray.exe"), "run -c config.json", _cfg.XrayDir)?.Dispose();
-            }
 
             if (_pollMode == "VPN Mode")
             {
                 if (_cfg.DebugMode)
-                {
-                    using var p2 = Process.Start(new ProcessStartInfo("cmd.exe",
-                        $"/c \"title SingBoxDebug & .\\sing-box.exe run -c config.json || pause\"")
-                        { WorkingDirectory = _cfg.SbDir, UseShellExecute = true });
-                    _sbDebugPid = p2?.Id;
-                }
+                    _sbDebugPid = StartDebugProcess(GetAppPath(@"Data\sing_box\sing-box.exe"), "run -c config.json", _cfg.SbDir, "SingBox");
                 else
-                {
                     ProcessService.StartProcessDirect(GetAppPath(@"Data\sing_box\sing-box.exe"), "run -c config.json", _cfg.SbDir)?.Dispose();
-                }
             }
 
             ProxyService.SetSystemProxy(_pollMode == "Proxy Mode");
 
             _state.IsConnected      = true;
             _state.SessionStartTime = DateTime.Now;
+            CrimsonOnion.Services.SimpleLogger.Log($"[Connect] Bridge={_activeBridge}, Config={_cfg.LastConfig}, Mode={_pollMode}, Tor instances={_activeTorEngines}");
             if (txtConnectBtn != null)
             {
                 txtConnectBtn.Text = CrimsonOnion.Localization.AppStrings.ConnectedBtn;
@@ -962,46 +1204,55 @@ public partial class MainWindow
     }
     private int? _adapterXrayDebugPid;
 
-    private void StartAdapterXray()
+
+    private async Task StartAdapterXrayAsync()
     {
         if (!_cfg.EnableAdapterBinding || string.IsNullOrWhiteSpace(_cfg.SelectedAdapterIp)) return;
 
         var adapterXrayDir = GetAppPath(@"Data\Xray");
         if (!Directory.Exists(adapterXrayDir)) Directory.CreateDirectory(adapterXrayDir);
 
-        var configJson = $$"""
-{
-  "log": { "loglevel": "warning" },
-  "inbounds": [
-    {
-      "port": 10819,
-      "listen": "127.0.0.1",
-      "protocol": "socks",
-      "settings": { "auth": "noauth", "udp": true }
-    }
-  ],
-  "outbounds": [
-    {
-      "protocol": "freedom",
-      "settings": {},
-      "sendThrough": "{{_cfg.SelectedAdapterIp}}"
-    }
-  ]
-}
-""";
-        File.WriteAllText(Path.Combine(adapterXrayDir, "adapter_config.json"), configJson);
+        var configObj = new Newtonsoft.Json.Linq.JObject
+        {
+            ["log"] = new Newtonsoft.Json.Linq.JObject { ["loglevel"] = "warning" },
+            ["inbounds"] = new Newtonsoft.Json.Linq.JArray
+            {
+                new Newtonsoft.Json.Linq.JObject
+                {
+                    ["port"] = 10819,
+                    ["listen"] = "127.0.0.1",
+                    ["protocol"] = "socks",
+                    ["settings"] = new Newtonsoft.Json.Linq.JObject { ["auth"] = "noauth", ["udp"] = true }
+                }
+            }
+        };
+
+        var outbounds = new Newtonsoft.Json.Linq.JArray();
+        
+        var freedomOutbound = new Newtonsoft.Json.Linq.JObject
+        {
+            ["protocol"] = "freedom",
+            ["settings"] = new Newtonsoft.Json.Linq.JObject()
+        };
+        freedomOutbound["sendThrough"] = _cfg.SelectedAdapterIp;
+        outbounds.Add(freedomOutbound);
+
+        var routingObj = new Newtonsoft.Json.Linq.JObject
+        {
+            ["domainStrategy"] = "AsIs",
+            ["rules"] = new Newtonsoft.Json.Linq.JArray()
+        };
+
+        configObj["outbounds"] = outbounds;
+        configObj["routing"] = routingObj;
+
+        string configJson = configObj.ToString();
+        await File.WriteAllTextAsync(Path.Combine(adapterXrayDir, "adapter_config.json"), configJson);
         
         if (_cfg.DebugMode)
-        {
-            using var p = Process.Start(new ProcessStartInfo("cmd.exe",
-                $"/c \"title AdapterXrayDebug & .\\xray.exe run -c adapter_config.json || pause\"")
-                { WorkingDirectory = adapterXrayDir, UseShellExecute = true });
-            _adapterXrayDebugPid = p?.Id;
-        }
+            _adapterXrayDebugPid = StartDebugProcess(GetAppPath(@"Data\Xray\xray.exe"), "run -c adapter_config.json", adapterXrayDir, "AdapterXray");
         else
-        {
-            ProcessService.StartProcessDirect(GetAppPath(@"Data\Xray\xray.exe"), "run -c adapter_config.json", adapterXrayDir, hidden: true)?.Dispose();
-        }
+            ProcessService.StartProcessDirect(GetAppPath(@"Data\Xray\xray.exe"), "run -c adapter_config.json", adapterXrayDir)?.Dispose();
     }
 
     private void SmartRestartXray()
@@ -1020,76 +1271,79 @@ public partial class MainWindow
         }
     }
 
+    private string _xrayRestartTargetMode = "";
+
     private void RestartXray(string targetMode)
     {
-        KillManagedProcess("xray");
-        KillManagedProcess("sing-box");
+        KillManagedProcesses("xray", "sing-box");
         KillPidRef(ref _xrayDebugPid);
         KillPidRef(ref _sbDebugPid);
 
-
-        _xrayRestartTimer?.Stop();
-        _xrayRestartTimer = new global::Avalonia.Threading.DispatcherTimer
+        _xrayRestartTargetMode = targetMode;
+        
+        if (_xrayRestartTimer == null)
         {
-            Interval = TimeSpan.FromMilliseconds(500)
-        };
-        _xrayRestartTimer.Tick += (s, e) =>
-        {
-            _xrayRestartTimer?.Stop();
-            if (!XrayConfigWriter.Write(_cfg, _cfg.XrayDir)) return;
-
-            if (targetMode == "VPN Mode")
+            _xrayRestartTimer = new global::Avalonia.Threading.DispatcherTimer
             {
-                if (!SingboxConfigWriter.Write(_cfg, _cfg.SbDir)) return;
-            }
+                Interval = TimeSpan.FromMilliseconds(500)
+            };
+            _xrayRestartTimer.Tick += OnXrayRestartTick;
+        }
 
-            if (_cfg.DebugMode)
-            {
-                using var p = Process.Start(new ProcessStartInfo("cmd.exe",
-                    $"/c \"title XrayDebug & .\\xray.exe run -c config.json || pause\"")
-                    { WorkingDirectory = _cfg.XrayDir, UseShellExecute = true });
-                _xrayDebugPid = p?.Id;
-            }
-            else
-            {
-                ProcessService.StartProcessDirect(GetAppPath(@"Data\Xray\xray.exe"), "run -c config.json", _cfg.XrayDir)?.Dispose();
-            }
-
-            if (targetMode == "VPN Mode")
-            {
-                if (_cfg.DebugMode)
-                {
-                    using var p2 = Process.Start(new ProcessStartInfo("cmd.exe",
-                        $"/c \"title SingBoxDebug & .\\sing-box.exe run -c config.json || pause\"")
-                        { WorkingDirectory = _cfg.SbDir, UseShellExecute = true });
-                    _sbDebugPid = p2?.Id;
-                }
-                else
-                {
-                    ProcessService.StartProcessDirect(GetAppPath(@"Data\sing_box\sing-box.exe"), "run -c config.json", _cfg.SbDir)?.Dispose();
-                }
-            }
-
-            ProxyService.SetSystemProxy(targetMode == "Proxy Mode");
-
-            if (_state.IsConnected)
-            {
-                UpdateLanIp();
-                UpdateLanPortUI();
-
-                UpdateLocalPortUI();
-
-                _pingTimer?.Stop();
-                var pt = new global::Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1.5) };
-                pt.Tick += (s2, e2) => { pt.Stop(); StartGeoPing(); };
-                _pingTimer = pt;
-                pt.Start();
-            }
-        };
+        _xrayRestartTimer.Stop();
         _xrayRestartTimer.Start();
     }
 
+    private void OnXrayRestartTick(object? sender, EventArgs e)
+    {
+        _xrayRestartTimer?.Stop();
+        string targetMode = _xrayRestartTargetMode;
+        if (!XrayConfigWriter.Write(_cfg, _cfg.XrayDir)) return;
 
+        if (targetMode == "VPN Mode")
+        {
+            if (!SingboxConfigWriter.Write(_cfg, _cfg.SbDir)) return;
+        }
+
+        if (_cfg.DebugMode)
+            _xrayDebugPid = StartDebugProcess(GetAppPath(@"Data\Xray\xray.exe"), "run -c config.json", _cfg.XrayDir, "Xray");
+        else
+            ProcessService.StartProcessDirect(GetAppPath(@"Data\Xray\xray.exe"), "run -c config.json", _cfg.XrayDir)?.Dispose();
+
+        if (targetMode == "VPN Mode")
+        {
+            if (_cfg.DebugMode)
+                _sbDebugPid = StartDebugProcess(GetAppPath(@"Data\sing_box\sing-box.exe"), "run -c config.json", _cfg.SbDir, "SingBox");
+            else
+                ProcessService.StartProcessDirect(GetAppPath(@"Data\sing_box\sing-box.exe"), "run -c config.json", _cfg.SbDir)?.Dispose();
+        }
+
+        ProxyService.SetSystemProxy(targetMode == "Proxy Mode");
+
+        if (_state.IsConnected)
+        {
+            UpdateLanIp();
+            UpdateLanPortUI();
+
+            UpdateLocalPortUI();
+
+            if (_pingCts != null) { try { _pingCts.Cancel(); _pingCts.Dispose(); } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); } _pingCts = null; }
+                            _pingCts = new System.Threading.CancellationTokenSource();
+            var pToken = _pingCts.Token;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(1500, pToken).ConfigureAwait(false);
+                    if (!pToken.IsCancellationRequested) StartGeoPing();
+                }
+                catch { }
+            });
+        }
+    }
+
+
+    private global::Avalonia.Controls.TextBlock? _lblTimerCache;
     private void StartSessionClock()
     {
 
@@ -1111,9 +1365,9 @@ public partial class MainWindow
                 return;
             }
             var elapsed = DateTime.Now - _state.SessionStartTime.Value;
-            var lblTimer = this.FindControl<TextBlock>("lblTimer");
-            if (lblTimer != null)
-                lblTimer.Text = elapsed.ToString(@"hh\:mm\:ss");
+            if (_lblTimerCache == null) _lblTimerCache = this.FindControl<TextBlock>("lblTimer");
+            if (_lblTimerCache != null)
+                _lblTimerCache.Text = elapsed.ToString(@"hh\:mm\:ss");
         };
         _sessionClockTimer.Start();
     }
@@ -1136,17 +1390,37 @@ public partial class MainWindow
     private void btnCustomSave_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         var txtCustomBridge = this.FindControl<global::Avalonia.Controls.TextBox>("txtCustomBridge");
-        if (_cfg != null && _state != null && txtCustomBridge != null)
+        if (txtCustomBridge == null || string.IsNullOrWhiteSpace(txtCustomBridge.Text))
         {
-            _cfg.CustomBridgeLine = txtCustomBridge.Text ?? "";
-            ConfigService.Save(_cfg, _state, _cfg.CfgFile, _cfg.LastConfig, _cfg.LastBridge, _cfg.LastCount);
+            var panCustomBridge = this.FindControl<global::Avalonia.Controls.Border>("panCustomBridge");
+            if (panCustomBridge != null)
+            {
+                panCustomBridge.MaxHeight       = 0;
+                panCustomBridge.Opacity         = 0;
+                panCustomBridge.BorderThickness = new global::Avalonia.Thickness(0);
+            }
+            ApplyLoadedSettings();
+            return;
         }
-        var panCustomBridge = this.FindControl<global::Avalonia.Controls.Border>("panCustomBridge");
-        if (panCustomBridge != null)
+
+        if (_cfg != null && _state != null)
         {
-            panCustomBridge.MaxHeight       = 0;
-            panCustomBridge.Opacity         = 0;
-            panCustomBridge.BorderThickness = new global::Avalonia.Thickness(0);
+            _cfg.CustomBridgeLine = txtCustomBridge.Text.Trim();
+            _activeBridge = "Custom";
+            _cfg.LastBridge = _activeBridge;
+            ConfigService.Save(_cfg, _state, _cfg.CfgFile, _cfg.LastConfig, _cfg.LastBridge, _cfg.LastCount);
+            RequestConfigSave();
+            
+            if (_state.IsEngineRunning)
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectBridge);
+        }
+        
+        var pan = this.FindControl<global::Avalonia.Controls.Border>("panCustomBridge");
+        if (pan != null)
+        {
+            pan.MaxHeight       = 0;
+            pan.Opacity         = 0;
+            pan.BorderThickness = new global::Avalonia.Thickness(0);
         }
     }
 
@@ -1159,7 +1433,7 @@ public partial class MainWindow
             panCustomBridge.Opacity         = 0;
             panCustomBridge.BorderThickness = new global::Avalonia.Thickness(0);
         }
-        CancelFetch();
+        ApplyLoadedSettings();
     }
 
     private void btnGetWebTunnel_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
@@ -1189,19 +1463,23 @@ public partial class MainWindow
             btnGetWebTunnel.IsEnabled  = false;
         }
 
-        _httpClient?.Dispose();
+        var oldClient = _httpClient;
+        System.Net.Http.HttpClient newClient;
         try
         {
             var sysProxy = System.Net.WebRequest.GetSystemWebProxy();
             sysProxy.Credentials = System.Net.CredentialCache.DefaultCredentials;
-            _httpClient = new System.Net.Http.HttpClient(
+            newClient = new System.Net.Http.HttpClient(
                 new System.Net.Http.HttpClientHandler { Proxy = sysProxy, UseProxy = true });
         }
         catch
         {
-            _httpClient = new System.Net.Http.HttpClient();
+            newClient = new System.Net.Http.HttpClient();
         }
-        _httpClient.DefaultRequestHeaders.Add("Accept", "application/vnd.api+json");
+        newClient.DefaultRequestHeaders.Add("Accept", "application/vnd.api+json");
+        
+        _httpClient = newClient;
+        oldClient?.Dispose();
         _ = RequestChallengeAsync();
     }
 
@@ -1271,6 +1549,7 @@ public partial class MainWindow
 
                         if (imgCaptcha != null)
                         {
+                            (imgCaptcha.Source as global::Avalonia.Media.Imaging.Bitmap)?.Dispose();
                             using var ms = new MemoryStream(imgBytes);
                             imgCaptcha.Source = new global::Avalonia.Media.Imaging.Bitmap(ms);
                         }
@@ -1281,8 +1560,9 @@ public partial class MainWindow
                     return;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                CrimsonOnion.Services.SimpleLogger.Log(ex);
                 if (!_fetchingBridges) return;
             }
         }
@@ -1373,8 +1653,9 @@ public partial class MainWindow
                 _ = Dispatcher.UIThread.InvokeAsync(() => ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian ? "اتصال به سرورهای تور با مشکل مواجه شد.\nمیتوانید از ربات تلگرام زیر پل دریافت کنید:\n@GetBridgesBot" : "Failed to reach Tor servers. Please use the @GetBridgesBot Telegram bot or email bridges@torproject.org to get a bridge."));
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            CrimsonOnion.Services.SimpleLogger.Log(ex);
             CancelFetch();
             _ = Dispatcher.UIThread.InvokeAsync(() => ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian ? "اتصال به سرورهای تور با مشکل مواجه شد.\nمیتوانید از ربات تلگرام زیر پل دریافت کنید:\n@GetBridgesBot" : "Failed to reach Tor servers. Please use the @GetBridgesBot Telegram bot or email bridges@torproject.org to get a bridge."));
         }
@@ -1384,7 +1665,7 @@ public partial class MainWindow
     private global::Avalonia.Threading.DispatcherTimer? _logTimer;
     private global::Avalonia.Threading.DispatcherTimer? _logClearTimer;
     private long _lastXrayLogPos = 0;
-    private volatile bool _isReadingLogs = false; 
+    private int _isReadingLogs = 0; 
     private readonly System.Collections.Generic.List<string> _xrayLogLines = new();
 
     private void StartLogsTimers()
@@ -1420,10 +1701,9 @@ public partial class MainWindow
             {
                 var fp = GetAppPath(lf);
                 if (File.Exists(fp))
-                    try { using var fs = new FileStream(fp, FileMode.Truncate, FileAccess.Write, FileShare.ReadWrite); } catch { }
+                    try { using var fs = new FileStream(fp, FileMode.Truncate, FileAccess.Write, FileShare.ReadWrite); } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
             }
         };
-        _logClearTimer.Start();
     }
 
     private void chkLogs_CheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
@@ -1460,9 +1740,10 @@ public partial class MainWindow
 
         if (!_state.IsEngineRunning)
         {
+            if (_torLabels == null) _torLabels = new[] { lblTor1, lblTor2, lblTor3, lblTor4, lblTor5, lblTor6, lblTor7, lblTor8 };
             for (int i = 1; i <= 8; i++)
             {
-                var lbl = this.FindControl<global::Avalonia.Controls.TextBlock>($"lblTor{i}");
+                var lbl = _torLabels[i - 1];
                 if (lbl != null)
                 {
                     var padded = i.ToString().PadLeft(2, '0');
@@ -1476,9 +1757,10 @@ public partial class MainWindow
             return;
         }
 
+        if (_torLabels == null) _torLabels = new[] { lblTor1, lblTor2, lblTor3, lblTor4, lblTor5, lblTor6, lblTor7, lblTor8 };
         for (int i = 1; i <= 8; i++)
         {
-            var lbl = this.FindControl<global::Avalonia.Controls.TextBlock>($"lblTor{i}");
+            var lbl = _torLabels[i - 1];
             if (lbl != null)
             {
                 var padded = i.ToString().PadLeft(2, '0');
@@ -1519,8 +1801,7 @@ public partial class MainWindow
             }
         }
 
-        if (_isReadingLogs) return;
-        _isReadingLogs = true;
+        if (System.Threading.Interlocked.CompareExchange(ref _isReadingLogs, 1, 0) != 0) return;
         Task.Run(() =>
         {
             try
@@ -1532,10 +1813,11 @@ public partial class MainWindow
                 try
                 {
                     using var fs = new FileStream(xrayLogPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                    if (fs.Length < _lastXrayLogPos) _lastXrayLogPos = 0;
-                    if (fs.Length > _lastXrayLogPos)
+                    long currentPos = Interlocked.Read(ref _lastXrayLogPos);
+                    if (fs.Length < currentPos) { Interlocked.Exchange(ref _lastXrayLogPos, 0); currentPos = 0; }
+                    if (fs.Length > currentPos)
                     {
-                        fs.Seek(_lastXrayLogPos, SeekOrigin.Begin);
+                        fs.Seek(currentPos, SeekOrigin.Begin);
                         using var sr = new StreamReader(fs);
                         string? line;
                         while ((line = sr.ReadLine()) != null)
@@ -1562,10 +1844,10 @@ public partial class MainWindow
                                 }
                             }
                         }
-                        _lastXrayLogPos = fs.Length;
+                        Interlocked.Exchange(ref _lastXrayLogPos, fs.Length);
                     }
                 }
-                catch { }
+                catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
             }
 
             Dispatcher.UIThread.InvokeAsync(() =>
@@ -1580,7 +1862,7 @@ public partial class MainWindow
                 }
             });
             }
-            finally { _isReadingLogs = false; }
+            finally { System.Threading.Interlocked.Exchange(ref _isReadingLogs, 0); }
         });
     }
 
@@ -1617,7 +1899,7 @@ public partial class MainWindow
         if (lblCountry != null) lblCountry.Text = CrimsonOnion.Localization.AppStrings.GeoTracing;
         if (lblPing != null) lblPing.Text = "0 ms";
 
-        if (_geoCts != null) { try { _geoCts.Cancel(); _geoCts.Dispose(); } catch { } }
+        if (_geoCts != null) { try { _geoCts.Cancel(); _geoCts.Dispose(); } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); } }
         _geoCts = new System.Threading.CancellationTokenSource();
         var token = _geoCts.Token;
         var sw    = Stopwatch.StartNew();
@@ -1667,8 +1949,9 @@ public partial class MainWindow
                     if (lblPing != null) lblPing.Text = $"{pingMs}ms";
                 });
             }
-            catch
+            catch (Exception ex)
             {
+                CrimsonOnion.Services.SimpleLogger.Log(ex);
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     _state.IsGeoTracing = false;
@@ -1685,17 +1968,30 @@ public partial class MainWindow
     private void StartStatsPolling()
     {
         UpdateLanPortUI();
+        _logClearTimer?.Stop();
+        _logClearTimer?.Start();
 
-        _statsTimer?.Stop();
-        _statsTimer = new global::Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1500) };
-        _statsTimer.Tick += (s, e) => PollStatsTick();
-        _statsTimer.Start();
+        if (_statsCts != null) { try { _statsCts.Cancel(); _statsCts.Dispose(); } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); } _statsCts = null; }
+                _statsCts = new System.Threading.CancellationTokenSource();
+        var token = _statsCts.Token;
+
+        _ = Task.Run(async () =>
+        {
+            while (!token.IsCancellationRequested)
+            {
+                await Task.Delay(1500, token).ConfigureAwait(false);
+                if (token.IsCancellationRequested) break;
+                
+                try { PollStatsTick(); } catch { }
+            }
+        }, token);
     }
+
+    private static readonly byte[] _grpcStatsQueryBody = new byte[] { 0x00, 0x00, 0x00, 0x00, 0x02, 0x0A, 0x00 };
 
     private void PollStatsTick()
     {
-        if (!_state.IsConnected || _isFetchingStats) return;
-        _isFetchingStats = true;
+        if (!_state.IsConnected || System.Threading.Interlocked.CompareExchange(ref _isFetchingStatsInt, 1, 0) != 0) return;
 
         Task.Run(async () =>
         {
@@ -1708,7 +2004,7 @@ public partial class MainWindow
                     Version       = new Version(2, 0),
                     VersionPolicy = System.Net.Http.HttpVersionPolicy.RequestVersionExact
                 };
-                request.Content = new System.Net.Http.ByteArrayContent(new byte[] { 0x00, 0x00, 0x00, 0x00, 0x02, 0x0A, 0x00 });
+                request.Content = new System.Net.Http.ByteArrayContent(_grpcStatsQueryBody);
                 request.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/grpc");
                 request.Headers.Add("TE", "trailers");
 
@@ -1775,15 +2071,15 @@ public partial class MainWindow
                     _dnHistory.Enqueue(diffDn);
                     if (_dnHistory.Count > 40) _dnSum -= _dnHistory.Dequeue();
 
-                    var avgUp = (_upSum / (double)_upHistory.Count) * 2;
-                    var avgDn = (_dnSum / (double)_dnHistory.Count) * 2;
+                                        double curSpdUp = diffUp * 2;
+                    double curSpdDn = diffDn * 2;
 
-                    string spdUp = avgUp >= 1048576 ? $"{Math.Round(avgUp / 1048576, 2)} MB/s"
-                                 : avgUp >= 1024    ? $"{Math.Round(avgUp / 1024, 1)} KB/s"
-                                 :                   $"{(int)avgUp} B/s";
-                    string spdDn = avgDn >= 1048576 ? $"{Math.Round(avgDn / 1048576, 2)} MB/s"
-                                 : avgDn >= 1024    ? $"{Math.Round(avgDn / 1024, 1)} KB/s"
-                                 :                   $"{(int)avgDn} B/s";
+                    string spdUp = curSpdUp >= 1048576 ? $"{Math.Round(curSpdUp / 1048576.0, 2)} MB/s"
+                                 : curSpdUp >= 1024    ? $"{Math.Round(curSpdUp / 1024.0, 1)} KB/s"
+                                 :                   $"{(int)curSpdUp} B/s";
+                    string spdDn = curSpdDn >= 1048576 ? $"{Math.Round(curSpdDn / 1048576.0, 2)} MB/s"
+                                 : curSpdDn >= 1024    ? $"{Math.Round(curSpdDn / 1024.0, 1)} KB/s"
+                                 :                   $"{(int)curSpdDn} B/s";
                     string tot = _state.SessionDataBytes >= 1073741824
                                     ? $"{Math.Round(_state.SessionDataBytes / 1073741824.0, 2)} GB"
                                : _state.SessionDataBytes >= 1048576
@@ -1802,18 +2098,39 @@ public partial class MainWindow
                 if (curUpBytes > 0) _lastUpBytes = curUpBytes;
                 if (curDnBytes > 0) _lastDnBytes = curDnBytes;
             }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"Stats error: {ex.Message}"); }
-            finally { _isFetchingStats = false; }
+            catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
+            finally { System.Threading.Interlocked.Exchange(ref _isFetchingStatsInt, 0); }
         });
     }
 
 
+    private global::Avalonia.Controls.Shapes.Path? _graphDownload;
+    private global::Avalonia.Controls.Shapes.Path? _graphUpload;
+    private global::Avalonia.Controls.Shapes.Path? _graphDownloadFill;
+    private global::Avalonia.Controls.Shapes.Path? _graphUploadFill;
+    private readonly System.Collections.Generic.List<global::Avalonia.Point> _ptsUpCache = new System.Collections.Generic.List<global::Avalonia.Point>(40);
+    private readonly System.Collections.Generic.List<global::Avalonia.Point> _ptsDnCache = new System.Collections.Generic.List<global::Avalonia.Point>(40);
+
     private void DrawGraph()
     {
-        if (graphUpload == null || graphDownload == null) return;
+        if (_graphDownload == null)
+        {
+            _graphDownload = this.FindControl<global::Avalonia.Controls.Shapes.Path>("graphDownload");
+            _graphUpload = this.FindControl<global::Avalonia.Controls.Shapes.Path>("graphUpload");
+            _graphDownloadFill = this.FindControl<global::Avalonia.Controls.Shapes.Path>("graphDownloadFill");
+            _graphUploadFill = this.FindControl<global::Avalonia.Controls.Shapes.Path>("graphUploadFill");
+        }
+        var graphDownload = _graphDownload;
+        var graphUpload = _graphUpload;
+        var graphDownloadFill = _graphDownloadFill;
+        var graphUploadFill = _graphUploadFill;
+
+        if (graphUpload == null || graphDownload == null || graphUploadFill == null || graphDownloadFill == null) return;
 
         const double width  = 150;
         const double height = 40;
+        const double topPadding = 4;
+        const double bottomPadding = 2;
         int count = Math.Min(_upHistory.Count, _dnHistory.Count);
         if (count < 2) return;
 
@@ -1823,26 +2140,97 @@ public partial class MainWindow
         double maxVal = Math.Max(maxUp, maxDn);
         if (maxVal < 1024) maxVal = 1024;
 
-        var ptsUp = new global::Avalonia.Collections.AvaloniaList<global::Avalonia.Point>();
-        var ptsDn = new global::Avalonia.Collections.AvaloniaList<global::Avalonia.Point>();
+        _ptsUpCache.Clear();
+        _ptsDnCache.Clear();
 
-        var upArr  = _upHistory.ToArray();
-        var dnArr  = _dnHistory.ToArray();
-        int startIdx = 40 - upArr.Length;
+        int startIdx = 40 - count;
+        double drawHeight = height - topPadding - bottomPadding;
 
-        for (int i = 0; i < Math.Min(upArr.Length, dnArr.Length); i++)
+        using var upEnum = _upHistory.GetEnumerator();
+        using var dnEnum = _dnHistory.GetEnumerator();
+
+        for (int i = 0; i < count; i++)
         {
-            double x   = (startIdx + i) * step;
-            double yUp = height - (upArr[i] / maxVal * height);
-            double yDn = height - (dnArr[i] / maxVal * height);
-            if (yUp < 2) yUp = 2;
-            if (yDn < 2) yDn = 2;
-            ptsUp.Add(new global::Avalonia.Point(x, yUp));
-            ptsDn.Add(new global::Avalonia.Point(x, yDn));
+            if (!upEnum.MoveNext() || !dnEnum.MoveNext()) break;
+            double x = (startIdx + i) * step;
+            double yUp = (height - bottomPadding) - (upEnum.Current / maxVal * drawHeight);
+            double yDn = (height - bottomPadding) - (dnEnum.Current / maxVal * drawHeight);
+            _ptsUpCache.Add(new global::Avalonia.Point(x, yUp));
+            _ptsDnCache.Add(new global::Avalonia.Point(x, yDn));
         }
 
-        graphUpload.Points   = ptsUp;
-        graphDownload.Points = ptsDn;
+        graphUpload.Data = GenerateSmoothSpline(_ptsUpCache, false, width, height);
+        graphDownload.Data = GenerateSmoothSpline(_ptsDnCache, false, width, height);
+        graphUploadFill.Data = GenerateSmoothSpline(_ptsUpCache, true, width, height);
+        graphDownloadFill.Data = GenerateSmoothSpline(_ptsDnCache, true, width, height);
+
+        var canvas = graphUpload.Parent as global::Avalonia.Controls.Canvas;
+        if (canvas != null && canvas.RenderTransform is global::Avalonia.Media.TranslateTransform t)
+        {
+            t.X = 0;
+            var anim = new global::Avalonia.Animation.Animation
+            {
+                Duration = TimeSpan.FromSeconds(1),
+                FillMode = global::Avalonia.Animation.FillMode.Forward,
+                Children =
+                {
+                    new global::Avalonia.Animation.KeyFrame
+                    {
+                        Cue = new global::Avalonia.Animation.Cue(1d),
+                        Setters =
+                        {
+                            new global::Avalonia.Styling.Setter
+                            {
+                                Property = global::Avalonia.Media.TranslateTransform.XProperty,
+                                Value = -step
+                            }
+                        }
+                    }
+                }
+            };
+            if (_graphAnimCts != null) { try { _graphAnimCts.Cancel(); _graphAnimCts.Dispose(); } catch { } }
+            _graphAnimCts = new System.Threading.CancellationTokenSource();
+            _ = anim.RunAsync(canvas, _graphAnimCts.Token);
+        }
+    }
+
+    private global::Avalonia.Media.StreamGeometry GenerateSmoothSpline(System.Collections.Generic.List<global::Avalonia.Point> points, bool isFill, double width, double height)
+    {
+        var geom = new global::Avalonia.Media.StreamGeometry();
+        using (var ctx = geom.Open())
+        {
+            if (points.Count == 0) return geom;
+            
+            if (isFill)
+            {
+                ctx.BeginFigure(new global::Avalonia.Point(points[0].X, height), true);
+                ctx.LineTo(points[0]);
+            }
+            else
+            {
+                ctx.BeginFigure(points[0], false);
+            }
+
+            for (int i = 1; i < points.Count; i++)
+            {
+                var p0 = i >= 2 ? points[i - 2] : points[i - 1];
+                var p1 = points[i - 1];
+                var p2 = points[i];
+                var p3 = i + 1 < points.Count ? points[i + 1] : points[i];
+
+                double t = 0.25;
+                var cp1 = new global::Avalonia.Point(p1.X + (p2.X - p0.X) * t, p1.Y + (p2.Y - p0.Y) * t);
+                var cp2 = new global::Avalonia.Point(p2.X - (p3.X - p1.X) * t, p2.Y - (p3.Y - p1.Y) * t);
+
+                ctx.CubicBezierTo(cp1, cp2, p2);
+            }
+
+            if (isFill)
+            {
+                ctx.LineTo(new global::Avalonia.Point(points[points.Count - 1].X, height));
+            }
+        }
+        return geom;
     }
 
 
@@ -2023,6 +2411,8 @@ public partial class MainWindow
         var panSplitOverlay = this.FindControl<global::Avalonia.Controls.Border>("panSplitOverlay");
         if (panSplitOverlay != null)
         {
+            if (panSplitOverlay.IsVisible) return;
+
             panSplitOverlay.IsVisible = true;
             panSplitOverlay.Classes.Add("popupOpen");
             var ldo = this.FindControl<global::Avalonia.Controls.Border>("LightDismissOverlay");
@@ -2069,6 +2459,8 @@ public partial class MainWindow
         var panSettingsOverlay = this.FindControl<global::Avalonia.Controls.Border>("panSettingsOverlay");
         if (panSettingsOverlay != null)
         {
+            if (panSettingsOverlay.IsVisible) return;
+
             panSettingsOverlay.IsVisible = true;
             panSettingsOverlay.Classes.Add("popupOpen");
             var ldo = this.FindControl<global::Avalonia.Controls.Border>("LightDismissOverlay");
@@ -2231,7 +2623,7 @@ public partial class MainWindow
                     }
                 }
                 
-                string tempFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "xray_test.json");
+                string tempFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), Guid.NewGuid().ToString() + ".json");
                 try
                 {
                     System.IO.File.WriteAllText(tempFile, text);
@@ -2253,12 +2645,18 @@ public partial class MainWindow
                         {
                             if (proc != null)
                             {
+                                var outTask = proc.StandardOutput.ReadToEndAsync();
                                 var errTask = proc.StandardError.ReadToEndAsync();
                                 await proc.WaitForExitAsync();
                                 if (proc.ExitCode != 0)
                                 {
                                     string err = await errTask;
-                                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastXrayRejected + err.Substring(0, System.Math.Min(err.Length, 100)));
+                                    string outStr = await outTask;
+                                    string msg = string.IsNullOrWhiteSpace(err) ? outStr : err;
+                                    var lines = msg.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                                    msg = string.Join(" ", lines.Where(l => !l.Contains("Xray, Penetrates Everything") && !l.Contains("unified platform")));
+                                    msg = msg.Trim();
+                                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastXrayRejected + msg.Substring(0, System.Math.Min(msg.Length, 150)));
                                     return;
                                 }
                             }
@@ -2267,7 +2665,7 @@ public partial class MainWindow
                 }
                 finally
                 {
-                    try { if (System.IO.File.Exists(tempFile)) System.IO.File.Delete(tempFile); } catch { }
+                    try { if (System.IO.File.Exists(tempFile)) System.IO.File.Delete(tempFile); } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
                 }
 
                 _cfg.V2rayChainJson = text.Trim();
@@ -2281,9 +2679,10 @@ public partial class MainWindow
                 
                 btnXrayCancel_Click(sender, e);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                ShowToast(CrimsonOnion.Localization.AppStrings.ToastInvalidJson);
+                CrimsonOnion.Services.SimpleLogger.Log(ex);
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastInvalidJson + " " + ex.Message);
             }
         }
     }
@@ -2391,6 +2790,7 @@ public partial class MainWindow
                 break;
             case "btnDebugTog":
                 _cfg.DebugMode = val;
+                CrimsonOnion.Services.SimpleLogger.EnableLogging = val;
                 break;
         }
 
@@ -2807,7 +3207,10 @@ public partial class MainWindow
                 {
                     _cfg.EnableAdapterBinding = true;
                     RequestConfigSave();
-                    if (_state.IsEngineRunning) ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
+                    if (_activeBridge == "snowflake")
+                        ShowToast(CrimsonOnion.Localization.AppStrings.ToastAdapterBindingSnowflake);
+                    else if (_state.IsEngineRunning)
+                        ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
                 }
             }
             else
@@ -2831,10 +3234,16 @@ public partial class MainWindow
             var parts = selectedText.Split(new[] { " - " }, StringSplitOptions.None);
             if (parts.Length == 2)
             {
-                _cfg.SelectedAdapterName = parts[0];
-                _cfg.SelectedAdapterIp = parts[1];
+                var newName = parts[0];
+                var newIp = parts[1];
+                
+                bool changed = newIp != _cfg.SelectedAdapterIp;
+                
+                _cfg.SelectedAdapterName = newName;
+                _cfg.SelectedAdapterIp = newIp;
                 RequestConfigSave();
-                if (_state.IsEngineRunning)
+                
+                if (changed && _cfg.EnableAdapterBinding && _state.IsEngineRunning)
                 {
                     ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
                 }
@@ -3266,60 +3675,73 @@ public partial class MainWindow
     }
 
     // ─── Apply system DNS at connect time 
-    private void ApplySystemDns()
+    private async Task ApplySystemDnsAsync()
     {
         if (!_cfg.EnableSystemDns) return;
         if (string.IsNullOrWhiteSpace(_cfg.SystemDnsPrimary)) return;
 
-        try
+        await Task.Run(() =>
         {
-            System.Net.NetworkInformation.NetworkInterface? nic = null;
-            if (_cfg.EnableAdapterBinding && !string.IsNullOrWhiteSpace(_cfg.SelectedAdapterName))
+            try
             {
-                nic = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
-                    .FirstOrDefault(a => a.Name == _cfg.SelectedAdapterName && a.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up);
-            }
-            
-            if (nic == null)
-            {
-                nic = DnsService.GetMainPhysicalAdapter();
-            }
+                System.Net.NetworkInformation.NetworkInterface? nic = null;
+                if (_cfg.EnableAdapterBinding && !string.IsNullOrWhiteSpace(_cfg.SelectedAdapterName))
+                {
+                    nic = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
+                        .FirstOrDefault(a => a.Name == _cfg.SelectedAdapterName && a.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up);
+                }
+                
+                if (nic == null)
+                {
+                    nic = DnsService.GetMainPhysicalAdapter();
+                }
 
-            if (nic == null)
-            {
-                System.Diagnostics.Debug.WriteLine("[DnsService] No valid adapter found for DNS.");
-                return;
-            }
-            _savedDnsAdapterName = nic.Name;
-            _savedDnsServers     = DnsService.GetCurrentDns(nic);
+                if (nic == null)
+                {
+                    CrimsonOnion.Services.SimpleLogger.Log("[DnsService] No valid adapter found for DNS.");
+                    return;
+                }
+                _savedDnsAdapterName = nic.Name;
+                _savedDnsServers     = DnsService.GetCurrentDns(nic);
 
-            DnsService.SetDns(nic.Name, _cfg.SystemDnsPrimary, _cfg.SystemDnsSecondary);
-            System.Diagnostics.Debug.WriteLine($"[DnsService] Applied DNS {_cfg.SystemDnsPrimary}/{_cfg.SystemDnsSecondary} to {nic.Name}");
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[DnsService] ApplySystemDns error: {ex.Message}");
-        }
+                DnsService.SetDns(nic.Name, _cfg.SystemDnsPrimary, _cfg.SystemDnsSecondary);
+                CrimsonOnion.Services.SimpleLogger.Log($"[DnsService] Applied DNS {_cfg.SystemDnsPrimary}/{_cfg.SystemDnsSecondary} to {nic.Name}");
+            }
+            catch (Exception ex)
+            {
+                CrimsonOnion.Services.SimpleLogger.Log(ex);
+            }
+        });
     }
 
     // ─── Restore system DNS at disconnect / app close 
-    private void RestoreSystemDns()
+
+    private async Task RestoreSystemDnsAsync()
     {
         if (_savedDnsAdapterName == null) return;
 
-        try
+        await Task.Run(() =>
         {
-            DnsService.RestoreDns(_savedDnsAdapterName, _savedDnsServers ?? Array.Empty<string>());
-            System.Diagnostics.Debug.WriteLine($"[DnsService] Restored DNS on {_savedDnsAdapterName}");
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[DnsService] RestoreSystemDns error: {ex.Message}");
-        }
-        finally
-        {
-            _savedDnsAdapterName = null;
-            _savedDnsServers     = null;
-        }
+            try
+            {
+                DnsService.RestoreDns(_savedDnsAdapterName, _savedDnsServers ?? Array.Empty<string>());
+                CrimsonOnion.Services.SimpleLogger.Log($"[DnsService] Restored DNS on {_savedDnsAdapterName}");
+            }
+            catch (Exception ex)
+            {
+                CrimsonOnion.Services.SimpleLogger.Log(ex);
+            }
+            finally
+            {
+                _savedDnsAdapterName = null;
+                _savedDnsServers     = null;
+            }
+        });
     }
 }
+
+
+
+
+
+

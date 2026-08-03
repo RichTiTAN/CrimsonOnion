@@ -30,30 +30,26 @@ namespace CrimsonOnion.Services
 {
     public static class UpdateService
     {
-        public const string AppVersion = "2.1.0";
+        public const string AppVersion = "2.2.0";
         
         private static readonly HttpClient _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
 
         public static async Task<(string? remoteVer, string? remoteMin)> CheckForUpdatesAsync(CancellationToken token = default)
         {
-            try
-            {
-                var response = await _httpClient.GetAsync("https://raw.githubusercontent.com/RichTiTAN/CrimsonOnion/main/version.json", token);
-                response.EnsureSuccessStatusCode();
-                
-                var raw = await response.Content.ReadAsStringAsync(token);
-                var json = JObject.Parse(raw);
-                var remoteVer = json["version"]?.ToString() ?? "0.0.0";
-                var remoteMin = json["minAutoUpdateVersion"]?.ToString() ?? "0.0.0";
+            var url = $"https://raw.githubusercontent.com/RichTiTAN/CrimsonOnion/main/version.json?t={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+            var response = await _httpClient.GetAsync(url, token);
+            response.EnsureSuccessStatusCode();
+            
+            var raw = await response.Content.ReadAsStringAsync(token);
+            var json = JObject.Parse(raw);
+            var remoteVer = json["version"]?.ToString() ?? "0.0.0";
+            var remoteMin = json["minAutoUpdateVersion"]?.ToString() ?? "0.0.0";
 
-                if (Version.Parse(remoteVer) > Version.Parse(AppVersion))
-                {
-                    return (remoteVer, remoteMin);
-                }
-            }
-            catch
+            if (Version.Parse(remoteVer) > Version.Parse(AppVersion))
             {
+                return (remoteVer, remoteMin);
             }
+            
             return (null, null);
         }
 
@@ -65,7 +61,7 @@ namespace CrimsonOnion.Services
             
             if (Directory.Exists(extPath)) Directory.Delete(extPath, true);
 
-            progressCallback($"DOWNLOADING UPDATE... 0% (CLICK TO CANCEL)");
+            Dispatcher.UIThread.Post(() => progressCallback($"DOWNLOADING UPDATE... 0% (CLICK TO CANCEL)"));
 
             try
             {
@@ -96,8 +92,12 @@ namespace CrimsonOnion.Services
                     }
                 }
                 
-                // FIX: Close the file stream so the zip file isn't locked by the app when we try to extract it!
                 fs.Close();
+
+                if (total > 0 && new FileInfo(zipPath).Length != total)
+                {
+                    throw new Exception("Downloaded file size does not match expected size. Download may be corrupted.");
+                }
 
                 Dispatcher.UIThread.Post(() => progressCallback("EXTRACTING UPDATE..."));
                 

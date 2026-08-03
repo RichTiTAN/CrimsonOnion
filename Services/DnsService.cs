@@ -80,9 +80,8 @@ namespace CrimsonOnion.Services
             {
                 var props = nic.GetIPProperties().GetIPv4Properties();
                 return props?.IsDhcpEnabled == true &&
-                       nic.GetIPProperties().DnsAddresses
-                           .Where(a => a.AddressFamily == AddressFamily.InterNetwork)
-                           .Count() == 0;
+                       !nic.GetIPProperties().DnsAddresses
+                           .Any(a => a.AddressFamily == AddressFamily.InterNetwork);
             }
             catch
             {
@@ -143,7 +142,12 @@ namespace CrimsonOnion.Services
                 RedirectStandardError = false,
             };
             using var proc = Process.Start(psi);
-            proc?.WaitForExit(5000);
+            bool exited = proc?.WaitForExit(5000) ?? true;
+            if (!exited)
+            {
+                try { proc?.Kill(); } catch { }
+                SimpleLogger.Log("netsh timed out");
+            }
         }
     }
 }

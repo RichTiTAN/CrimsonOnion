@@ -16,8 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace CrimsonOnion.Services
@@ -39,7 +41,8 @@ namespace CrimsonOnion.Services
                 };
                 var process = new Process { StartInfo = psi };
                 process.Start();
-                try { if (!process.HasExited) process.PriorityClass = ProcessPriorityClass.BelowNormal; } catch { }
+                try { JobManager.AddProcess(process); } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
+                try { if (!process.HasExited) process.PriorityClass = ProcessPriorityClass.BelowNormal; } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
                 return process;
             }
             catch (Exception ex)
@@ -57,7 +60,7 @@ namespace CrimsonOnion.Services
                 using var p = Process.GetProcessById(pid.Value);
                 p.Kill();
             }
-            catch { }
+            catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
         }
 
         public static void KillAppProcesses(string[] names, string[] appPaths)
@@ -76,11 +79,11 @@ namespace CrimsonOnion.Services
                                 if (appPaths.Any(path => string.Equals(path, p.MainModule?.FileName, StringComparison.OrdinalIgnoreCase)))
                                     p.Kill();
                             }
-                            catch { }
+                            catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
                         }
                     }
                 }
-                catch { }
+                catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
             }
         }
 
@@ -142,4 +145,5 @@ namespace CrimsonOnion.Services
         }
     }
 }
+
 
