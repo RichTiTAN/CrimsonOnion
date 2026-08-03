@@ -70,7 +70,7 @@ __CONNECTION:__
 - **ALLOW LAN CONNECTIONS**: Allow other devices on your local network to connect to Tor using the app (provides a LAN IP and Port). Now supports **AUTHENTICATION** so devices must supply a username and password to use this proxy.
 
 __SYSTEM:__
-- **DEBUG MODE**: Launches each backend engine's window in the command line for debugging and live log viewing.
+- **DEBUG MODE**: Catches errors in the logs folder.
 - **LANGUAGE**: Switch between ENGLISH and PERSIAN.
 - **DESKTOP / START MENU SHORTCUT**: Easily create application shortcuts.
 
