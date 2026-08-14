@@ -1,14 +1,14 @@
 <div dir="rtl">
 
 # CrimsonOnion (کریمسون آنیون)
-یک کلاینت با رابط کاربری (GUI) که چندین نمونه از Tor را اجرا کرده و بار آن‌ها را با HAProxy بالانس می‌کند.
+یک کلاینت با رابط کاربری (GUI) که چندین نمونه از Tor را اجرا کرده و بار آن‌ها را بالانس می‌کند.
 این پروژه نسخه بازنویسی شده و بهبود یافته‌ی [TorMultiplexer](https://github.com/richTiTAN/Tor-Multiplexer/) به زبان C# و .NET است.
 
 <img width="2900" height="1080" alt="coui" src="https://github.com/user-attachments/assets/662c1e32-dfad-483d-be5f-63c77fbb1165" />
 
 
 __نحوه کارکرد:__
-- این برنامه از ۱ تا ۸ کانکشن Tor استفاده می‌کند، ترافیک آن‌ها را با HAProxy بالانس کرده و از هسته Xray برای مدیریت و فعال‌سازی Proxy و از Sing-box برای مدیریت VPN MODE استفاده می‌کند.
+- این برنامه از ۱ تا ۸ کانکشن Tor استفاده می‌کند، ترافیک آن‌ها را بالانس کرده و از هسته Xray برای مدیریت و فعال‌سازی Proxy و از Sing-box برای مدیریت VPN MODE استفاده می‌کند.
 - [راهنمای انگلیسی (ENGLISH GUIDE)](https://github.com/RichTiTAN/CrimsonOnion/blob/main/README.md)
   
 # نحوه استفاده و عیب‌یابی
