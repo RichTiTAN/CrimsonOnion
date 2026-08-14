@@ -1,12 +1,12 @@
 # CrimsonOnion
-A GUI client that runs Multiple Tor instances and load-balances them with HAProxy.  
+A GUI client that runs Multiple Tor instances and load-balances them.  
 This project is a rewritten and improved version of [TorMultiplexer](https://github.com/richTiTAN/Tor-Multiplexer/) in C# and .NET.  
 
 <img width="2900" height="1080" alt="coui" src="https://github.com/user-attachments/assets/662c1e32-dfad-483d-be5f-63c77fbb1165" />
 
 
 __HOW IT WORKS:__
-- This app uses 1-8 Tor connections, load-balances them with HAProxy, uses Xray-core for managing and enabling the Proxy and Sing-box for managing the VPN MODE.
+- This app uses 1-8 Tor connections, load-balances them, uses Xray-core for managing and enabling the Proxy and Sing-box for managing the VPN MODE.
 - [FARSI GUIDE](https://github.com/RichTiTAN/CrimsonOnion/blob/main/readmeFA.md)
   
 # How to use and Troubleshooting
