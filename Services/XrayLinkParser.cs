@@ -206,6 +206,9 @@ namespace CrimsonOnion.Services
             string[] mpParts = methodPass.Split(new[] { ':' }, 2);
             string[] hpParts = hostPort.Split(new[] { ':' }, 2);
 
+            if (mpParts.Length < 2 || hpParts.Length < 2)
+                return new JObject();
+
             var outbound = new JObject
             {
                 ["protocol"] = "shadowsocks",

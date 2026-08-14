@@ -26,7 +26,6 @@ namespace CrimsonOnion.Models
         [JsonIgnore] public string BaseDir { get; set; } = "";
         [JsonIgnore] public string CfgFile { get; set; } = "";
         [JsonIgnore] public string XrayDir { get; set; } = "";
-        [JsonIgnore] public string HaPath { get; set; } = "";
         [JsonIgnore] public string SbDir { get; set; } = "";
 
         public bool AutoStart { get; set; } = true;
@@ -51,6 +50,12 @@ namespace CrimsonOnion.Models
         public string LastBlockSplit { get; set; } = "";
         public bool EnableDirect { get; set; } = false;
         public bool EnableDirectUDP { get; set; } = false;
+        public bool ShowAdvancedRouting { get; set; } = false;
+        
+        public bool EnableSnowflakeAmpCache { get; set; } = false;
+        public bool EnableConjureAmpCache { get; set; } = false;
+        public bool EnableConjureDnsRegistration { get; set; } = false;
+
         public string CustomBridgeLine { get; set; } = "";
         public string V2rayChainJson { get; set; } = "";
         public bool EnableV2rayChain { get; set; } = false;
@@ -94,6 +99,7 @@ namespace CrimsonOnion.Models
         public string ExpertExcludeNodes { get; set; } = "";
         public string ExpertExcludeExitNodes { get; set; } = "";
         public string ExpertCustomTorrc { get; set; } = "";
+        public string HaProxyBalancePolicy { get; set; } = "roundrobin";
     }
 
     public class AppState

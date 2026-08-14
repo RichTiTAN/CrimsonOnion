@@ -144,6 +144,10 @@ namespace CrimsonOnion.Localization
         public static string OutboundProxy      => IsPersian ? "پروکسی خروجی"     : "OUTBOUND PROXY";
         public static string AdapterBinding     => IsPersian ? "اتصال به آداپتور" : "BIND ADAPTER";
         public static string ScanAdapters       => IsPersian ? "اسکن"            : "SCAN";
+        public static string LbPolicy           => IsPersian ? "سیاست توزیع بار" : "LOAD-BALANCE POLICY";
+        public static string TtLbPolicy         => IsPersian
+            ? "نحوه توزیع اتصالات بین نمونه‌های Tor توسط Xray را کنترل می‌کند."
+            : "Controls how Xray distributes connections across your Tor instances.";
         public static string DnsSettings        => IsPersian ? "تنظیمات DNS"       : "DNS SETTINGS";
         public static string AdBlocker          => IsPersian ? "مسدودکننده تبلیغات و ردیاب" : "AD AND TRACKER BLOCKER";
         public static string AllowLan           => IsPersian ? "اجازه اتصالات LAN" : "ALLOW LAN CONNECTIONS";
@@ -200,12 +204,12 @@ namespace CrimsonOnion.Localization
         public static string BtnUpdateNow       => IsPersian ? "همین الان آپدیت کن" : "UPDATE NOW";
         public static string BtnDownloadGithub  => IsPersian ? "دانلود از گیت‌هاب" : "DOWNLOAD FROM GITHUB";
         public static string BtnChangeLog       => IsPersian ? "تغییرات" : "CHANGE LOG";
-        public static string BtnCancel          => IsPersian ? "لغو" : "CANCEL";
-        public static string AboutCreator       => IsPersian ? "سازنده: RichTitan" : "Creator: @RichTitan";
-        public static string AboutLicense       => IsPersian ? "لایسنس: GPL-3.0 license" : "License: GPL-3.0 license";
+        public static string BtnCancel => IsPersian ? "لغو" : "CANCEL";
+        public static string AboutCreator => IsPersian ? "سازنده: RichTitan" : "Creator: @RichTitan";
+        public static string AboutLicense => IsPersian ? "لایسنس: GPL-3.0 license" : "License: GPL-3.0 license";
         public static string ToastUpdateCancelled => IsPersian ? "آپدیت لغو شد." : "Update cancelled.";
         public static string ToastLatestVersion => IsPersian ? "شما از قبل آخرین نسخه را دارید!" : "You are already on the latest version!";
-        public static string ToastVpnDisabledSnowflake => IsPersian ? "حالت VPN برای پل Snowflake غیرفعال شد." : "VPN Mode disabled for Snowflake bridge.";
+        public static string ToastVpnDisabledSnowflake => IsPersian ? "حالت VPN برای پل Snowflake غیرفعال شد. اگر می‌خواهید از Snowflake در حالت VPN استفاده کنید، لطفاً گزینه \"Direct UDP\" را در منوی اسپلیت تانل روشن کنید." : "VPN Mode disabled for Snowflake bridge. To use it, turn on \"Direct UDP\" in split tunneling.";
         public static string ToastAdapterBindingSnowflake => IsPersian ? "وقتی پل \"Snowflake\" انتخاب شده، اتصال به آداپتور کار نمی‌کند." : "BIND ADAPTER will not work when Snowflake bridge is selected.";
         public static string ToastReconnectBridge => IsPersian ? "لطفا برای اعمال پل جدید مجددا متصل شوید." : "Please reconnect to apply the new bridge.";
         public static string ToastBootstrapTimeout => IsPersian ? "تایم اوت در اتصال. سعی کنید نوع پل دیگری را انتخاب کنید." : "Bootstrap timed out. Try a different bridge type.";
@@ -245,7 +249,7 @@ namespace CrimsonOnion.Localization
         public static string TtAdBlocker    => IsPersian ? "مسدود کردن درخواست‌ها به دامنه‌های شناخته‌شده تبلیغات و ردیاب‌ها قبل از خروج از رایانه شما. Xray دامنه‌های مطابق را به یک خروجی نامعتبر (blackhole) هدایت می‌کند. فقط بر ترافیک عبوری از پروکسی محلی تأثیر می‌گذارد، نه برنامه‌هایی که از اسپلیت تانل عبور نمی‌کنند." : "Drop requests to known ad and tracker domains before they leave your PC. Xray routes matching domains to a blackhole outbound. Only affects traffic going through the local proxy—not apps on split-tunnel bypass.";
         public static string TtAllowLan     => IsPersian ? "به دستگاه‌های دیگر در شبکه خود اجازه دهید از این رایانه به عنوان پروکسی استفاده کنند. وقتی روشن است، پروکسی محلی روی تمام رابط‌ها (0.0.0.0) گوش می‌دهد؛ وقتی خاموش است، فقط همین دستگاه (127.0.0.1) می‌تواند متصل شود. فقط در شبکه‌هایی که به آنها اعتماد دارید روشن کنید." : "Let other devices on your network use this PC as a proxy. When on, the local proxy listens on all interfaces (0.0.0.0); when off, only this machine (127.0.0.1) can connect. Turn on only on networks you trust.";
         public static string TtLanguage     => IsPersian ? "تغییر زبان برنامه. برای اعمال کامل تغییرات ممکن است نیاز به باز کردن مجدد برنامه باشد." : "Change the application language. Reopening the app may be required for all changes to take effect.";
-        public static string TtDebugMode    => IsPersian ? "پنجره‌های کنسول مربوط به Tor، Xray، HAProxy و sing-box را به جای پنهان کردن نمایش می‌دهد. فقط برای عیب‌یابی کاربرد دارد." : "Show console windows for Tor, Xray, HAProxy, and sing-box instead of hiding them. Helpful for reading live logs when something fails to connect. Does not change routing or security-only visibility.";
+        public static string TtDebugMode    => IsPersian ? "گزارش‌های زنده Tor، Xray (پشت و جلو)، dnstt-client و sing-box را در لحظه ضبط می‌کند. برای عیب‌یابی در هنگام قطع اتصال مفید است. تأثیری بر مسیریابی یا امنیت ندارد." : "Captures live logs from Tor, Xray (frontend & backend), dnstt-client, and sing-box. Helpful for diagnosing issues when something fails to connect. Does not change routing or security.";
         public static string TtSystemDns    => IsPersian
             ? "DNS ویندوز آداپتور شبکه اصلی را هنگام اتصال تغییر می‌دهد تا Tor بتواند از آن استفاده کند. پس از قطع اتصال یا بستن برنامه، DNS قبلی بازگردانده می‌شود."
             : "Changes the Windows DNS of your main network adapter when you connect, so Tor bootstrap benefits from it. Restored to original on disconnect or app close.";
@@ -263,10 +267,15 @@ namespace CrimsonOnion.Localization
         public static string TtStartMinimized => IsPersian ? "اجرای برنامه به صورت کوچک شده (مخفی)." : "Start the application minimized in the background.";
         public static string TtMinimizeToTray => IsPersian ? "کوچک کردن برنامه در سینی سیستم به جای نوار وظیفه." : "Minimize the application to the system tray instead of the taskbar.";
         public static string TtPingRefresh => IsPersian ? "برای به‌روزرسانی پینگ کلیک کنید" : "Click to refresh ping";
+
+        public static string TtLbLeastLoad => IsPersian ? "هر اتصال جدید را به خلوت‌ترین نمونه Tor ارسال می‌کند. بهترین گزینه برای ترافیک ترکیبی با حجم متغیر." : "Distributes each new connection to the least-loaded Tor instance. Best for mixed traffic with varying connection size.";
+        public static string TtLbRoundRobin => IsPersian ? "اتصالات را به طور مساوی و به نوبت بین تمام نمونه‌های Tor توزیع می‌کند. مناسب برای توزیع یکنواخت و برابر." : "Distributes connections evenly across all Tor instances in order, cycling through them one by one. Good for consistent, equal distribution.";
+        public static string TtLbLeastPing => IsPersian ? "نمونه Tor با کمترین پینگ اخیر را انتخاب می‌کند. بهترین گزینه برای ترافیک حساس به تأخیر." : "Picks the Tor instance with the lowest recent ping. Best for latency-sensitive traffic.";
+        public static string TtLbRandom => IsPersian ? "برای هر اتصال جدید یک نمونه Tor را به صورت تصادفی انتخاب می‌کند. در طول زمان متعادل است اما نوسان بیشتری نسبت به Round Robin دارد." : "Picks a Tor instance at random for each new connection. Statistically even over time but with more variance than Round Robin.";
         
         public static string TtDisabledAdapterBinding => IsPersian ? "غیرفعال است زیرا پروکسی خروجی فعال است." : "Disabled because Outbound Proxy is enabled.";
         public static string TtDisabledOutboundProxy => IsPersian ? "غیرفعال است زیرا اتصال به آداپتور فعال است." : "Disabled because Adapter Binding is enabled.";
-        public static string TtDisabledVpnSnowflake => IsPersian ? "غیرفعال است زیرا پل Snowflake انتخاب شده است." : "Disabled because Snowflake bridge is selected.";
+        public static string TtDisabledVpnSnowflake => IsPersian ? "غیرفعال است چون پل Snowflake انتخاب شده است. اگر می‌خواهید از Snowflake در حالت VPN استفاده کنید، لطفاً گزینه \"Direct UDP\" را در منوی تونل‌زنی دوگانه روشن کنید." : "Disabled because Snowflake bridge is selected.\nIf you want to use Snowflake in VPN Mode please turn on the \"Direct UDP\" option in split tunneling menu.";
 
         public static string SplitExplanationExclusive => IsPersian ? "فقط برنامه ها، دامنه ها، آیپی ها و پورت های لیست شده در اینجا از پروکسی مستثنی می شوند." : "Only bypass the proxy for the apps, domains, IPs and ports listed below.";
         public static string SplitExplanationInclusive => IsPersian ? "فقط برنامه ها، دامنه ها، آیپی ها و پورت های لیست شده در اینجا از طریق پروکسی هدایت می شوند." : "Only route the apps, domains, IPs and ports listed below through the proxy.";

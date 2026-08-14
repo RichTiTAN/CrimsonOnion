@@ -555,12 +555,30 @@
                                       </Panel>
                                   </Border>
 
-                                  <Border Background="#99141414" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="12" Padding="3">
+                                  <Border x:Name="panConnectBox" Background="#99141414" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="12" Padding="3">
                                       <Grid RowDefinitions="Auto, Auto">
                                           
-                                          <Button x:Name="btnConnect" Grid.Row="0" Classes="connectBtn" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent" BorderThickness="0" CornerRadius="8" Padding="0,8,0,8" Cursor="Hand" Margin="2,2,2,2" Click="btnConnect_Click">
-                                              <TextBlock x:Name="txtConnectBtn" Text="CONNECT" FontSize="19" FontWeight="Bold" LetterSpacing="2" Foreground="#E2E8F0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                          </Button>
+                                            <Button x:Name="btnConnect" Grid.Row="0" Classes="connectBtn" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent" BorderThickness="0" CornerRadius="8" Padding="0" Cursor="Hand" Margin="2,2,2,2" Click="btnConnect_Click">
+                                                <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <!-- Main Text (CONNECT / CONNECTING) -->
+                                                    <TextBlock x:Name="txtConnectBtn" Text="CONNECT" FontSize="19" FontWeight="Bold" LetterSpacing="2" Foreground="#E2E8F0" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,8,0,8">
+                                                        <TextBlock.Transitions>
+                                                            <Transitions>
+                                                                <DoubleTransition Property="Opacity" Duration="0:0:0.4" Easing="CubicEaseInOut"/>
+                                                            </Transitions>
+                                                        </TextBlock.Transitions>
+                                                    </TextBlock>
+                                                    
+                                                    <!-- Success Text (CONNECTED) -->
+                                                    <TextBlock x:Name="txtConnectedBtn" Text="CONNECTED" FontSize="19" FontWeight="Bold" LetterSpacing="2" Foreground="{DynamicResource ThemeGlowBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,8,0,8" Opacity="0" IsHitTestVisible="False">
+                                                        <TextBlock.Transitions>
+                                                            <Transitions>
+                                                                <DoubleTransition Property="Opacity" Duration="0:0:0.4" Easing="CubicEaseInOut"/>
+                                                            </Transitions>
+                                                        </TextBlock.Transitions>
+                                                    </TextBlock>
+                                                </Grid>
+                                            </Button>
 
                                           <Grid Grid.Row="1" ColumnDefinitions="Auto, Auto, Auto, Auto, Auto" Margin="0">
                                               <Button x:Name="btnProxyMode" Grid.Column="0" Classes="modeBtn activeMode" Background="Transparent" BorderThickness="0" CornerRadius="6" Padding="14,8,14,8" Margin="2,2,2,2" Cursor="Hand" Click="Mode_Click" >
@@ -585,6 +603,57 @@
                                   </Border>
                               </Panel>
 
+                            <Border x:Name="panAdvancedBridges" Grid.Row="2" Width="{Binding Bounds.Width, ElementName=panConnectBox}" HorizontalAlignment="Center" VerticalAlignment="Top" Background="#99141414" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="2,2" Margin="0,9,0,0" Opacity="0" IsHitTestVisible="False">
+                                <Border.Transitions>
+                                    <Transitions>
+                                        <DoubleTransition Property="Opacity" Duration="0:0:0.15" Easing="CubicEaseInOut"/>
+                                    </Transitions>
+                                </Border.Transitions>
+                                <Border.Styles>
+                                    <Style Selector="Button.advBtn">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="RenderTransform" Value="scale(1.0)"/>
+                                        <Setter Property="Transitions">
+                                            <Transitions>
+                                                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.1" Easing="CubicEaseOut"/>
+                                            </Transitions>
+                                        </Setter>
+                                    </Style>
+                                    <Style Selector="Button.advBtn:pressed">
+                                        <Setter Property="RenderTransform" Value="scale(0.96)"/>
+                                    </Style>
+                                    <Style Selector="Button.advBtn TextBlock.advText">
+                                        <Setter Property="Foreground" Value="#8B949E"/>
+                                        <Setter Property="Transitions">
+                                            <Transitions>
+                                                <BrushTransition Property="Foreground" Duration="0:0:0.2"/>
+                                            </Transitions>
+                                        </Setter>
+                                    </Style>
+                                    <Style Selector="Button.advBtn:pointerover /template/ ContentPresenter">
+                                        <Setter Property="Background" Value="Transparent"/>
+                                    </Style>
+                                    <Style Selector="Button.advBtn:pointerover TextBlock.advText">
+                                        <Setter Property="Foreground" Value="#E2E8F0"/>
+                                    </Style>
+                                    <Style Selector="Button.activeMode TextBlock.advText">
+                                        <Setter Property="Foreground" Value="#FFFFFF"/>
+                                    </Style>
+                                    <Style Selector="Button.notrans TextBlock.advText">
+                                        <Setter Property="Transitions" Value="{x:Null}"/>
+                                    </Style>
+                                </Border.Styles>
+                                <Grid ColumnDefinitions="*, *" HorizontalAlignment="Stretch">
+                                    <Button x:Name="btnAmpCacheMode" Grid.Column="0" Grid.ColumnSpan="2" Classes="advBtn" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="Transparent" BorderThickness="0" CornerRadius="6" Padding="0,6" Cursor="Hand" Click="AdvancedBridgeMode_Click">
+                                        <TextBlock x:Name="lblAmpCache" Classes="advText" Text="AMP CACHE" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Button>
+                                    <Button x:Name="btnDnsRegMode" Grid.Column="1" Classes="advBtn" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Background="Transparent" BorderThickness="0" CornerRadius="6" Padding="0,6" Cursor="Hand" Click="AdvancedBridgeMode_Click" IsVisible="False">
+                                        <TextBlock x:Name="lblDnsReg" Classes="advText" Text="DNS REGISTRATION" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Button>
+                                    <Border x:Name="panDnsRegDiv" Grid.Column="0" Grid.ColumnSpan="2" Width="1" Background="#2D3748" Margin="0,6,0,6" HorizontalAlignment="Center" IsVisible="False" IsHitTestVisible="False"/>
+                                </Grid>
+                            </Border>
+
                             <Border x:Name="panMainConfig" Grid.Row="2" Background="#99141414" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="12" Padding="6" Margin="10,50,25,15" HorizontalAlignment="Stretch">
                                 <StackPanel Spacing="6">
                                     
@@ -601,6 +670,7 @@
                                                     <Button x:Name="btnBridgeObfs4" Classes="optBtn" Click="Bridge_Click"><TextBlock Text="OBFS4" FontSize="11" FontWeight="SemiBold"/></Button>
                                                     <Button x:Name="btnBridgeSnowflake" Classes="optBtn" Click="Bridge_Click"><TextBlock Text="SNOWFLAKE" FontSize="11" FontWeight="SemiBold"/></Button>
                                                     <Button x:Name="btnBridgeMeek" Classes="optBtn" Click="Bridge_Click"><TextBlock Text="MEEK" FontSize="11" FontWeight="SemiBold"/></Button>
+                                                    <Button x:Name="btnBridgeConjure" Classes="optBtn" Click="Bridge_Click"><TextBlock Text="CONJURE" FontSize="11" FontWeight="SemiBold"/></Button>
                                                     <Button x:Name="btnBridgeCustom" Classes="optBtn" Click="Bridge_Click"><TextBlock Text="CUSTOM" FontSize="11" FontWeight="SemiBold"/></Button>
                                                 </StackPanel>
                                             </Grid>
@@ -994,6 +1064,21 @@
                                     <TextBlock x:Name="lblSectionConnection" Text="CONNECTION" FontSize="11" FontWeight="SemiBold" Foreground="#8B949E" LetterSpacing="1" Margin="5,15,0,0"/>
                                     <StackPanel Spacing="8">
                                         
+                                        <Border Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="12,8">
+                                            <Grid ColumnDefinitions="Auto, *, Auto" MinHeight="36">
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                                    <PathIcon Data="M4 15h16v-2H4v2zm0 4h16v-2H4v2zm0-8h16V9H4v2zm0-6v2h16V5H4z" Width="14" Height="14" Foreground="#8B949E"/>
+                                                    <TextBlock x:Name="lblLbPolicy" Classes="settingTitle" Text="LOAD-BALANCE POLICY" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" VerticalAlignment="Center" ToolTip.Tip="Controls how Xray distributes connections across your Tor instances."/>
+                                                </StackPanel>
+                                                <Button x:Name="btnLbPolicy" Grid.Column="2" Classes="optBtn" Click="BtnLbPolicy_Click" Background="#0A0C0F" Foreground="#E2E8F0" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Width="137" MinHeight="26" Height="26" Padding="8,0" HorizontalAlignment="Right" VerticalAlignment="Center" Cursor="Hand">
+                                                    <Grid ColumnDefinitions="*, Auto">
+                                                        <TextBlock x:Name="lblCurrentLbPolicy" Grid.Column="0" Text="ROUND ROBIN" FontSize="11" FontWeight="Bold" VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                                                        <PathIcon Grid.Column="1" Data="M7 10l5 5 5-5z" Width="10" Height="10" Foreground="#8B949E" VerticalAlignment="Center" Margin="5,0,0,0" HorizontalAlignment="Right"/>
+                                                    </Grid>
+                                                </Button>
+                                            </Grid>
+                                        </Border>
+
                                         <StackPanel Spacing="0">
                                             <Border x:Name="panXrayExitNodeToggle" Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="0">
                                                 <Button x:Name="btnXrayExitNodeToggle" Classes="optBtn" CornerRadius="8" BorderThickness="0" Background="Transparent" Padding="12,8" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="btnXrayExitNodeToggle_Click">
@@ -1687,6 +1772,25 @@
                                 </Button>
                                 <Button Classes="countryControl" Tag="PERSIAN" Click="LanguageOption_Click" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="8,6" Cursor="Hand" CornerRadius="4">
                                     <TextBlock Text="PERSIAN" VerticalAlignment="Center" Foreground="#E2E8F0" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Left"/>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+                    </Popup>
+
+                    <Popup x:Name="LbPolicyPopup" IsLightDismissEnabled="False">
+                        <Border Classes="popupContent" Background="#E6101116" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="4" Width="137" Padding="2">
+                            <StackPanel>
+                                <Button x:Name="btnLbLeastLoad" Classes="countryControl" Tag="leastload" Click="LbPolicyOption_Click" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="8,6" Cursor="Hand" CornerRadius="4" ToolTip.Tip="Distributes each new connection to the least-loaded Tor instance. Best for mixed traffic with varying connection size.">
+                                    <TextBlock Text="LEAST LOAD" VerticalAlignment="Center" Foreground="#E2E8F0" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Left"/>
+                                </Button>
+                                <Button x:Name="btnLbRoundRobin" Classes="countryControl" Tag="roundrobin" Click="LbPolicyOption_Click" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="8,6" Cursor="Hand" CornerRadius="4" ToolTip.Tip="Distributes connections evenly across all Tor instances in order, cycling through them one by one. Good for consistent, equal distribution.">
+                                    <TextBlock Text="ROUND ROBIN" VerticalAlignment="Center" Foreground="#E2E8F0" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Left"/>
+                                </Button>
+                                <Button x:Name="btnLbLeastPing" Classes="countryControl" Tag="leastping" Click="LbPolicyOption_Click" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="8,6" Cursor="Hand" CornerRadius="4" ToolTip.Tip="Picks the Tor instance with the lowest recent ping. Best for latency-sensitive traffic.">
+                                    <TextBlock Text="LEAST PING" VerticalAlignment="Center" Foreground="#E2E8F0" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Left"/>
+                                </Button>
+                                <Button x:Name="btnLbRandom" Classes="countryControl" Tag="random" Click="LbPolicyOption_Click" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="8,6" Cursor="Hand" CornerRadius="4" ToolTip.Tip="Picks a Tor instance at random for each new connection. Statistically even over time but with more variance than Round Robin.">
+                                    <TextBlock Text="RANDOM" VerticalAlignment="Center" Foreground="#E2E8F0" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Left"/>
                                 </Button>
                             </StackPanel>
                         </Border>

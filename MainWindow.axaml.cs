@@ -62,6 +62,7 @@ public partial class MainWindow : Window
     private List<TorControlClient> _torControlClients = new();
     private int?[] _torPids = new int?[8];
     private int? _xrayDebugPid, _sbDebugPid;
+    private int? _xrayPid, _adapterXrayPid, _sbPid;
     private DispatcherTimer? _bootstrapTimer;
     private DispatcherTimer? _autoBootTimer; 
     private int _pollSelCount = 6;
@@ -121,6 +122,7 @@ public partial class MainWindow : Window
 
     private bool _wasLanguagePopupOpen = false;
     private bool _wasCountriesPopupOpen = false;
+    private bool _wasLbPolicyPopupOpen = false;
 
     protected override void OnPropertyChanged(global::Avalonia.AvaloniaPropertyChangedEventArgs change)
     {
@@ -139,6 +141,10 @@ public partial class MainWindow : Window
                     {
                         CountriesPopup.IsOpen = true;
                     }
+                    if (_wasLbPolicyPopupOpen && LbPolicyPopup != null)
+                    {
+                        LbPolicyPopup.IsOpen = true;
+                    }
                 }
                 else
                 {
@@ -151,6 +157,11 @@ public partial class MainWindow : Window
                     {
                         _wasCountriesPopupOpen = CountriesPopup.IsOpen;
                         if (CountriesPopup.IsOpen) CountriesPopup.IsOpen = false;
+                    }
+                    if (LbPolicyPopup != null)
+                    {
+                        _wasLbPolicyPopupOpen = LbPolicyPopup.IsOpen;
+                        if (LbPolicyPopup.IsOpen) LbPolicyPopup.IsOpen = false;
                     }
                 }
             }
@@ -174,7 +185,6 @@ public partial class MainWindow : Window
             System.IO.Path.AltDirectorySeparatorChar);
         _cfg.CfgFile = System.IO.Path.Combine(_cfg.BaseDir, @"Data\multiplexer_settings.json");
         _cfg.XrayDir = System.IO.Path.Combine(_cfg.BaseDir, @"Data\Xray");
-        _cfg.HaPath  = System.IO.Path.Combine(_cfg.BaseDir, @"Data\HAproxy");
         _cfg.SbDir   = System.IO.Path.Combine(_cfg.BaseDir, @"Data\sing_box");
 
         ConfigService.Load(_cfg, _state, _cfg.CfgFile);
@@ -241,18 +251,21 @@ public partial class MainWindow : Window
     {
         bool closeCountries = CountriesPopup != null && CountriesPopup.IsOpen;
         bool closeLanguage = LanguagePopup != null && LanguagePopup.IsOpen;
+        bool closeLbPolicy = LbPolicyPopup != null && LbPolicyPopup.IsOpen;
 
-        if (!closeCountries && !closeLanguage) return;
+        if (!closeCountries && !closeLanguage && !closeLbPolicy) return;
 
         if (closeCountries && CountriesPopup?.Child is Border cBorder) cBorder.Classes.Remove("popupOpen");
         if (closeLanguage && LanguagePopup?.Child is Border lBorder) lBorder.Classes.Remove("popupOpen");
+        if (closeLbPolicy && LbPolicyPopup?.Child is Border lpBorder) lpBorder.Classes.Remove("popupOpen");
 
         await Task.Delay(200);
 
         if (closeCountries && CountriesPopup != null) CountriesPopup.IsOpen = false;
         if (closeLanguage && LanguagePopup != null) LanguagePopup.IsOpen = false;
+        if (closeLbPolicy && LbPolicyPopup != null) LbPolicyPopup.IsOpen = false;
         
-        bool anyPopupOpen = (CountriesPopup != null && CountriesPopup.IsOpen) || (LanguagePopup != null && LanguagePopup.IsOpen);
+        bool anyPopupOpen = (CountriesPopup != null && CountriesPopup.IsOpen) || (LanguagePopup != null && LanguagePopup.IsOpen) || (LbPolicyPopup != null && LbPolicyPopup.IsOpen);
         if (!anyPopupOpen)
         {
             var sld = this.FindControl<Border>("SettingsLightDismiss");
@@ -277,6 +290,29 @@ public partial class MainWindow : Window
         var panSplitOverlay = this.FindControl<Border>("panSplitOverlay");
         if (panSplitOverlay != null && panSplitOverlay.IsVisible)
         {
+            if (_cfg.SplitTunnelMode != "DISABLED")
+            {
+                var txtDomains = this.FindControl<TextBox>("txtSplitDomains");
+                var txtApps = this.FindControl<TextBox>("txtSplitApps");
+                var txtBlock = this.FindControl<TextBox>("txtSplitBlock");
+
+                bool hasSavedInput = !string.IsNullOrWhiteSpace(_cfg.LastManualSplit) || 
+                                     !string.IsNullOrWhiteSpace(_cfg.LastAppSplit) || 
+                                     !string.IsNullOrWhiteSpace(_cfg.LastBlockSplit);
+                                     
+                bool hasUnsavedInput = (txtDomains != null && !string.IsNullOrWhiteSpace(txtDomains.Text)) ||
+                                       (txtApps != null && !string.IsNullOrWhiteSpace(txtApps.Text)) ||
+                                       (txtBlock != null && !string.IsNullOrWhiteSpace(txtBlock.Text));
+
+                if (!hasSavedInput && !hasUnsavedInput)
+                {
+                    _cfg.SplitTunnelMode = "DISABLED";
+                    _cfg.EnableDirect = false;
+                    UpdateSplitTunnelUI();
+                    RequestConfigSave();
+                }
+            }
+
             panSplitOverlay.Classes.Remove("popupOpen");
             global::Avalonia.Threading.DispatcherTimer.RunOnce(() => { panSplitOverlay.IsVisible = false; }, TimeSpan.FromMilliseconds(200));
         }
@@ -302,7 +338,7 @@ public partial class MainWindow : Window
         var ldo = this.FindControl<Border>("LightDismissOverlay");
         if (ldo != null) ldo.IsVisible = false;
         
-        if ((CountriesPopup != null && CountriesPopup.IsOpen) || (LanguagePopup != null && LanguagePopup.IsOpen))
+        if ((CountriesPopup != null && CountriesPopup.IsOpen) || (LanguagePopup != null && LanguagePopup.IsOpen) || (LbPolicyPopup != null && LbPolicyPopup.IsOpen))
         {
             _ = ClosePopupAnimatedAsync();
         }
@@ -359,7 +395,8 @@ public partial class MainWindow : Window
 
         var countriesPopup = this.FindControl<global::Avalonia.Controls.Primitives.Popup>("CountriesPopup");
         var languagePopup = this.FindControl<global::Avalonia.Controls.Primitives.Popup>("LanguagePopup");
-        if ((countriesPopup != null && countriesPopup.IsOpen) || (languagePopup != null && languagePopup.IsOpen))
+        var lbPolicyPopup = this.FindControl<global::Avalonia.Controls.Primitives.Popup>("LbPolicyPopup");
+        if ((countriesPopup != null && countriesPopup.IsOpen) || (languagePopup != null && languagePopup.IsOpen) || (lbPolicyPopup != null && lbPolicyPopup.IsOpen))
         {
             _ = ClosePopupAnimatedAsync();
         }
@@ -457,14 +494,18 @@ public partial class MainWindow : Window
             }
             else
             {
-                System.Windows.Forms.MessageBox.Show("Connection timed out while downloading the update.", "Update Error", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
+                    ? "اتصال هنگام دانلود بروزرسانی قطع شد."
+                    : "Connection timed out while downloading the update.");
             }
             string msg = CrimsonOnion.Localization.AppStrings.IsPersian ? "بروزرسانی جدید در دسترس است" : "NEW UPDATE AVAILABLE";
             SetUpdateUIStatus(msg);
         }
         catch (Exception ex)
         {
-            System.Windows.Forms.MessageBox.Show($"Failed to update: {ex.Message}", "Update Error", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+            ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
+                ? $"خطا در بروزرسانی: {ex.Message}"
+                : $"Failed to update: {ex.Message}");
             string msg = CrimsonOnion.Localization.AppStrings.IsPersian ? "بروزرسانی جدید در دسترس است" : "NEW UPDATE AVAILABLE";
             SetUpdateUIStatus(msg);
         }
@@ -602,13 +643,17 @@ public partial class MainWindow : Window
             }
             else
             {
-                System.Windows.Forms.MessageBox.Show("Connection timed out while checking for updates.", "Update Error", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
+                    ? "اتصال هنگام بررسی بروزرسانی قطع شد."
+                    : "Connection timed out while checking for updates.");
             }
             if (btnCheckUpdate != null) btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.CheckForUpdates;
         }
         catch (Exception ex)
         {
-            System.Windows.Forms.MessageBox.Show($"Failed to update: {ex.Message}", "Update Error", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+            ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
+                ? $"خطا در بروزرسانی: {ex.Message}"
+                : $"Failed to update: {ex.Message}");
             if (btnCheckUpdate != null) btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.CheckForUpdates;
         }
         finally
@@ -669,9 +714,69 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
         }
     }
 
+    private async void BtnLbPolicy_Click(object? sender, RoutedEventArgs e)
+    {
+        bool isSelf = LbPolicyPopup != null && LbPolicyPopup.IsOpen && LbPolicyPopup.PlacementTarget?.Name == "btnLbPolicy";
+        if (isSelf)
+        {
+            _ = ClosePopupAnimatedAsync();
+            return;
+        }
+
+        if (LbPolicyPopup != null && LbPolicyPopup.IsOpen)
+        {
+            LbPolicyPopup.IsOpen = false;
+            if (LbPolicyPopup.Child is Border oldBorder) oldBorder.Classes.Remove("popupOpen");
+        }
+
+        _ = ClosePopupAnimatedAsync();
+
+        if (LbPolicyPopup != null)
+        {
+            LbPolicyPopup.PlacementTarget  = this.FindControl<Control>("btnLbPolicy");
+            LbPolicyPopup.Placement        = PlacementMode.Bottom;
+            LbPolicyPopup.HorizontalOffset = 0;
+            LbPolicyPopup.VerticalOffset   = 5;
+            LbPolicyPopup.IsOpen           = true;
+
+            var sld = this.FindControl<Border>("SettingsLightDismiss");
+            if (sld != null) sld.IsVisible = true;
+
+            await Task.Delay(10);
+            if (LbPolicyPopup.Child is Border border) border.Classes.Add("popupOpen");
+        }
+    }
+
+    private void LbPolicyOption_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string policy)
+        {
+            string displayName = policy switch
+            {
+                "leastload"  => "LEAST LOAD",
+                "roundrobin" => "ROUND ROBIN",
+                "leastping"  => "LEAST PING",
+                "random"     => "RANDOM",
+                _            => policy.ToUpperInvariant()
+            };
+
+            var lbl = this.FindControl<TextBlock>("lblCurrentLbPolicy");
+            if (lbl != null) lbl.Text = displayName;
+
+            bool wasConnected = _state.IsConnected || _state.IsEngineRunning;
+            _cfg.HaProxyBalancePolicy = policy;
+            SaveConfig();
+
+            if (wasConnected)
+                SmartRestartXray();
+
+            _ = ClosePopupAnimatedAsync();
+        }
+    }
+
     private void SettingsLightDismiss_PointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (LanguagePopup != null && LanguagePopup.IsOpen)
+        if ((LanguagePopup != null && LanguagePopup.IsOpen) || (LbPolicyPopup != null && LbPolicyPopup.IsOpen))
         {
             _ = ClosePopupAnimatedAsync();
         }
@@ -699,6 +804,11 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
         AppStrings.ApplyToolTip(B("btnProxyMode"),  AppStrings.TtProxyMode);
         AppStrings.ApplyToolTip(B("btnVpnMode"),    AppStrings.TtVpnMode);
         AppStrings.ApplyToolTip(B("btnClearProxy"), AppStrings.TtClearProxy);
+        
+        AppStrings.ApplyToolTip(B("btnLbLeastLoad"), AppStrings.TtLbLeastLoad);
+        AppStrings.ApplyToolTip(B("btnLbRoundRobin"), AppStrings.TtLbRoundRobin);
+        AppStrings.ApplyToolTip(B("btnLbLeastPing"), AppStrings.TtLbLeastPing);
+        AppStrings.ApplyToolTip(B("btnLbRandom"), AppStrings.TtLbRandom);
 
         
         var panTimerContent = this.FindControl<StackPanel>("panTimerContent");
@@ -754,6 +864,11 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
         AppStrings.ApplyToolTip(this.FindControl<Button>("btnRefreshPing"), AppStrings.TtPingRefresh);
 
         AppStrings.Apply(F("lblSectionConnection"), AppStrings.SectionConnection, forceLtr: true);
+
+        var tbLbPolicy = this.FindControl<TextBlock>("lblLbPolicy");
+        AppStrings.Apply(tbLbPolicy, AppStrings.LbPolicy);
+        AppStrings.ApplyToolTip(tbLbPolicy, AppStrings.TtLbPolicy);
+        AppStrings.ApplyToolTip(this.FindControl<Button>("btnLbPolicy"), AppStrings.TtLbPolicy);
 
 
         var tbCustomXray = this.FindControl<TextBlock>("lblCustomXrayExit");
@@ -891,9 +1006,22 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
         
         UpdateAdapterBindingMutualExclusivity();
         ApplyModeUI(_cfg.LastXrayMode);
-        
+
+        var txtConnectBtn = F("txtConnectBtn");
+        var txtConnectedBtn = F("txtConnectedBtn");
         if (_state.IsConnected)
-            StartGeoPing();
+        {
+            if (txtConnectedBtn != null) txtConnectedBtn.Text = AppStrings.ConnectedBtn;
+            if (txtConnectBtn != null) txtConnectBtn.Text = AppStrings.ConnectedBtn;
+        }
+        else if (_state.IsEngineRunning)
+        {
+            if (txtConnectBtn != null) txtConnectBtn.Text = fa ? "در حال اتصال..." : "CONNECTING";
+        }
+        else
+        {
+            if (txtConnectBtn != null) txtConnectBtn.Text = AppStrings.Connect;
+        }
     }
 
     private async void SidebarCountries_Click(object? sender, RoutedEventArgs e)
@@ -962,7 +1090,7 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is Button clickedBtn)
         {
-            if (clickedBtn.Name == "btnVpnMode" && _activeBridge == "snowflake") return;
+            if (clickedBtn.Name == "btnVpnMode" && _activeBridge == "snowflake" && !_cfg.EnableDirectUDP) return;
 
             string newMode;
             if (clickedBtn.Name == "btnProxyMode")       newMode = "Proxy Mode";
@@ -984,6 +1112,120 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
         }
     }
 
+    private async void UpdateAdvancedBridgesUI(bool forceHide = false)
+    {
+        var panAdvancedBridges = this.FindControl<global::Avalonia.Controls.Border>("panAdvancedBridges");
+        var btnAmpCacheMode = this.FindControl<global::Avalonia.Controls.Button>("btnAmpCacheMode");
+        var panDnsRegDiv = this.FindControl<global::Avalonia.Controls.Border>("panDnsRegDiv");
+        var btnDnsRegMode = this.FindControl<global::Avalonia.Controls.Button>("btnDnsRegMode");
+        
+        if (panAdvancedBridges != null && panDnsRegDiv != null && btnDnsRegMode != null && btnAmpCacheMode != null)
+        {
+            bool show = !forceHide && (_activeBridge == "snowflake" || _activeBridge == "conjure");
+            bool isConjure = (_activeBridge == "conjure");
+
+            void ApplyState()
+            {
+                btnAmpCacheMode.Classes.Add("notrans");
+                btnDnsRegMode.Classes.Add("notrans");
+
+                if (isConjure)
+                {
+                    if (_cfg.EnableConjureAmpCache) btnAmpCacheMode.Classes.Add("activeMode");
+                    else btnAmpCacheMode.Classes.Remove("activeMode");
+
+                    if (_cfg.EnableConjureDnsRegistration) btnDnsRegMode.Classes.Add("activeMode");
+                    else btnDnsRegMode.Classes.Remove("activeMode");
+                }
+                else
+                {
+                    if (_cfg.EnableSnowflakeAmpCache) btnAmpCacheMode.Classes.Add("activeMode");
+                    else btnAmpCacheMode.Classes.Remove("activeMode");
+                }
+                panDnsRegDiv.IsVisible = isConjure;
+                btnDnsRegMode.IsVisible = isConjure;
+                btnAmpCacheMode.SetValue(global::Avalonia.Controls.Grid.ColumnSpanProperty, isConjure ? 1 : 2);
+            }
+
+            async void FinishState()
+            {
+                await System.Threading.Tasks.Task.Delay(50); 
+                btnAmpCacheMode.Classes.Remove("notrans");
+                btnDnsRegMode.Classes.Remove("notrans");
+            }
+
+            if (show)
+            {
+                if (panAdvancedBridges.Opacity > 0 && panDnsRegDiv.IsVisible != isConjure)
+                {
+                    panAdvancedBridges.Opacity = 0.0;
+                    await System.Threading.Tasks.Task.Delay(150);
+                    ApplyState();
+                    panAdvancedBridges.Opacity = 1.0;
+                    FinishState();
+                }
+                else
+                {
+                    ApplyState();
+                    panAdvancedBridges.Opacity = 1.0;
+                    FinishState();
+                }
+                panAdvancedBridges.IsHitTestVisible = true;
+            }
+            else
+            {
+                panAdvancedBridges.Opacity = 0.0;
+                panAdvancedBridges.IsHitTestVisible = false;
+            }
+        }
+    }
+
+    private void AdvancedBridgeMode_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (_isInitializingSettings) return;
+
+        var btnAmpCacheMode = this.FindControl<global::Avalonia.Controls.Button>("btnAmpCacheMode");
+        var btnDnsRegMode = this.FindControl<global::Avalonia.Controls.Button>("btnDnsRegMode");
+
+        if (sender is global::Avalonia.Controls.Button clickedBtn)
+        {
+            if (clickedBtn.Classes.Contains("activeMode"))
+            {
+                clickedBtn.Classes.Remove("activeMode");
+            }
+            else
+            {
+                if (clickedBtn == btnAmpCacheMode)
+                {
+                    btnAmpCacheMode.Classes.Add("activeMode");
+                    btnDnsRegMode?.Classes.Remove("activeMode");
+                }
+                else if (clickedBtn == btnDnsRegMode)
+                {
+                    btnDnsRegMode.Classes.Add("activeMode");
+                    btnAmpCacheMode?.Classes.Remove("activeMode");
+                }
+            }
+        }
+
+        if (_activeBridge == "snowflake")
+        {
+            _cfg.EnableSnowflakeAmpCache = btnAmpCacheMode?.Classes.Contains("activeMode") ?? false;
+        }
+        else if (_activeBridge == "conjure")
+        {
+            _cfg.EnableConjureAmpCache = btnAmpCacheMode?.Classes.Contains("activeMode") ?? false;
+            _cfg.EnableConjureDnsRegistration = btnDnsRegMode?.Classes.Contains("activeMode") ?? false;
+        }
+        
+        RequestConfigSave();
+        
+        if (_state.IsEngineRunning)
+        {
+            ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
+        }
+    }
+
     private void Bridge_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is Button clickedBtn)
@@ -993,14 +1235,28 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
             else if (clickedBtn.Name == "btnBridgeObfs4")     targetBridge = "obfs4";
             else if (clickedBtn.Name == "btnBridgeSnowflake") targetBridge = "snowflake";
             else if (clickedBtn.Name == "btnBridgeMeek")      targetBridge = "meek_lite";
+            else if (clickedBtn.Name == "btnBridgeConjure")   targetBridge = "conjure";
 
             if (clickedBtn.Name != "btnBridgeCustom" && _activeBridge == targetBridge)
+            {
+                var customPan = this.FindControl<global::Avalonia.Controls.Border>("panCustomBridge");
+                if (customPan != null && customPan.MaxHeight > 0)
+                {
+                    customPan.MaxHeight       = 0;
+                    customPan.Opacity         = 0;
+                    customPan.BorderThickness = new global::Avalonia.Thickness(0);
+
+                    this.FindControl<Button>("btnBridgeCustom")?.Classes.Remove("activeOpt");
+                    clickedBtn.Classes.Add("activeOpt");
+                }
                 return;
+            }
 
             this.FindControl<Button>("btnBridgeDirect")?.Classes.Remove("activeOpt");
             this.FindControl<Button>("btnBridgeObfs4")?.Classes.Remove("activeOpt");
             this.FindControl<Button>("btnBridgeSnowflake")?.Classes.Remove("activeOpt");
             this.FindControl<Button>("btnBridgeMeek")?.Classes.Remove("activeOpt");
+            this.FindControl<Button>("btnBridgeConjure")?.Classes.Remove("activeOpt");
             this.FindControl<Button>("btnBridgeCustom")?.Classes.Remove("activeOpt");
 
             clickedBtn.Classes.Add("activeOpt");
@@ -1020,6 +1276,7 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
                     customPan.BorderThickness = new global::Avalonia.Thickness(1);
                     var txtCustom = this.FindControl<global::Avalonia.Controls.TextBox>("txtCustomBridge");
                     if (txtCustom != null) txtCustom.Text = _cfg?.CustomBridgeLine;
+                    UpdateAdvancedBridgesUI(true);
                 }
                 return;
             }
@@ -1028,11 +1285,14 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
             else if (clickedBtn.Name == "btnBridgeObfs4")     _activeBridge = "obfs4";
             else if (clickedBtn.Name == "btnBridgeSnowflake") _activeBridge = "snowflake";
             else if (clickedBtn.Name == "btnBridgeMeek")      _activeBridge = "meek_lite";
+            else if (clickedBtn.Name == "btnBridgeConjure")   _activeBridge = "conjure";
 
             _cfg.LastBridge = _activeBridge;
             RequestConfigSave();
+            
+            UpdateAdvancedBridgesUI();
 
-            if (_activeBridge == "snowflake" && _cfg.LastXrayMode == "VPN Mode")
+            if (_activeBridge == "snowflake" && _cfg.LastXrayMode == "VPN Mode" && !_cfg.EnableDirectUDP)
             {
                 _cfg.LastXrayMode = "Proxy Mode";
                 _pollMode         = "Proxy Mode";
@@ -1100,11 +1360,13 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
         this.FindControl<global::Avalonia.Controls.Button>("btnBridgeObfs4")?.Classes.Remove("activeOpt");
         this.FindControl<global::Avalonia.Controls.Button>("btnBridgeSnowflake")?.Classes.Remove("activeOpt");
         this.FindControl<global::Avalonia.Controls.Button>("btnBridgeMeek")?.Classes.Remove("activeOpt");
+        this.FindControl<global::Avalonia.Controls.Button>("btnBridgeConjure")?.Classes.Remove("activeOpt");
         this.FindControl<global::Avalonia.Controls.Button>("btnBridgeCustom")?.Classes.Remove("activeOpt");
 
         if (_activeBridge == "obfs4")          this.FindControl<global::Avalonia.Controls.Button>("btnBridgeObfs4")?.Classes.Add("activeOpt");
         else if (_activeBridge == "snowflake") this.FindControl<global::Avalonia.Controls.Button>("btnBridgeSnowflake")?.Classes.Add("activeOpt");
         else if (_activeBridge == "meek_lite") this.FindControl<global::Avalonia.Controls.Button>("btnBridgeMeek")?.Classes.Add("activeOpt");
+        else if (_activeBridge == "conjure")   this.FindControl<global::Avalonia.Controls.Button>("btnBridgeConjure")?.Classes.Add("activeOpt");
         else if (_activeBridge == "Custom")    this.FindControl<global::Avalonia.Controls.Button>("btnBridgeCustom")?.Classes.Add("activeOpt");
         else                                   this.FindControl<global::Avalonia.Controls.Button>("btnBridgeDirect")?.Classes.Add("activeOpt");
 
@@ -1207,16 +1469,32 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
             togAdapterBinding.IsChecked = _cfg.EnableAdapterBinding;
             UpdateAdapterBindingMutualExclusivity();
         }
-        
+
         _isInitializingSettings = false;
 
         ApplyModeUI(_pollMode);
         ApplyRoutingUI(false);
         UpdateLanPortUI();
+        UpdateAdvancedBridgesUI();
 
         var langLbl = this.FindControl<TextBlock>("lblCurrentLanguage");
         if (langLbl != null) langLbl.Text = _cfg.Language;
         ApplyLanguage();
+
+        var lbLbl = this.FindControl<TextBlock>("lblCurrentLbPolicy");
+        if (lbLbl != null)
+        {
+            lbLbl.Text = _cfg.HaProxyBalancePolicy switch
+            {
+                "leastload"  => "LEAST LOAD",
+                "leastping"  => "LEAST PING",
+                "roundrobin" => "ROUND ROBIN",
+                "random"     => "RANDOM",
+                "leastconn"  => "LEAST LOAD",
+                "first"      => "ROUND ROBIN",
+                _            => (_cfg.HaProxyBalancePolicy ?? "roundrobin").ToUpperInvariant()
+            };
+        }
     }
 
     private void ApplyModeUI(string mode)
@@ -1229,7 +1507,7 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
         var btnVpnMode = this.FindControl<global::Avalonia.Controls.Button>("btnVpnMode");
         if (btnVpnMode != null)
         {
-            if (_activeBridge == "snowflake")
+            if (_activeBridge == "snowflake" && !_cfg.EnableDirectUDP)
             {
                 btnVpnMode.IsEnabled = false;
                 btnVpnMode.Opacity = 0.3;
@@ -1342,9 +1620,13 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is global::Avalonia.Controls.Button clickedBtn)
         {
+            string oldMode = _cfg.SplitTunnelMode ?? "DISABLED";
+            
             if (clickedBtn.Name == "btnSplitExclusive") _cfg.SplitTunnelMode = "EXCLUSIVE";
             else if (clickedBtn.Name == "btnSplitInclusive") _cfg.SplitTunnelMode = "INCLUSIVE";
             else _cfg.SplitTunnelMode = "DISABLED";
+
+            if (oldMode == _cfg.SplitTunnelMode) return;
 
             _cfg.EnableDirect = _cfg.SplitTunnelMode != "DISABLED";
 
@@ -1352,7 +1634,16 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
             RequestConfigSave();
             
             if (_state.IsEngineRunning)
-                SmartRestartXray();
+            {
+                bool hasAnyInput = !string.IsNullOrWhiteSpace(_cfg.LastManualSplit) || 
+                                   !string.IsNullOrWhiteSpace(_cfg.LastAppSplit) || 
+                                   !string.IsNullOrWhiteSpace(_cfg.LastBlockSplit);
+
+                if (hasAnyInput)
+                {
+                    SmartRestartXray();
+                }
+            }
         }
     }
 
@@ -1440,27 +1731,47 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is Button btn)
         {
+            bool changed = false;
             if (btn.Name == "btnSaveDomains")
             {
                 var tb = this.FindControl<TextBox>("txtSplitDomains")!;
-                _cfg.LastManualSplit = tb.Text?.Trim() ?? "";
+                string newVal = tb.Text?.Trim() ?? "";
+                if (_cfg.LastManualSplit != newVal)
+                {
+                    _cfg.LastManualSplit = newVal;
+                    changed = true;
+                }
                 ClosePanel(this.FindControl<Border>("panDomainsEdit")!, this.FindControl<Border>("panDomainsToggle")!, tb, this.FindControl<Button>("btnToggleDomains")!);
             }
             else if (btn.Name == "btnSaveApps")
             {
                 var tb = this.FindControl<TextBox>("txtSplitApps")!;
-                _cfg.LastAppSplit = tb.Text?.Trim() ?? "";
+                string newVal = tb.Text?.Trim() ?? "";
+                if (_cfg.LastAppSplit != newVal)
+                {
+                    _cfg.LastAppSplit = newVal;
+                    changed = true;
+                }
                 ClosePanel(this.FindControl<Border>("panAppsEdit")!, this.FindControl<Border>("panAppsToggle")!, tb, this.FindControl<Button>("btnToggleApps")!);
             }
             else if (btn.Name == "btnSaveBlock")
             {
                 var tb = this.FindControl<TextBox>("txtSplitBlock")!;
-                _cfg.LastBlockSplit = tb.Text?.Trim() ?? "";
+                string newVal = tb.Text?.Trim() ?? "";
+                if (_cfg.LastBlockSplit != newVal)
+                {
+                    _cfg.LastBlockSplit = newVal;
+                    changed = true;
+                }
                 ClosePanel(this.FindControl<Border>("panBlockEdit")!, this.FindControl<Border>("panBlockToggle")!, tb, this.FindControl<Button>("btnToggleBlock")!);
             }
-            RequestConfigSave();
-            if (_state.IsEngineRunning)
-                SmartRestartXray();
+            
+            if (changed)
+            {
+                RequestConfigSave();
+                if (_state.IsEngineRunning)
+                    SmartRestartXray();
+            }
         }
     }
 
@@ -1488,6 +1799,8 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
             }
         }
     }
+
+
 
     private async void BrowseApp_Click(object? sender, RoutedEventArgs e)
     {

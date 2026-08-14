@@ -49,13 +49,38 @@ namespace CrimsonOnion.Services
                                     Directory.CreateDirectory(dir);
                                 }
                                 _dirCreated = true;
+                                TrimLogFile();
                             }
                             File.AppendAllText(LogFile, msg);
+                            
+                            if (++_writeCount >= 50)
+                            {
+                                _writeCount = 0;
+                                TrimLogFile();
+                            }
                         }
                         catch { }
                     }
                 }
             });
+        }
+
+        private static int _writeCount = 0;
+
+        private static void TrimLogFile()
+        {
+            try
+            {
+                if (!File.Exists(LogFile)) return;
+                var lines = File.ReadAllLines(LogFile);
+                if (lines.Length > 1000)
+                {
+                    var newLines = new string[1000];
+                    Array.Copy(lines, lines.Length - 1000, newLines, 0, 1000);
+                    File.WriteAllLines(LogFile, newLines);
+                }
+            }
+            catch { }
         }
 
         public static bool EnableLogging { get; set; } = true;

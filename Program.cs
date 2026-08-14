@@ -36,11 +36,16 @@ class Program
             return;
         }
 
-        BuildAvaloniaApp()
-            .StartWithClassicDesktopLifetime(args);
-            
-        _mutex.ReleaseMutex();
-        _mutex.Dispose();
+        try
+        {
+            BuildAvaloniaApp()
+                .StartWithClassicDesktopLifetime(args);
+        }
+        finally
+        {
+            _mutex.ReleaseMutex();
+            _mutex.Dispose();
+        }
     }
 
     public static AppBuilder BuildAvaloniaApp()

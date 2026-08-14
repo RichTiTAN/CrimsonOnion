@@ -31,26 +31,30 @@ namespace CrimsonOnion.Services
 
         public static void SetSystemProxy(bool enable)
         {
-            try
+            Task.Run(() =>
             {
-                using var key = Registry.CurrentUser.OpenSubKey(
-                    @"Software\Microsoft\Windows\CurrentVersion\Internet Settings", true);
-                if (key == null) return;
-
-                if (enable)
+                try
                 {
-                    key.SetValue("ProxyEnable", 1, RegistryValueKind.DWord);
-                    key.SetValue("ProxyServer", "127.0.0.1:10818", RegistryValueKind.String);
+                    using var key = Registry.CurrentUser.OpenSubKey(
+                        @"Software\Microsoft\Windows\CurrentVersion\Internet Settings", true);
+                    if (key != null)
+                    {
+                        if (enable)
+                        {
+                            key.SetValue("ProxyEnable", 1, RegistryValueKind.DWord);
+                            key.SetValue("ProxyServer", "127.0.0.1:10818", RegistryValueKind.String);
+                        }
+                        else
+                        {
+                            key.SetValue("ProxyEnable", 0, RegistryValueKind.DWord);
+                            key.DeleteValue("ProxyServer", false);
+                        }
+                    }
                 }
-                else
-                {
-                    key.SetValue("ProxyEnable", 0, RegistryValueKind.DWord);
-                    key.DeleteValue("ProxyServer", false);
-                }
-            }
-            catch { }
+                catch { }
 
-            RefreshProxy();
+                RefreshProxy();
+            });
         }
 
 

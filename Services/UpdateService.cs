@@ -30,17 +30,17 @@ namespace CrimsonOnion.Services
 {
     public static class UpdateService
     {
-        public const string AppVersion = "2.2.0";
+        public const string AppVersion = "2.3.0";
         
         private static readonly HttpClient _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
 
         public static async Task<(string? remoteVer, string? remoteMin)> CheckForUpdatesAsync(CancellationToken token = default)
         {
             var url = $"https://raw.githubusercontent.com/RichTiTAN/CrimsonOnion/main/version.json?t={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
-            var response = await _httpClient.GetAsync(url, token);
+            var response = await _httpClient.GetAsync(url, token).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
             
-            var raw = await response.Content.ReadAsStringAsync(token);
+            var raw = await response.Content.ReadAsStringAsync(token).ConfigureAwait(false);
             var json = JObject.Parse(raw);
             var remoteVer = json["version"]?.ToString() ?? "0.0.0";
             var remoteMin = json["minAutoUpdateVersion"]?.ToString() ?? "0.0.0";
@@ -65,21 +65,21 @@ namespace CrimsonOnion.Services
 
             try
             {
-                using var dlResponse = await _httpClient.GetAsync(zipUrl, HttpCompletionOption.ResponseHeadersRead, token);
+                using var dlResponse = await _httpClient.GetAsync(zipUrl, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
                 dlResponse.EnsureSuccessStatusCode();
                 
                 var total = dlResponse.Content.Headers.ContentLength ?? -1L;
                 
                 using var fs = File.Create(zipPath);
-                using var stream = await dlResponse.Content.ReadAsStreamAsync(token);
+                using var stream = await dlResponse.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
                 var buffer = new byte[81920];
                 long downloaded = 0;
                 int read;
                 int lastPct = -1;
                 
-                while ((read = await stream.ReadAsync(buffer, token)) > 0)
+                while ((read = await stream.ReadAsync(buffer, token).ConfigureAwait(false)) > 0)
                 {
-                    await fs.WriteAsync(buffer.AsMemory(0, read), token);
+                    await fs.WriteAsync(buffer.AsMemory(0, read), token).ConfigureAwait(false);
                     downloaded += read;
                     if (total > 0)
                     {
@@ -91,8 +91,6 @@ namespace CrimsonOnion.Services
                         }
                     }
                 }
-                
-                fs.Close();
 
                 if (total > 0 && new FileInfo(zipPath).Length != total)
                 {
@@ -104,7 +102,7 @@ namespace CrimsonOnion.Services
                 await Task.Run(() => {
                     token.ThrowIfCancellationRequested();
                     System.IO.Compression.ZipFile.ExtractToDirectory(zipPath, extPath, true);
-                }, token);
+                }, token).ConfigureAwait(false);
 
                 var exeFile = Directory.GetFiles(extPath, "CrimsonOnion.exe", SearchOption.AllDirectories).FirstOrDefault();
                 if (exeFile == null) throw new Exception("CrimsonOnion.exe not found in the downloaded ZIP!");

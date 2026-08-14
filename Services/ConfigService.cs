@@ -85,6 +85,10 @@ namespace CrimsonOnion.Services
                 ExpertExcludeNodes = config.ExpertExcludeNodes,
                 ExpertExcludeExitNodes = config.ExpertExcludeExitNodes,
                 ExpertCustomTorrc = config.ExpertCustomTorrc,
+                HaProxyBalancePolicy = config.HaProxyBalancePolicy,
+                EnableSnowflakeAmpCache = config.EnableSnowflakeAmpCache,
+                EnableConjureAmpCache = config.EnableConjureAmpCache,
+                EnableConjureDnsRegistration = config.EnableConjureDnsRegistration,
             };
 
             try
@@ -108,9 +112,11 @@ namespace CrimsonOnion.Services
             try
             {
                 var json = File.ReadAllText(cfgFile);
-                JsonConvert.PopulateObject(json, config);
 
                 var jobj = Newtonsoft.Json.Linq.JObject.Parse(json);
+                using var jReader = jobj.CreateReader();
+                Newtonsoft.Json.JsonSerializer.CreateDefault().Populate(jReader, config);
+
                 if (jobj["IsLogsOpen"] != null)
                     state.IsLogsOpen = jobj.Value<bool>("IsLogsOpen");
 

@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using System.Diagnostics;
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -27,10 +28,22 @@ namespace CrimsonOnion.Services
     {
         public static bool Write(AppConfig config, string xrayDir)
         {
+            int torCount = 1;
+            if (!int.TryParse(config.LastCount, out torCount) || torCount < 1) torCount = 1;
+            if (torCount > 8) torCount = 8;
+
+            bool useCustomChain = config.EnableV2rayChain && !string.IsNullOrWhiteSpace(config.V2rayChainJson);
+            bool preferDirectDefault = config.EnableDirect && config.SplitTunnelMode == "INCLUSIVE" && config.LastXrayMode != "VPN Mode";
+
+            string xrayBalancePolicy = GetXrayBalancePolicy(config.HaProxyBalancePolicy);
+            object strategy = GetXrayBalancerStrategy(xrayDir, xrayBalancePolicy);
+
             var rules = new List<object>
             {
                 new { type = "field", ip = new[] { "127.0.0.0/8", "::1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16" }, outboundTag = "direct" },
-                new { type = "field", domain = new[] { "domain:get.geojs.io" }, outboundTag = "proxy" }
+                preferDirectDefault
+                    ? new { type = "field", domain = new[] { "domain:get.geojs.io" }, outboundTag = "direct" }
+                    : new { type = "field", domain = new[] { "domain:get.geojs.io" }, balancerTag = "proxy" }
             };
 
             var blockDomains = new List<string>();
@@ -79,8 +92,16 @@ namespace CrimsonOnion.Services
                 if (ports.Count > 0) rules.Add(new { type = "field", port = string.Join(",", ports), outboundTag = targetTag });
             }
 
-            string defaultTag = (config.EnableDirect && config.SplitTunnelMode == "INCLUSIVE" && config.LastXrayMode != "VPN Mode") ? "direct" : "proxy";
-            rules.Add(new { type = "field", network = "tcp,udp", outboundTag = defaultTag });
+            rules.Insert(0, new { type = "field", inboundTag = new[] { "api" }, outboundTag = "api" });
+            
+            if (preferDirectDefault)
+            {
+                rules.Add(new { type = "field", network = "tcp,udp", outboundTag = "direct" });
+            }
+            else
+            {
+                rules.Add(new { type = "field", network = "tcp,udp", balancerTag = "proxy" });
+            }
 
             bool lanAuth = config.AllowLanConnections
                         && config.EnableLanAuth
@@ -101,6 +122,7 @@ namespace CrimsonOnion.Services
             };
 
             var outbounds = new List<object>();
+            var proxyCloneTags = new List<string>();
 
             if (config.EnableV2rayChain && !string.IsNullOrWhiteSpace(config.V2rayChainJson))
             {
@@ -121,36 +143,35 @@ namespace CrimsonOnion.Services
 
                     if (v2ob != null)
                     {
-                        v2ob["tag"] = "proxy";
-                        var tlsSettings = v2ob.SelectToken("streamSettings.tlsSettings");
-                        if (tlsSettings is JObject tlsObj)
+                        for (int i = 1; i <= torCount; i++)
                         {
-                            if (tlsObj["allowInsecure"] == null)
-                                tlsObj.Add("allowInsecure", true);
-                            else
-                                tlsObj["allowInsecure"] = true;
-                        }
-                        if (v2ob["proxySettings"] == null)
-                            v2ob.Add("proxySettings", JObject.FromObject(new { tag = "torProxy" }));
-                        else
-                            v2ob["proxySettings"] = JObject.FromObject(new { tag = "torProxy" });
+                            string cloneTag = $"proxy-clone-{i}";
+                            proxyCloneTags.Add(cloneTag);
 
-                        outbounds.Add(v2ob);
-                        outbounds.Add(new { tag = "torProxy", protocol = "socks", settings = new { servers = new[] { new { address = "127.0.0.1", port = 10800 } } } });
+                            var clone = (JObject)v2ob.DeepClone();
+                            clone["tag"] = cloneTag;
+                            clone["proxySettings"] = JObject.FromObject(new { tag = $"tor{i}" });
+
+                            outbounds.Add(clone);
+                        }
                     }
                     else
                     {
-                        outbounds.Add(new { tag = "proxy", protocol = "socks", settings = new { servers = new[] { new { address = "127.0.0.1", port = 10800 } } } });
+                        useCustomChain = false;
                     }
                 }
                 catch
                 {
-                    outbounds.Add(new { tag = "proxy", protocol = "socks", settings = new { servers = new[] { new { address = "127.0.0.1", port = 10800 } } } });
+                    useCustomChain = false;
                 }
             }
-            else
+
+            var torOutboundTags = new List<string>();
+            for (int i = 1; i <= torCount; i++)
             {
-                outbounds.Add(new { tag = "proxy", protocol = "socks", settings = new { servers = new[] { new { address = "127.0.0.1", port = 10800 } } } });
+                string tag = $"tor{i}";
+                torOutboundTags.Add(tag);
+                outbounds.Add(new { tag, protocol = "socks", settings = new { servers = new[] { new { address = "127.0.0.1", port = 19050 + i } } }, streamSettings = new { network = "raw" }, mux = new { enabled = false, concurrency = -1 } });
             }
 
             if (config.EnableAdBlock || (config.EnableDirect && !string.IsNullOrWhiteSpace(config.LastBlockSplit)))
@@ -163,19 +184,46 @@ namespace CrimsonOnion.Services
             {
                 allRules.Add(new { type = "field", network = "udp", outboundTag = "direct" });
             }
-            allRules.Add(new { type = "field", inboundTag = new[] { "api" }, outboundTag = "api" });
             allRules.AddRange(rules);
+
+            var balancerSelector = useCustomChain && proxyCloneTags.Count > 0
+                ? proxyCloneTags.ToArray()
+                : torOutboundTags.ToArray();
+
+            var balancers = new List<object>
+            {
+                new { selector = balancerSelector, strategy = strategy, tag = "proxy" }
+            };
 
             var cfg = new Dictionary<string, object>
             {
                 ["log"] = new { logLevel = "info", access = Path.Combine(xrayDir, "access.log").Replace("\\", "/"), error = Path.Combine(xrayDir, "error.log").Replace("\\", "/") },
                 ["stats"] = new { },
                 ["api"] = new { tag = "api", services = new[] { "StatsService" } },
-                ["policy"] = new { system = new { statsInboundUplink = true, statsInboundDownlink = true } },
+                ["policy"] = new
+                {
+                    system = new
+                    {
+                        statsInboundUplink = true,
+                        statsInboundDownlink = true,
+                        statsOutboundUplink = true,
+                        statsOutboundDownlink = true
+                    }
+                },
                 ["inbounds"] = inbounds,
                 ["outbounds"] = outbounds.ToArray(),
-                ["routing"] = new { domainStrategy = "AsIs", rules = allRules.ToArray() }
+                ["routing"] = new { domainStrategy = "AsIs", rules = allRules.ToArray(), balancers = balancers.ToArray() }
             };
+
+            if (xrayBalancePolicy == "leastPing" || xrayBalancePolicy == "leastLoad")
+            {
+                cfg["observatory"] = new
+                {
+                    subjectSelector = balancerSelector,
+                    probeUrl = "https://www.google.com/generate_204",
+                    probeInterval = "5s"
+                };
+            }
 
             if (config.EnableUpstreamDoh && !string.IsNullOrWhiteSpace(config.UpstreamDohUrl))
             {
@@ -209,6 +257,116 @@ namespace CrimsonOnion.Services
                 return false;
             }
         }
+
+        private static string GetXrayBalancePolicy(string? policy)
+        {
+            return (policy ?? string.Empty).ToLowerInvariant() switch
+            {
+                "leastload" => "leastLoad",
+                "leastping" => "leastPing",
+                "roundrobin" => "roundRobin",
+                "random" => "random",
+                "leastconn" => "roundRobin",
+                "first" => "roundRobin",
+                _ => "roundRobin"
+            };
+        }
+
+        private static readonly Dictionary<string, bool> XrayBalancerSupportCache = new();
+
+        private static object GetXrayBalancerStrategy(string xrayDir, string xrayBalancePolicy)
+        {
+            if (xrayBalancePolicy == "leastLoad" || xrayBalancePolicy == "leastPing")
+            {
+                if (IsXrayBalancerStrategySupported(xrayDir, xrayBalancePolicy))
+                {
+                    return new { type = xrayBalancePolicy, settings = new { expected = 1 } };
+                }
+
+                return new { type = "roundRobin" };
+            }
+
+            return new { type = xrayBalancePolicy };
+        }
+
+        private static bool IsXrayBalancerStrategySupported(string xrayDir, string strategyType)
+        {
+            try
+            {
+                string cacheKey = $"{xrayDir}|{strategyType}";
+                if (XrayBalancerSupportCache.TryGetValue(cacheKey, out bool supported))
+                {
+                    return supported;
+                }
+
+                var xrayExe = Path.Combine(xrayDir, "xray.exe");
+                if (!File.Exists(xrayExe))
+                {
+                    XrayBalancerSupportCache[cacheKey] = false;
+                    return false;
+                }
+
+                var tempConfig = Path.Combine(xrayDir, $"xray_strategy_check_{strategyType}.json");
+                var config = new Dictionary<string, object>
+                {
+                    ["log"] = new { logLevel = "none" },
+                    ["inbounds"] = new[] { new { listen = "127.0.0.1", port = 10818, protocol = "socks", settings = new { auth = "noauth" } } },
+                    ["outbounds"] = new[]
+                    {
+                        new { tag = "a", protocol = "freedom", settings = new { } },
+                        new { tag = "b", protocol = "freedom", settings = new { } }
+                    },
+                    ["routing"] = new
+                    {
+                        domainStrategy = "AsIs",
+                        rules = new[] { new { type = "field", network = "tcp,udp", balancerTag = "test-balancer" } },
+                        balancers = new[] { new { selector = new[] { "a", "b" }, strategy = new { type = strategyType, settings = new { expected = 1 } }, tag = "test-balancer" } }
+                    }
+                };
+
+                if (strategyType == "leastPing" || strategyType == "leastLoad")
+                {
+                    config["observatory"] = new
+                    {
+                        subjectSelector = new[] { "a", "b" },
+                        probeUrl = "https://www.google.com/generate_204",
+                        probeInterval = "5s"
+                    };
+                }
+
+                File.WriteAllText(tempConfig, JsonConvert.SerializeObject(config, Formatting.Indented));
+
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = xrayExe,
+                    Arguments = $"-test -c \"{tempConfig}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+
+                using var process = Process.Start(startInfo);
+                if (process == null)
+                {
+                    XrayBalancerSupportCache[cacheKey] = false;
+                    File.Delete(tempConfig);
+                    return false;
+                }
+
+                process.WaitForExit(5000);
+                process.StandardOutput.ReadToEnd();
+                process.StandardError.ReadToEnd();
+                bool result = process.ExitCode == 0;
+                File.Delete(tempConfig);
+                XrayBalancerSupportCache[cacheKey] = result;
+                return result;
+            }
+            catch
+            {
+                return false;
+            }
+        }
     }
 
     public static class SingboxConfigWriter
@@ -219,7 +377,7 @@ namespace CrimsonOnion.Services
 
             var systemBypassApps = new List<string>
             {
-                currentExe, "tor.exe", "tor", "haproxy.exe", "haproxy",
+                currentExe, "tor.exe", "tor", "conjure-client.exe", "dnstt-client.exe",
                 "lyrebird.exe", "lyrebird", "xray.exe", "xray",
                 "sing-box.exe", "sing-box", "cmd.exe", "conhost.exe",
                 "powershell.exe", "pwsh.exe"

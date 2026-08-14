@@ -20,6 +20,8 @@ using System.IO;
 using CrimsonOnion.Models;
 using System.Collections.Generic;
 using System;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace CrimsonOnion.Services
 {
@@ -33,6 +35,14 @@ namespace CrimsonOnion.Services
                 Lines = new[]
                 {
                     "Bridge meek_lite 192.0.2.20:80 url=https://1603026938.rsc.cdn77.org front=www.phpmyadmin.net utls=HelloRandomizedALPN"
+                }
+            },
+            ["conjure"] = new BridgeEntry
+            {
+                Plugin = "ClientTransportPlugin conjure exec ../../TorBin/conjure-client.exe -registerURL https://registration.refraction.network/api",
+                Lines = new[]
+                {
+                    "Bridge conjure 143.110.214.222:80 url=https://registration.refraction.network.global.prod.fastly.net/api front=cdn.sstatic.net"
                 }
             },
             ["obfs4"] = new BridgeEntry
@@ -60,42 +70,44 @@ namespace CrimsonOnion.Services
             }
         };
 
-        public static List<string> BuildTorrcConfig(string torrcFile, string selBridge, string selConfig, string path, AppConfig config)
+        public static List<string> BuildTorrcConfig(string torrcFile, string selBridge, string selConfig, string path, AppConfig config, out List<DnsttProxyArgs> dnsttProxies)
         {
             var fullPath = Path.Combine(path, torrcFile);
             var rawLines = File.Exists(fullPath) ? File.ReadAllLines(fullPath) : Array.Empty<string>();
 
             var cleanCfg = new List<string>();
+            dnsttProxies = new List<DnsttProxyArgs>();
             foreach (var line in rawLines)
             {
                 if (line.StartsWith("# --- MANAGED BRIDGES ---", StringComparison.OrdinalIgnoreCase)) break;
-                if (!line.TrimStart().StartsWith("UseBridges", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("ClientTransportPlugin", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("Bridge ", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("HTTPSProxy", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("Socks5Proxy", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("Socks5ProxyUsername", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("Socks5ProxyPassword", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("HTTPSProxyAuthenticator", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("Log notice file", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("MaxCircuitDirtiness", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("ExitNodes", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("StrictNodes", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("CircuitBuildTimeout", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("HardwareAccel", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("KeepalivePeriod", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("NewCircuitPeriod", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("FascistFirewall", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("ExcludeNodes", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("ExcludeExitNodes", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("DataDirectory", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("GeoIPFile", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("GeoIPv6File", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("ControlPort", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("SocksPort", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("CookieAuthentication", StringComparison.OrdinalIgnoreCase) &&
-                    !line.TrimStart().StartsWith("# --- DYNAMIC ROUTING ---", StringComparison.OrdinalIgnoreCase) &&
-                    !string.IsNullOrWhiteSpace(line.Trim()))
+                var trimmedLine = line.TrimStart();
+                if (!trimmedLine.StartsWith("UseBridges", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("ClientTransportPlugin", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("Bridge ", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("HTTPSProxy", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("Socks5Proxy", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("Socks5ProxyUsername", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("Socks5ProxyPassword", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("HTTPSProxyAuthenticator", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("Log notice file", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("MaxCircuitDirtiness", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("ExitNodes", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("StrictNodes", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("CircuitBuildTimeout", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("HardwareAccel", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("KeepalivePeriod", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("NewCircuitPeriod", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("FascistFirewall", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("ExcludeNodes", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("ExcludeExitNodes", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("DataDirectory", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("GeoIPFile", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("GeoIPv6File", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("ControlPort", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("SocksPort", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("CookieAuthentication", StringComparison.OrdinalIgnoreCase) &&
+                    !trimmedLine.StartsWith("# --- DYNAMIC ROUTING ---", StringComparison.OrdinalIgnoreCase) &&
+                    !string.IsNullOrEmpty(trimmedLine))
                 {
                     cleanCfg.Add(line.Trim());
                 }
@@ -179,29 +191,10 @@ namespace CrimsonOnion.Services
             if (config.DebugMode)
                 cleanCfg.Add("Log warn stdout");
 
-            if (config.EnableAdapterBinding && !string.IsNullOrWhiteSpace(config.SelectedAdapterIp))
+            if ((config.EnableAdapterBinding && !string.IsNullOrWhiteSpace(config.SelectedAdapterIp)) ||
+                (config.EnableOutboundProxy && !string.IsNullOrEmpty(config.OutboundProxyAddress) && !string.IsNullOrEmpty(config.OutboundProxyPort)))
             {
                 cleanCfg.Add("Socks5Proxy 127.0.0.1:10819");
-            }
-            else if (config.EnableOutboundProxy && !string.IsNullOrEmpty(config.OutboundProxyAddress) && !string.IsNullOrEmpty(config.OutboundProxyPort))
-            {
-                if (config.OutboundProxyType == "SOCKS5")
-                {
-                    cleanCfg.Add($"Socks5Proxy {config.OutboundProxyAddress}:{config.OutboundProxyPort}");
-                    if (config.EnableOutboundAuth && !string.IsNullOrEmpty(config.OutboundProxyUser) && !string.IsNullOrEmpty(config.OutboundProxyPass))
-                    {
-                        cleanCfg.Add($"Socks5ProxyUsername {config.OutboundProxyUser}");
-                        cleanCfg.Add($"Socks5ProxyPassword {config.OutboundProxyPass}");
-                    }
-                }
-                else if (config.OutboundProxyType == "HTTPS")
-                {
-                    cleanCfg.Add($"HTTPSProxy {config.OutboundProxyAddress}:{config.OutboundProxyPort}");
-                    if (config.EnableOutboundAuth && !string.IsNullOrEmpty(config.OutboundProxyUser) && !string.IsNullOrEmpty(config.OutboundProxyPass))
-                    {
-                        cleanCfg.Add($"HTTPSProxyAuthenticator {config.OutboundProxyUser}:{config.OutboundProxyPass}");
-                    }
-                }
             }
 
             if (selBridge == "Custom")
@@ -210,13 +203,21 @@ namespace CrimsonOnion.Services
                 {
                     cleanCfg.Add("UseBridges 1");
                     cleanCfg.Add("ClientTransportPlugin meek_lite,obfs2,obfs3,obfs4,scramblesuit,webtunnel,snowflake exec ../../TorBin/lyrebird.exe");
-                    foreach (var bl in config.CustomBridgeLine.Split('\n'))
+                    cleanCfg.Add("ClientTransportPlugin conjure exec ../../TorBin/conjure-client.exe -registerURL https://registration.refraction.network/api");
+                    
+                    int torInstanceId = 1;
+                    var matchInstance = Regex.Match(path, @"Tor(\d+)");
+                    if (matchInstance.Success)
                     {
-                        var trimmed = bl.Trim();
-                        if (!string.IsNullOrEmpty(trimmed) && !trimmed.StartsWith("ClientTransportPlugin", StringComparison.OrdinalIgnoreCase))
-                        {
-                            cleanCfg.Add(trimmed.StartsWith("Bridge ", StringComparison.OrdinalIgnoreCase) ? trimmed : $"Bridge {trimmed}");
-                        }
+                        int.TryParse(matchInstance.Groups[1].Value, out torInstanceId);
+                    }
+
+                    var dnsttResult = DnsttManager.ProcessDnsttBridges(config.CustomBridgeLine, torInstanceId);
+                    dnsttProxies = dnsttResult.Proxies;
+
+                    foreach (var bridgeLine in dnsttResult.ModifiedBridges)
+                    {
+                        cleanCfg.Add(bridgeLine);
                     }
                 }
                 else
@@ -230,7 +231,24 @@ namespace CrimsonOnion.Services
                 {
                     cleanCfg.Add("UseBridges 1");
                     cleanCfg.Add(b.Plugin.Replace("%%LYREBIRD%%", "../../TorBin/lyrebird.exe"));
-                    foreach (var bl in b.Lines) cleanCfg.Add(bl);
+                    
+                    if (selBridge == "snowflake" && config.EnableSnowflakeAmpCache)
+                    {
+                        cleanCfg.Add("Bridge snowflake 192.0.2.3:80 2B280B23E1107BB62ABFC40DDCC8824814F80A72 fingerprint=2B280B23E1107BB62ABFC40DDCC8824814F80A72 url=https://snowflake-broker.torproject.net/ ampcache=https://cdn.ampproject.org/ front=www.google.com ice=stun:stun.epygi.com:3478,stun:stun.uls.co.za:3478,stun:stun.voipgate.com:3478,stun:stun.mixvoip.com:3478,stun:stun.telnyx.com:3478,stun:stun.hot-chilli.net:3478,stun:stun.fitauto.ru:3478,stun:stun.m-online.net:3478 utls-imitate=hellorandomizedalpn");
+                        cleanCfg.Add("Bridge snowflake 192.0.2.4:80 8838024498816A039FCBBAB14E6F40A0843051FA fingerprint=8838024498816A039FCBBAB14E6F40A0843051FA url=https://snowflake-broker.torproject.net/ ampcache=https://cdn.ampproject.org/ front=www.google.com ice=stun:stun.epygi.com:3478,stun:stun.uls.co.za:3478,stun:stun.voipgate.com:3478,stun:stun.mixvoip.com:3478,stun:stun.telnyx.com:3478,stun:stun.hot-chilli.net:3478,stun:stun.fitauto.ru:3478,stun:stun.m-online.net:3478 utls-imitate=hellorandomizedalpn");
+                    }
+                    else if (selBridge == "conjure" && config.EnableConjureAmpCache)
+                    {
+                        cleanCfg.Add("Bridge conjure 143.110.214.222:80 50B99540A96C5E9F9F7704BAAE11DF01564711F4 url=https://amp.refraction.network registrar=ampcache ampcache=https://cdn.ampproject.org/ fronts=www.google.com transport=prefix");
+                    }
+                    else if (selBridge == "conjure" && config.EnableConjureDnsRegistration)
+                    {
+                        cleanCfg.Add("Bridge conjure 143.110.214.222:80 50B99540A96C5E9F9F7704BAAE11DF01564711F4 registrar=dns url=https://registration.refraction.network fronts=cdn.zk.mk,www.cdn77.com transport=min");
+                    }
+                    else
+                    {
+                        foreach (var bl in b.Lines) cleanCfg.Add(bl);
+                    }
                 }
                 else
                 {
