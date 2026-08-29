@@ -30,7 +30,7 @@ namespace CrimsonOnion.Services
 {
     public static class UpdateService
     {
-        public const string AppVersion = "2.3.0";
+        public const string AppVersion = "2.3.1";
         
         private static readonly HttpClient _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
 
@@ -92,10 +92,6 @@ namespace CrimsonOnion.Services
                     }
                 }
 
-                if (total > 0 && new FileInfo(zipPath).Length != total)
-                {
-                    throw new Exception("Downloaded file size does not match expected size. Download may be corrupted.");
-                }
 
                 Dispatcher.UIThread.Post(() => progressCallback("EXTRACTING UPDATE..."));
                 

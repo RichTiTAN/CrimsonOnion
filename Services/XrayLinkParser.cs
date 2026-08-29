@@ -51,6 +51,10 @@ namespace CrimsonOnion.Services
                 {
                     outbound = ParseShadowsocks(link);
                 }
+                else if (link.StartsWith("socks://", StringComparison.OrdinalIgnoreCase))
+                {
+                    outbound = ParseSocks(link);
+                }
                 else
                 {
                     return false;
@@ -293,7 +297,75 @@ namespace CrimsonOnion.Services
                 outbound["streamSettings"] = stream;
             }
         }
-    }
+    
+        private static JObject ParseSocks(string link)
+        {
+            string payload = link.Substring(8);
+            int hashIdx = payload.IndexOf("#");
+            if (hashIdx >= 0) payload = payload.Substring(0, hashIdx);
+
+            string userPass = "";
+            string hostPort = payload;
+
+            if (payload.Contains("@"))
+            {
+                var parts = payload.Split(new[] { '@' }, 2);
+                string up = parts[0];
+                hostPort = parts[1];
+
+                try
+                {
+                    string padded = up;
+                    switch (padded.Length % 4)
+                    {
+                        case 2: padded += "=="; break;
+                        case 3: padded += "="; break;
+                    }
+                    userPass = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(padded));
+                }
+                catch
+                {
+                    userPass = Uri.UnescapeDataString(up);
+                }
+            }
+            
+            var hpParts = hostPort.Split(new[] { ':' }, 2);
+            var outbound = new JObject
+            {
+                ["protocol"] = "socks",
+                ["settings"] = new JObject
+                {
+                    ["servers"] = new JArray
+                    {
+                        new JObject
+                        {
+                            ["address"] = hpParts[0],
+                            ["port"] = int.Parse(hpParts[1])
+                        }
+                    }
+                }
+            };
+            
+            if (!string.IsNullOrEmpty(userPass) && userPass.Contains(":"))
+            {
+                var upParts = userPass.Split(new[] { ':' }, 2);
+                string user = upParts[0];
+                string pass = upParts[1];
+                if (!string.IsNullOrEmpty(user) || !string.IsNullOrEmpty(pass))
+                {
+                    var srvs = outbound["settings"]?["servers"] as JArray;
+                    if (srvs != null && srvs.Count > 0)
+                    {
+                        srvs[0]["users"] = new JArray
+                    {
+                        new JObject { ["user"] = user, ["pass"] = pass }
+                        };
+                    }
+                }
+            }
+            return outbound;
+        }
+}
 }
 
 

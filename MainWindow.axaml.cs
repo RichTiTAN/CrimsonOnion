@@ -407,6 +407,11 @@ public partial class MainWindow : Window
         Process.Start(new ProcessStartInfo("https://github.com/RichTiTAN") { UseShellExecute = true })?.Dispose();
     }
 
+    private void BtnOtherApps_Click(object? sender, RoutedEventArgs e)
+    {
+        Process.Start(new ProcessStartInfo("https://github.com/RichTiTAN/CrimsonX") { UseShellExecute = true })?.Dispose();
+    }
+
     private void BtnTelegram_Click(object? sender, RoutedEventArgs e)
     {
         Process.Start(new ProcessStartInfo("https://t.me/itsTitanVPN") { UseShellExecute = true })?.Dispose();
@@ -450,7 +455,7 @@ public partial class MainWindow : Window
                 var btnTitleUpdate = this.FindControl<global::Avalonia.Controls.Button>("btnTitleUpdate");
                 if (btnTitleUpdate != null) btnTitleUpdate.IsVisible = true;
                 
-                string msg = CrimsonOnion.Localization.AppStrings.IsPersian ? "بروزرسانی جدید در دسترس است" : "NEW UPDATE AVAILABLE";
+                string msg = CrimsonOnion.Localization.AppStrings.UpdateAutoTitle;
                 SetUpdateUIStatus(msg);
             }
         }
@@ -490,29 +495,36 @@ public partial class MainWindow : Window
         {
             if (token.IsCancellationRequested)
             {
-                ShowToast(CrimsonOnion.Localization.AppStrings.ToastUpdateCancelled);
+                ShowToast(CrimsonOnion.Localization.AppStrings.UpdateCancelled);
             }
             else
             {
-                ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
-                    ? "اتصال هنگام دانلود بروزرسانی قطع شد."
-                    : "Connection timed out while downloading the update.");
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastUpdateDownloadFailed);
             }
-            string msg = CrimsonOnion.Localization.AppStrings.IsPersian ? "بروزرسانی جدید در دسترس است" : "NEW UPDATE AVAILABLE";
+            string msg = CrimsonOnion.Localization.AppStrings.UpdateAutoTitle;
             SetUpdateUIStatus(msg);
         }
         catch (Exception ex)
         {
-            ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
-                ? $"خطا در بروزرسانی: {ex.Message}"
-                : $"Failed to update: {ex.Message}");
-            string msg = CrimsonOnion.Localization.AppStrings.IsPersian ? "بروزرسانی جدید در دسترس است" : "NEW UPDATE AVAILABLE";
+            ShowToast(string.Format(CrimsonOnion.Localization.AppStrings.ToastUpdateErrorFormat, ex.Message));
+            string msg = CrimsonOnion.Localization.AppStrings.UpdateAutoTitle;
             SetUpdateUIStatus(msg);
         }
         finally
         {
             _updateCts?.Dispose();
             _updateCts = null;
+        }
+    }
+
+    private async void BtnCrimsonXPromo_Click(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var dialog = new Dialogs.CrimsonXDialog();
+        var result = await dialog.ShowDialog<string>(this);
+        
+        if (result == "Primary")
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://github.com/RichTiTAN/CrimsonX") { UseShellExecute = true })?.Dispose();
         }
     }
 
@@ -615,7 +627,7 @@ public partial class MainWindow : Window
             var btnTitleUpdate = this.FindControl<global::Avalonia.Controls.Button>("btnTitleUpdate");
             if (btnTitleUpdate != null) btnTitleUpdate.IsVisible = true;
 
-            string msg = CrimsonOnion.Localization.AppStrings.IsPersian ? "بروزرسانی جدید در دسترس است" : "NEW UPDATE AVAILABLE";
+            string msg = CrimsonOnion.Localization.AppStrings.UpdateAutoTitle;
             SetUpdateUIStatus(msg);
 
             _updateCts?.Dispose();
@@ -637,23 +649,19 @@ public partial class MainWindow : Window
         {
             if (token.IsCancellationRequested)
             {
-                ShowToast(CrimsonOnion.Localization.AppStrings.ToastUpdateCancelled);
+                ShowToast(CrimsonOnion.Localization.AppStrings.UpdateCancelled);
                 if (btnCheckUpdate != null) btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.UpdateCancelled;
                 try { await Task.Delay(2000); } catch { }
             }
             else
             {
-                ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
-                    ? "اتصال هنگام بررسی بروزرسانی قطع شد."
-                    : "Connection timed out while checking for updates.");
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastUpdateCheckFailed);
             }
             if (btnCheckUpdate != null) btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.CheckForUpdates;
         }
         catch (Exception ex)
         {
-            ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
-                ? $"خطا در بروزرسانی: {ex.Message}"
-                : $"Failed to update: {ex.Message}");
+            ShowToast(string.Format(CrimsonOnion.Localization.AppStrings.ToastUpdateErrorFormat, ex.Message));
             if (btnCheckUpdate != null) btnCheckUpdate.Content = CrimsonOnion.Localization.AppStrings.CheckForUpdates;
         }
         finally
@@ -791,7 +799,7 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
         TextBlock? F(string name) => this.FindControl<TextBlock>(name);
         Button? B(string name)    => this.FindControl<Button>(name);
 
-        AppStrings.Apply(F("lblSidebarConnection"),  AppStrings.SidebarConnection);
+        AppStrings.Apply(F("lblSidebarConnection"),  AppStrings.Connect);
         AppStrings.Apply(F("lblSidebarCountries"),   AppStrings.SidebarCountries);
         AppStrings.Apply(F("lblSidebarSplitTunnel"), AppStrings.SidebarSplitTunnel);
         AppStrings.Apply(F("lblSidebarSettings"),    AppStrings.SidebarSettings);
@@ -863,7 +871,7 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
         AppStrings.ApplyToolTip(this.FindControl<TextBlock>("lblMinimizeToTray"), AppStrings.TtMinimizeToTray);
         AppStrings.ApplyToolTip(this.FindControl<Button>("btnRefreshPing"), AppStrings.TtPingRefresh);
 
-        AppStrings.Apply(F("lblSectionConnection"), AppStrings.SectionConnection, forceLtr: true);
+        AppStrings.Apply(F("lblSectionConnection"), AppStrings.Connect, forceLtr: true);
 
         var tbLbPolicy = this.FindControl<TextBlock>("lblLbPolicy");
         AppStrings.Apply(tbLbPolicy, AppStrings.LbPolicy);
@@ -929,7 +937,7 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
         AppStrings.Apply(F("lblDomainsAndIps"), AppStrings.DomainsAndIps);
         AppStrings.Apply(F("lblApplications"), AppStrings.Applications);
         var lblSplitAppsWarning = this.FindControl<TextBlock>("lblSplitAppsWarning");
-        if (lblSplitAppsWarning != null) lblSplitAppsWarning.Text = AppStrings.IsPersian ? "هشدار: به حروف بزرگ و کوچک حساس است" : "Warning: Case sensitive";
+        if (lblSplitAppsWarning != null) lblSplitAppsWarning.Text = AppStrings.LblSplitAppsWarning;
         AppStrings.Apply(F("lblBlockedDomainsIps"), AppStrings.BlockedDomains);
         AppStrings.Apply(F("lblDirectUdpHeader"), AppStrings.SplitTunnelDirectUDP);
         AppStrings.ApplyToolTip(F("lblDirectUdpHeader"), AppStrings.SplitTunnelDirectUDPTooltip);
@@ -960,7 +968,7 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
             btnToggleBlock.Content   = string.IsNullOrWhiteSpace(this.FindControl<TextBox>("txtSplitBlock")?.Text) ? AppStrings.Add : AppStrings.Edit;
 
         var btnBrowseApp = this.FindControl<Button>("btnBrowseApp");
-        if (btnBrowseApp != null) btnBrowseApp.Content = fa ? "مرور" : "BROWSE";
+        if (btnBrowseApp != null) btnBrowseApp.Content = AppStrings.BtnBrowse;
 
         AppStrings.Apply(F("lblAboutVersion"),  AppStrings.AboutVersion);
         AppStrings.Apply(F("lblAboutCreator"),  AppStrings.AboutCreator);
@@ -972,25 +980,25 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
         AppStrings.Apply(F("lblExpertTitle"), AppStrings.ExpertTitle);
         
         AppStrings.ApplyBtn(B("btnExpertSave"), AppStrings.Save);
-        AppStrings.ApplyBtn(B("btnExpertCancel"), AppStrings.Cancel);
+        AppStrings.ApplyBtn(B("btnExpertCancel"), AppStrings.BtnCancel);
         AppStrings.ApplyBtn(B("btnXraySave"), AppStrings.Save);
-        AppStrings.ApplyBtn(B("btnXrayCancel"), AppStrings.Cancel);
+        AppStrings.ApplyBtn(B("btnXrayCancel"), AppStrings.BtnCancel);
         AppStrings.ApplyBtn(B("btnOutboundSave"), AppStrings.Save);
-        AppStrings.ApplyBtn(B("btnOutboundCancel"), AppStrings.Cancel);
+        AppStrings.ApplyBtn(B("btnOutboundCancel"), AppStrings.BtnCancel);
         AppStrings.ApplyBtn(B("btnDohSave"), AppStrings.Save);
         AppStrings.ApplyBtn(B("btnSysDnsSave"), AppStrings.Save);
         AppStrings.ApplyBtn(B("btnLanAuthSave"), AppStrings.Save);
         AppStrings.ApplyBtn(B("btnSaveDomains"), AppStrings.Save);
-        AppStrings.ApplyBtn(B("btnCancelDomains"), AppStrings.Cancel);
+        AppStrings.ApplyBtn(B("btnCancelDomains"), AppStrings.BtnCancel);
         AppStrings.ApplyBtn(B("btnSaveApps"), AppStrings.Save);
-        AppStrings.ApplyBtn(B("btnCancelApps"), AppStrings.Cancel);
+        AppStrings.ApplyBtn(B("btnCancelApps"), AppStrings.BtnCancel);
         AppStrings.ApplyBtn(B("btnSaveBlock"), AppStrings.Save);
-        AppStrings.ApplyBtn(B("btnCancelBlock"), AppStrings.Cancel);
+        AppStrings.ApplyBtn(B("btnCancelBlock"), AppStrings.BtnCancel);
         
         AppStrings.ApplyBtn(B("btnCaptchaSubmit"), AppStrings.Submit);
-        AppStrings.ApplyBtn(B("btnCaptchaCancel"), AppStrings.Cancel);
+        AppStrings.ApplyBtn(B("btnCaptchaCancel"), AppStrings.BtnCancel);
         AppStrings.ApplyBtn(B("btnCustomSave"), AppStrings.Save);
-        AppStrings.ApplyBtn(B("btnCustomCancel"), AppStrings.Cancel);
+        AppStrings.ApplyBtn(B("btnCustomCancel"), AppStrings.BtnCancel);
 
         AppStrings.Apply(F("lblCountriesOptimized"), AppStrings.RoutingOptimized);
         AppStrings.Apply(F("lblCountriesExpert"), AppStrings.RoutingExpert);
@@ -1016,7 +1024,7 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
         }
         else if (_state.IsEngineRunning)
         {
-            if (txtConnectBtn != null) txtConnectBtn.Text = fa ? "در حال اتصال..." : "CONNECTING";
+            if (txtConnectBtn != null) txtConnectBtn.Text = AppStrings.BtnConnecting;
         }
         else
         {
@@ -1326,7 +1334,7 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
             }
 
             if (_state.IsEngineRunning)
-                ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectBridge);
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
         }
     }
 
@@ -1561,9 +1569,9 @@ private async void BtnLanguage_Click(object? sender, RoutedEventArgs e)
         if (lblSplitExplanation != null)
         {
             if (modeStr == "EXCLUSIVE")
-                lblSplitExplanation.Text = CrimsonOnion.Localization.AppStrings.SplitExplanationExclusive;
+                lblSplitExplanation.Text = CrimsonOnion.Localization.AppStrings.TtSplitExc;
             else if (modeStr == "INCLUSIVE")
-                lblSplitExplanation.Text = CrimsonOnion.Localization.AppStrings.SplitExplanationInclusive;
+                lblSplitExplanation.Text = CrimsonOnion.Localization.AppStrings.TtSplitInc;
                 
             lblSplitExplanation.FlowDirection = CrimsonOnion.Localization.AppStrings.IsPersian 
                 ? global::Avalonia.Media.FlowDirection.RightToLeft 

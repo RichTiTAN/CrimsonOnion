@@ -50,6 +50,8 @@ namespace CrimsonOnion.Models
         public string LastBlockSplit { get; set; } = "";
         public bool EnableDirect { get; set; } = false;
         public bool EnableDirectUDP { get; set; } = false;
+        public string DirectUdpAdapterName { get; set; } = "";
+        public string DirectUdpAdapterIp { get; set; } = "";
         public bool ShowAdvancedRouting { get; set; } = false;
         
         public bool EnableSnowflakeAmpCache { get; set; } = false;

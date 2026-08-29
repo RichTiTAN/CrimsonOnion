@@ -1,4 +1,4 @@
-/*
+﻿/*
  * CrimsonOnion - A GUI client that runs multiple Tor instances and load-balances them.
  * Copyright (C) 2026 RichTiTAN
  *
@@ -349,7 +349,7 @@ public partial class MainWindow
         }
         else
         {
-            lblLocalIp.Text = CrimsonOnion.Localization.AppStrings.PortStatusDisconnected;
+            lblLocalIp.Text = CrimsonOnion.Localization.AppStrings.Disconnected;
         }
     }
 
@@ -362,7 +362,7 @@ public partial class MainWindow
 
         if (!_cfg.AllowLanConnections)
         {
-            lblLanIp.Text = CrimsonOnion.Localization.AppStrings.PortStatusDisabled;
+            lblLanIp.Text = CrimsonOnion.Localization.AppStrings.Disabled;
         }
         else
         {
@@ -372,7 +372,7 @@ public partial class MainWindow
             }
             else
             {
-                lblLanIp.Text = CrimsonOnion.Localization.AppStrings.PortStatusDisconnected;
+                lblLanIp.Text = CrimsonOnion.Localization.AppStrings.Disconnected;
             }
         }
     }
@@ -398,7 +398,7 @@ public partial class MainWindow
                 var padded = i.ToString().PadLeft(2, '0');
                 if (i > _activeTorEngines)
                 {
-                    lbl.Text = $"TOR {padded}: {CrimsonOnion.Localization.AppStrings.TorStatusDisabled}";
+                    lbl.Text = $"TOR {padded}: {CrimsonOnion.Localization.AppStrings.Disabled}";
                     lbl.Foreground = BrGray;
                     lbl.Opacity = 0.5;
                 }
@@ -434,7 +434,7 @@ public partial class MainWindow
         {
             if (torIdx > uiSelCount)
             {
-                lbl.Text = $"TOR {padded}: {CrimsonOnion.Localization.AppStrings.TorStatusDisabled}";
+                lbl.Text = $"TOR {padded}: {CrimsonOnion.Localization.AppStrings.Disabled}";
             }
             else
             {
@@ -447,7 +447,7 @@ public partial class MainWindow
 
         if (torIdx > uiSelCount && torIdx > _pollSelCount)
         {
-            lbl.Text = $"TOR {padded}: {CrimsonOnion.Localization.AppStrings.TorStatusDisabled}";
+            lbl.Text = $"TOR {padded}: {CrimsonOnion.Localization.AppStrings.Disabled}";
             lbl.Foreground = BrGray;
             lbl.Opacity = 0.5;
             return;
@@ -1009,7 +1009,7 @@ public partial class MainWindow
             var clipboard = global::Avalonia.Controls.TopLevel.GetTopLevel(this)?.Clipboard;
             if (clipboard != null) _ = clipboard.SetTextAsync(tb.Text);
             
-            string msg = CrimsonOnion.Localization.AppStrings.IsPersian ? "کپی شد!" : "Copied to clipboard!";
+            string msg = CrimsonOnion.Localization.AppStrings.ToastCopiedToClipboard;
             ShowToast(msg, success: true);
         }
     }
@@ -1045,9 +1045,7 @@ public partial class MainWindow
                 if (tunExists)
                 {
                     bool isFa = CrimsonOnion.Localization.AppStrings.IsPersian;
-                    ShowToast(isFa
-                        ? "آداپتور VPN از قبل توسط برنامه دیگری در حال استفاده است!"
-                        : "VPN adapter is already in use by another app!");
+                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastVpnAdapterInUse);
                     return;
                 }
             }
@@ -1056,9 +1054,7 @@ public partial class MainWindow
 
         if (!File.Exists(GetAppPath(@"Data\Tors\Tor1\Data\state")))
         {
-            string msg = CrimsonOnion.Localization.AppStrings.IsPersian
-                ? "اتصال اولیه ممکن است بیشتر طول بکشد، لطفاً صبر کنید."
-                : "First connection might take longer, please wait.";
+            string msg = CrimsonOnion.Localization.AppStrings.ToastFirstConnectionLong;
             ShowToast(msg);
         }
 
@@ -1076,7 +1072,26 @@ public partial class MainWindow
             }
             if (!exists)
             {
-                ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian ? "آداپتور انتخاب شده در دسترس نیست!" : "Selected adapter is not available!");
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastAdapterNotAvailable);
+                return;
+            }
+        }
+
+        if (_cfg.EnableDirectUDP && !string.IsNullOrWhiteSpace(_cfg.DirectUdpAdapterName) && _cfg.DirectUdpAdapterName != "default")
+        {
+            var adapters = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
+            bool exists = false;
+            foreach (var adapter in adapters)
+            {
+                if (adapter.Name == _cfg.DirectUdpAdapterName && adapter.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up)
+                {
+                    exists = true;
+                    break;
+                }
+            }
+            if (!exists)
+            {
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastDirectUdpAdapterNotAvailable);
                 return;
             }
         }
@@ -1094,9 +1109,7 @@ public partial class MainWindow
         catch (Exception ex)
         {
             CrimsonOnion.Services.SimpleLogger.Log(ex);
-            ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
-                ? $"خطا در شروع موتور: {ex.Message}"
-                : $"Engine start failed: {ex.Message}");
+            ShowToast(string.Format(CrimsonOnion.Localization.AppStrings.ToastEngineStartFailedFormat, ex.Message));
             StopAllEngines();
         }
     }
@@ -1114,7 +1127,7 @@ public partial class MainWindow
 
         if (txtConnectBtn != null)
         {
-            txtConnectBtn.Text = CrimsonOnion.Localization.AppStrings.IsPersian ? "در حال اتصال..." : "CONNECTING";
+            txtConnectBtn.Text = CrimsonOnion.Localization.AppStrings.BtnConnecting;
             txtConnectBtn.Foreground = BrWhite;
         }
         SetConnectButtonProgress(0);
@@ -1332,15 +1345,13 @@ public partial class MainWindow
                 CrimsonOnion.Services.SimpleLogger.Log($"[Bootstrap] Still waiting after {elapsed}s. Bridge={_activeBridge}, Config={_cfg.LastConfig}, Mode={_pollMode}");
                 
                 int elapsedMins = (int)Math.Round(elapsed / 60.0);
-                ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
-                    ? $"اتصال هنوز برقرار نشده است ({elapsedMins} دقیقه). در حال تلاش مجدد..."
-                    : $"Still bootstrapping after {elapsedMins} minutes. Continuing to try...");
+                ShowToast(string.Format(CrimsonOnion.Localization.AppStrings.ToastBootstrappingLongFormat, elapsedMins));
                 
                 nextWarningTime[0] = DateTime.Now.AddSeconds(warningInterval);
             }
             if (bestPct >= 0 && txtConnectBtn != null)
             {
-                txtConnectBtn.Text = CrimsonOnion.Localization.AppStrings.IsPersian ? "در حال اتصال..." : "CONNECTING";
+                txtConnectBtn.Text = CrimsonOnion.Localization.AppStrings.BtnConnecting;
                 SetConnectButtonProgress(bestPct);
             }
             return;
@@ -1562,7 +1573,7 @@ public partial class MainWindow
         if (_cfg.LastXrayMode == "VPN Mode")
         {
             if (_state.IsConnected)
-                ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectSafely);
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
             else if (_state.IsEngineRunning)
                 ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
             return;
@@ -1742,20 +1753,16 @@ public partial class MainWindow
             {
                 if (isDnsttBypass)
                 {
-                    ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian 
-                        ? "برای اعمال پل جدید مجدداً متصل شوید.\nهشدار: پل‌های DNSTT از پروکسی و آداپتور پشتیبانی نمی‌کنند." 
-                        : "Reconnect to apply bridge.\nWarning: DNSTT bypasses proxy and adapter settings.");
+                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastDnsttBridgeWarning1);
                 }
                 else
                 {
-                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectBridge);
+                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
                 }
             }
             else if (isDnsttBypass)
             {
-                ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
-                    ? "هشدار: پل‌های DNSTT از تنظیمات پروکسی و آداپتور پشتیبانی نمی‌کنند."
-                    : "Warning: DNSTT bridges bypass Outbound Proxy and Adapter Binding settings.");
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastDnsttBridgeWarning2);
             }
         }
         
@@ -1915,7 +1922,7 @@ public partial class MainWindow
         if (_fetchingBridges)
         {
             CancelFetch();
-            _ = Dispatcher.UIThread.InvokeAsync(() => ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian ? "اتصال به سرورهای تور با مشکل مواجه شد.\nمیتوانید از ربات تلگرام زیر پل دریافت کنید:\n@GetBridgesBot" : "Failed to reach Tor servers. Please use the @GetBridgesBot Telegram bot or email bridges@torproject.org to get a bridge."));
+            _ = Dispatcher.UIThread.InvokeAsync(() => ShowToast(CrimsonOnion.Localization.AppStrings.ToastFailedToReachTor));
         }
     }
 
@@ -1995,14 +2002,14 @@ public partial class MainWindow
             else
             {
                 CancelFetch();
-                _ = Dispatcher.UIThread.InvokeAsync(() => ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian ? "اتصال به سرورهای تور با مشکل مواجه شد.\nمیتوانید از ربات تلگرام زیر پل دریافت کنید:\n@GetBridgesBot" : "Failed to reach Tor servers. Please use the @GetBridgesBot Telegram bot or email bridges@torproject.org to get a bridge."));
+                _ = Dispatcher.UIThread.InvokeAsync(() => ShowToast(CrimsonOnion.Localization.AppStrings.ToastFailedToReachTor));
             }
         }
         catch (Exception ex)
         {
             CrimsonOnion.Services.SimpleLogger.Log(ex);
             CancelFetch();
-            _ = Dispatcher.UIThread.InvokeAsync(() => ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian ? "اتصال به سرورهای تور با مشکل مواجه شد.\nمیتوانید از ربات تلگرام زیر پل دریافت کنید:\n@GetBridgesBot" : "Failed to reach Tor servers. Please use the @GetBridgesBot Telegram bot or email bridges@torproject.org to get a bridge."));
+            _ = Dispatcher.UIThread.InvokeAsync(() => ShowToast(CrimsonOnion.Localization.AppStrings.ToastFailedToReachTor));
         }
     }
 
@@ -2092,7 +2099,7 @@ public partial class MainWindow
                 if (lbl != null)
                 {
                     var padded = i.ToString().PadLeft(2, '0');
-                    lbl.Text = i <= selCount ? $"TOR {padded}: {CrimsonOnion.Localization.AppStrings.TorStatusOffline}" : $"TOR {padded}: {CrimsonOnion.Localization.AppStrings.TorStatusDisabled}";
+                    lbl.Text = i <= selCount ? $"TOR {padded}: {CrimsonOnion.Localization.AppStrings.TorStatusOffline}" : $"TOR {padded}: {CrimsonOnion.Localization.AppStrings.Disabled}";
                     lbl.Foreground = BrGray; 
                     lbl.Opacity = 0.5;
                 }
@@ -2112,7 +2119,7 @@ public partial class MainWindow
                 int uiSelCount = _activeTorEngines;
                 if (i > uiSelCount && i > _pollSelCount)
                 {
-                    lbl.Text = $"TOR {padded}: {CrimsonOnion.Localization.AppStrings.TorStatusDisabled}";
+                    lbl.Text = $"TOR {padded}: {CrimsonOnion.Localization.AppStrings.Disabled}";
                     lbl.Foreground = BrGray;
                     lbl.Opacity = 0.5;
                 }
@@ -2975,8 +2982,39 @@ public partial class MainWindow
                         {
                             if (port != 80 && port != 443)
                             {
-                                ShowToast(CrimsonOnion.Localization.AppStrings.ToastPortsSupported);
-                                return;
+                                bool isLocal = false;
+                                var parentObj = portToken.Parent?.Parent as Newtonsoft.Json.Linq.JObject;
+                                if (parentObj != null && parentObj["address"] != null)
+                                {
+                                    string addr = parentObj["address"]?.ToString()?.ToLowerInvariant() ?? "";
+                                    if (addr == "localhost" || addr == "127.0.0.1" || addr == "::1")
+                                    {
+                                        isLocal = true;
+                                    }
+                                    else if (System.Net.IPAddress.TryParse(addr, out var ip))
+                                    {
+                                        byte[] bytes = ip.GetAddressBytes();
+                                        if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                                        {
+                                            if (bytes[0] == 10 || 
+                                                (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) || 
+                                                (bytes[0] == 192 && bytes[1] == 168))
+                                            {
+                                                isLocal = true;
+                                            }
+                                        }
+                                        else if (System.Net.IPAddress.IsLoopback(ip))
+                                        {
+                                            isLocal = true;
+                                        }
+                                    }
+                                }
+                                
+                                if (!isLocal)
+                                {
+                                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastPortsSupported);
+                                    return;
+                                }
                             }
                         }
                     }
@@ -3054,7 +3092,7 @@ public partial class MainWindow
 
         string text = txt.Text.Trim();
         
-        if (text.StartsWith("vless://") || text.StartsWith("vmess://") || text.StartsWith("trojan://") || text.StartsWith("ss://"))
+        if (text.StartsWith("vless://") || text.StartsWith("vmess://") || text.StartsWith("trojan://") || text.StartsWith("ss://") || text.StartsWith("socks://"))
         {
             if (text.Contains("security=reality", StringComparison.OrdinalIgnoreCase))
             {
@@ -3516,6 +3554,143 @@ public partial class MainWindow
         }
     }
 
+    private void btnDirectUdpToggle_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        var src = e.Source as global::Avalonia.Controls.Control;
+        while (src != null)
+        {
+            if (src.Name == "togDirectUDP") return;
+            src = src.Parent as global::Avalonia.Controls.Control;
+        }
+
+        var pan = this.FindControl<global::Avalonia.Controls.Border>("panDirectUdpSettings");
+        var ico = this.FindControl<global::Avalonia.Controls.PathIcon>("icoDirectUdpExpander");
+        var panToggle = this.FindControl<global::Avalonia.Controls.Border>("panDirectUdpToggle");
+        var btnToggle = this.FindControl<global::Avalonia.Controls.Button>("btnDirectUdpToggle");
+        if (pan != null)
+        {
+            if (pan.MaxHeight == 0)
+            {
+                pan.MaxHeight = 200;
+                pan.Opacity = 1;
+                if (ico != null) ico.RenderTransform = new global::Avalonia.Media.RotateTransform(180);
+                if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
+                if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
+                
+                var cmb = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbDirectUdpAdapters");
+                if (cmb != null && cmb.Items.Count == 0)
+                {
+                    btnScanDirectUdpAdapters_Click(null, null);
+                }
+            }
+            else
+            {
+                pan.MaxHeight = 0;
+                pan.Opacity = 0;
+                if (ico != null) ico.RenderTransform = new global::Avalonia.Media.RotateTransform(0);
+                if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
+                if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
+            }
+        }
+    }
+
+    private void cmbDirectUdpAdapters_SelectionChanged(object? sender, global::Avalonia.Controls.SelectionChangedEventArgs e)
+    {
+        var cmb = sender as global::Avalonia.Controls.ComboBox;
+        if (cmb != null && cmb.SelectedItem is string selectedText && !string.IsNullOrWhiteSpace(selectedText))
+        {
+            if (selectedText == "default")
+            {
+                bool changed = _cfg.DirectUdpAdapterIp != "";
+                _cfg.DirectUdpAdapterName = "default";
+                _cfg.DirectUdpAdapterIp = "";
+                RequestConfigSave();
+                if (changed && _cfg.EnableDirectUDP && _state.IsEngineRunning)
+                {
+                    string runningMode = _cfg.LastXrayMode;
+                    if (runningMode == "Proxy Mode" || runningMode == "Clear Proxy")
+                        SmartRestartXray();
+                    else
+                        ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
+                }
+                return;
+            }
+
+            var parts = selectedText.Split(new[] { " - " }, StringSplitOptions.None);
+            if (parts.Length >= 2)
+            {
+                var newIp   = parts[parts.Length - 1];
+                var newName = string.Join(" - ", parts, 0, parts.Length - 1);
+
+                bool changed = newIp != _cfg.DirectUdpAdapterIp;
+
+                _cfg.DirectUdpAdapterName = newName;
+                _cfg.DirectUdpAdapterIp = newIp;
+                RequestConfigSave();
+                
+                if (changed && _cfg.EnableDirectUDP && _state.IsEngineRunning)
+                {
+                    string runningMode = _cfg.LastXrayMode;
+                    if (runningMode == "Proxy Mode" || runningMode == "Clear Proxy")
+                        SmartRestartXray();
+                    else
+                        ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
+                }
+            }
+        }
+    }
+
+    private void btnScanDirectUdpAdapters_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs? e = null)
+    {
+        var cmb = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbDirectUdpAdapters");
+        if (cmb == null) return;
+        
+        cmb.Items.Clear();
+        cmb.Items.Add("default");
+
+        var adapters = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
+        foreach (var adapter in adapters)
+        {
+            if (adapter.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up && 
+                adapter.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Loopback)
+            {
+                var properties = adapter.GetIPProperties();
+                var ipv4 = properties.UnicastAddresses.FirstOrDefault(a => a.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
+                if (ipv4 != null && !string.IsNullOrWhiteSpace(ipv4.Address.ToString()))
+                {
+                    cmb.Items.Add($"{adapter.Name} - {ipv4.Address}");
+                }
+            }
+        }
+        
+        if (_cfg.DirectUdpAdapterName == "default" || string.IsNullOrWhiteSpace(_cfg.DirectUdpAdapterIp))
+        {
+            cmb.SelectedIndex = 0;
+        }
+        else if (!string.IsNullOrWhiteSpace(_cfg.DirectUdpAdapterName) && !string.IsNullOrWhiteSpace(_cfg.DirectUdpAdapterIp))
+        {
+            var toSelect = $"{_cfg.DirectUdpAdapterName} - {_cfg.DirectUdpAdapterIp}";
+            var itemsList = cmb.Items.Cast<string>().ToList();
+            var index = itemsList.IndexOf(toSelect);
+            if (index >= 0)
+            {
+                cmb.SelectedIndex = index;
+            }
+            else
+            {
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastDirectUdpAdapterLost);
+                _cfg.DirectUdpAdapterName = "default";
+                _cfg.DirectUdpAdapterIp = "";
+                RequestConfigSave();
+                
+                cmb.SelectedIndex = 0;
+            }
+        }
+        else if (cmb.Items.Count > 0)
+        {
+            cmb.SelectedIndex = 0;
+        }
+    }
     private void btnAdapterBindingToggle_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         var src = e.Source as global::Avalonia.Controls.Control;
@@ -3663,7 +3838,7 @@ public partial class MainWindow
             }
             else
             {
-                ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian ? "آداپتور شبکه قبلی شما دیگر در دسترس نیست." : "Your previously selected network adapter is no longer available.");
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastSelectedAdapterLost);
                 _cfg.SelectedAdapterName = "";
                 _cfg.SelectedAdapterIp = "";
                 RequestConfigSave();
@@ -3677,11 +3852,9 @@ public partial class MainWindow
         }
     }
 
-    // ─── System DNS state 
     private string?   _savedDnsAdapterName;
     private string[]? _savedDnsServers;
 
-    // ─── DNS Settings panel toggle (expand/collapse) 
     private void btnDnsToggle_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         var src = e.Source as global::Avalonia.Controls.Control;
@@ -3741,7 +3914,6 @@ public partial class MainWindow
             if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
         }
     }
-    // ─── DoH URL inline SAVE button 
     private void btnDohSave_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         var cmbDohUrl = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbDohUrl");
@@ -3762,7 +3934,6 @@ public partial class MainWindow
         }
     }
 
-    // ─── DoH toggle 
     private void togDnsSettings_IsCheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (_isInitializingSettings) return;
@@ -3797,7 +3968,6 @@ public partial class MainWindow
         }
     }
 
-    // ─── System DNS SAVE button 
     private void btnSysDnsSave_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         var txtPrimary   = this.FindControl<global::Avalonia.Controls.TextBox>("txtSysDnsPrimary");
@@ -3809,16 +3979,12 @@ public partial class MainWindow
 
         if (!DnsService.IsValidIpv4(primary))
         {
-            ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
-                ? "لطفاً یک آدرس IPv4 معتبر برای DNS اول وارد کنید."
-                : "Please enter a valid IPv4 address for the primary DNS.");
+            ShowToast(CrimsonOnion.Localization.AppStrings.ToastInvalidPrimaryDns);
             return;
         }
         if (!string.IsNullOrWhiteSpace(secondary) && !DnsService.IsValidIpv4(secondary))
         {
-            ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
-                ? "لطفاً یک آدرس IPv4 معتبر برای DNS دوم وارد کنید."
-                : "Please enter a valid IPv4 address for the secondary DNS.");
+            ShowToast(CrimsonOnion.Localization.AppStrings.ToastInvalidSecondaryDns);
             return;
         }
 
@@ -3835,7 +4001,6 @@ public partial class MainWindow
             ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectDns);
     }
 
-    // ─── System DNS toggle 
     private void togSysDns_IsCheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (_isInitializingSettings) return;
@@ -3853,17 +4018,13 @@ public partial class MainWindow
             {
                 if (!DnsService.IsValidIpv4(livePrimary))
                 {
-                    ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
-                        ? "لطفاً یک آدرس IPv4 معتبر برای DNS اول وارد کنید."
-                        : "Please enter a valid IPv4 address for the primary DNS.");
+                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastInvalidPrimaryDns);
                     global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { tog.IsChecked = false; });
                     return;
                 }
                 if (!string.IsNullOrWhiteSpace(liveSecondary) && !DnsService.IsValidIpv4(liveSecondary))
                 {
-                    ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
-                        ? "لطفاً یک آدرس IPv4 معتبر برای DNS دوم وارد کنید."
-                        : "Please enter a valid IPv4 address for the secondary DNS.");
+                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastInvalidSecondaryDns);
                     global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { tog.IsChecked = false; });
                     return;
                 }
@@ -3894,7 +4055,6 @@ public partial class MainWindow
         }
     }
 
-    // ─── Allow LAN expandable panel 
     private void btnLanToggle_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         var src = e.Source as global::Avalonia.Controls.Control;
@@ -3936,7 +4096,6 @@ public partial class MainWindow
         }
     }
 
-    // ─── LAN auth toggle 
     private void togLanAuth_IsCheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (_isInitializingSettings) return;
@@ -3968,9 +4127,7 @@ public partial class MainWindow
             if (_state.IsEngineRunning)
             {
                 if (_pollMode == "VPN Mode")
-                    ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
-                        ? "\u0628\u0631\u0627\u06cc \u0627\u0639\u0645\u0627\u0644 \u062a\u063a\u06cc\u06cc\u0631\u0627\u062a \u062f\u0648\u0628\u0627\u0631\u0647 \u0645\u062a\u0635\u0644 \u0634\u0648\u06cc\u062f."
-                        : "Reconnect to apply the changes.");
+                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
                 else
                     SmartRestartXray();
             }
@@ -3985,9 +4142,7 @@ public partial class MainWindow
                 if (_state.IsEngineRunning)
                 {
                     if (_pollMode == "VPN Mode")
-                        ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
-                            ? "\u0628\u0631\u0627\u06cc \u0627\u0639\u0645\u0627\u0644 \u062a\u063a\u06cc\u06cc\u0631\u0627\u062a \u062f\u0648\u0628\u0627\u0631\u0647 \u0645\u062a\u0635\u0644 \u0634\u0648\u06cc\u062f."
-                        : "Reconnect to apply the changes.");
+                        ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
                     else
                         SmartRestartXray();
                 }
@@ -3995,7 +4150,6 @@ public partial class MainWindow
         }
     }
 
-    // ─── LAN auth SAVE button 
     private void btnLanAuthSave_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         var txtUser = this.FindControl<global::Avalonia.Controls.TextBox>("txtLanUser");
@@ -4007,9 +4161,7 @@ public partial class MainWindow
 
         if (string.IsNullOrWhiteSpace(user))
         {
-            ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
-                ? "\u0644\u0637\u0641\u0627\u064b \u0646\u0627\u0645 \u06a9\u0627\u0631\u0628\u0631\u06cc \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f."
-                : "Please enter a username.");
+            ShowToast(CrimsonOnion.Localization.AppStrings.ToastEnterUsername);
             return;
         }
 
@@ -4026,21 +4178,16 @@ public partial class MainWindow
         if (_state.IsEngineRunning)
         {
             if (_pollMode == "VPN Mode")
-                ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
-                    ? "\u0628\u0631\u0627\u06cc \u0627\u0639\u0645\u0627\u0644 \u062a\u063a\u06cc\u06cc\u0631\u0627\u062a \u062f\u0648\u0628\u0627\u0631\u0647 \u0645\u062a\u0635\u0644 \u0634\u0648\u06cc\u062f."
-                    : "Reconnect to apply the changes.");
+                ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
             else
                 SmartRestartXray();
         }
         else
         {
-            ShowToast(CrimsonOnion.Localization.AppStrings.IsPersian
-                ? "\u0627\u0637\u0644\u0627\u0639\u0627\u062a \u0648\u0631\u0648\u062f \u0630\u062e\u06cc\u0631\u0647 \u0634\u062f."
-                : "Credentials saved.", success: true);
+            ShowToast(CrimsonOnion.Localization.AppStrings.ToastCredentialsSaved, success: true);
         }
     }
-
-    // ─── LAN password show/hide eye 
+ 
     private bool _lanPassVisible = false;
     private void btnLanPassEye_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
     {
@@ -4057,7 +4204,6 @@ public partial class MainWindow
                 : global::Avalonia.Media.Geometry.Parse("M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z");
     }
 
-    // ─── Apply system DNS at connect time 
     private async Task ApplySystemDnsAsync()
     {
         if (!_cfg.EnableSystemDns) return;
@@ -4097,7 +4243,6 @@ public partial class MainWindow
         });
     }
 
-    // ─── Restore system DNS at disconnect / app close 
 
     private async Task RestoreSystemDnsAsync()
     {
@@ -4122,6 +4267,9 @@ public partial class MainWindow
         });
     }
 }
+
+
+
 
 
 

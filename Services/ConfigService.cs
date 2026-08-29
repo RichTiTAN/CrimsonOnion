@@ -52,6 +52,8 @@ namespace CrimsonOnion.Services
                 BlockSplit = config.LastBlockSplit,
                 EnableDirect = config.EnableDirect,
                 EnableDirectUDP = config.EnableDirectUDP,
+                DirectUdpAdapterName = config.DirectUdpAdapterName,
+                DirectUdpAdapterIp = config.DirectUdpAdapterIp,
                 CustomBridgeLine = config.CustomBridgeLine,
                 EnableV2rayChain = config.EnableV2rayChain,
                 V2rayChainJson = config.V2rayChainJson,

@@ -37,7 +37,7 @@ namespace CrimsonOnion.Dialogs
             InitializeComponent();
         }
 
-        public TrayWidget(MainWindow main)
+                public TrayWidget(MainWindow main)
         {
             InitializeComponent();
             _main = main;
@@ -45,6 +45,7 @@ namespace CrimsonOnion.Dialogs
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             _timer.Tick += (s, e) => UpdateUI();
             _timer.Start();
+            ApplyLanguage(CrimsonOnion.Localization.AppStrings.IsPersian);
             UpdateUI();
         }
 
@@ -53,21 +54,21 @@ namespace CrimsonOnion.Dialogs
             bool fa = AppStrings.IsPersian;
             if (_main.GetState().IsConnected)
             {
-                lblStatus.Text = fa ? "متصل"           : "CONNECTED";
+                lblStatus.Text = CrimsonOnion.Localization.AppStrings.ConnectedBtn;
                 lblStatus.Foreground = new SolidColorBrush(Color.Parse("#68D391"));
-                btnToggle.Content    = fa ? "قطع اتصال" : "DISCONNECT";
+                btnToggle.Content = CrimsonOnion.Localization.AppStrings.Disconnect;
             }
             else if (_main.GetState().IsEngineRunning)
             {
-                lblStatus.Text = fa ? "در حال اتصال..." : "CONNECTING...";
+                lblStatus.Text = CrimsonOnion.Localization.AppStrings.BtnConnecting;
                 lblStatus.Foreground = new SolidColorBrush(Color.Parse("#E2E8F0"));
-                btnToggle.Content    = fa ? "توقف موتور"  : "STOP ENGINE";
+                btnToggle.Content = CrimsonOnion.Localization.AppStrings.Disconnect;
             }
             else
             {
-                lblStatus.Text = fa ? "متصل نیست"  : "NOT CONNECTED";
+                lblStatus.Text = CrimsonOnion.Localization.AppStrings.TrayStatusNotConnected;
                 lblStatus.Foreground = new SolidColorBrush(Color.Parse("#E2E8F0"));
-                btnToggle.Content    = fa ? "اتصال"   : "CONNECT";
+                btnToggle.Content = CrimsonOnion.Localization.AppStrings.Connect;
             }
             lblSpeed.Text = _main.GetSpeedText();
         }
@@ -77,8 +78,8 @@ namespace CrimsonOnion.Dialogs
             UpdateUI();
 
             bool fa = isPersian;
-            btnClose.Content      = fa ? "بستن برنامه"  : "CLOSE THE APP";
-            btnShowWindow.Content = fa ? "نمایش پنجره" : "SHOW WINDOW";
+            btnClose.Content = CrimsonOnion.Localization.AppStrings.TrayBtnCloseApp;
+            btnShowWindow.Content = CrimsonOnion.Localization.AppStrings.TrayBtnShowWindow;
 
             lblStatus.FlowDirection = fa
                 ? global::Avalonia.Media.FlowDirection.RightToLeft

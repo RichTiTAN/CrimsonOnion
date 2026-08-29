@@ -1,4 +1,4 @@
-/*
+﻿/*
  * CrimsonOnion - A GUI client that runs multiple Tor instances and load-balances them.
  * Copyright (C) 2026 RichTiTAN
  *
@@ -182,7 +182,15 @@ namespace CrimsonOnion.Services
             var allRules = new List<object>();
             if (config.EnableDirectUDP)
             {
-                allRules.Add(new { type = "field", network = "udp", outboundTag = "direct" });
+                if (!string.IsNullOrWhiteSpace(config.DirectUdpAdapterIp))
+                {
+                    outbounds.Add(new { tag = "direct-udp", protocol = "freedom", settings = new { }, sendThrough = config.DirectUdpAdapterIp });
+                    allRules.Add(new { type = "field", network = "udp", outboundTag = "direct-udp" });
+                }
+                else
+                {
+                    allRules.Add(new { type = "field", network = "udp", outboundTag = "direct" });
+                }
             }
             allRules.AddRange(rules);
 
@@ -414,7 +422,8 @@ namespace CrimsonOnion.Services
 
             if (config.EnableDirectUDP)
             {
-                sbRules.Add(new { network = "udp", action = "route", outbound = "direct" });
+                if (string.IsNullOrWhiteSpace(config.DirectUdpAdapterIp))
+                    sbRules.Add(new { network = "udp", action = "route", outbound = "direct" });
             }
 
             if (userApps.Count > 0)
@@ -544,6 +553,19 @@ namespace CrimsonOnion.Services
                 return false;
             }
         }
+        private static System.Collections.Generic.List<object> GetSingBoxOutbounds(CrimsonOnion.Models.AppConfig config)
+        {
+            var obs = new System.Collections.Generic.List<object>
+            {
+                new { type = "socks", tag = "proxy", server = "127.0.0.1", server_port = 10818 },
+                new { type = "direct", tag = "direct" }
+            };
+
+            return obs;
+        }
     }
 }
+
+
+
 
