@@ -30,7 +30,7 @@ namespace CrimsonOnion.Services
 {
     public static class UpdateService
     {
-        public const string AppVersion = "2.3.1";
+        public const string AppVersion = "2.3.2";
         
         private static readonly HttpClient _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
 
@@ -70,24 +70,26 @@ namespace CrimsonOnion.Services
                 
                 var total = dlResponse.Content.Headers.ContentLength ?? -1L;
                 
-                using var fs = File.Create(zipPath);
-                using var stream = await dlResponse.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
-                var buffer = new byte[81920];
-                long downloaded = 0;
-                int read;
-                int lastPct = -1;
-                
-                while ((read = await stream.ReadAsync(buffer, token).ConfigureAwait(false)) > 0)
+                using (var stream = await dlResponse.Content.ReadAsStreamAsync(token).ConfigureAwait(false))
+                using (var fs = File.Create(zipPath))
                 {
-                    await fs.WriteAsync(buffer.AsMemory(0, read), token).ConfigureAwait(false);
-                    downloaded += read;
-                    if (total > 0)
+                    var buffer = new byte[81920];
+                    long downloaded = 0;
+                    int read;
+                    int lastPct = -1;
+                    
+                    while ((read = await stream.ReadAsync(buffer, token).ConfigureAwait(false)) > 0)
                     {
-                        int pct = (int)(downloaded * 100 / total);
-                        if (pct != lastPct)
+                        await fs.WriteAsync(buffer.AsMemory(0, read), token).ConfigureAwait(false);
+                        downloaded += read;
+                        if (total > 0)
                         {
-                            lastPct = pct;
-                            Dispatcher.UIThread.Post(() => progressCallback($"DOWNLOADING UPDATE... {pct}% (CLICK TO CANCEL)"));
+                            int pct = (int)(downloaded * 100 / total);
+                            if (pct != lastPct)
+                            {
+                                lastPct = pct;
+                                Dispatcher.UIThread.Post(() => progressCallback($"DOWNLOADING UPDATE... {pct}% (CLICK TO CANCEL)"));
+                            }
                         }
                     }
                 }
@@ -106,9 +108,24 @@ namespace CrimsonOnion.Services
                 var sourceDir = Path.GetDirectoryName(exeFile)!;
                 var currentExe = Process.GetCurrentProcess().MainModule?.FileName ?? "";
                 
-                var cmdArgs = $"/c ping 127.0.0.1 -n 4 > nul & xcopy /Y /E /H /C /I \"{sourceDir}\\*\" \"{baseDir}\" & rmdir /S /Q \"{extPath}\" & del /Q \"{zipPath}\" & start \"\" \"{currentExe}\"";
-
-                using (Process.Start(new ProcessStartInfo("cmd.exe", cmdArgs) { WindowStyle = ProcessWindowStyle.Hidden, CreateNoWindow = true }))
+                var pid = Process.GetCurrentProcess().Id;
+                var batPath = Path.Combine(baseDir, "update_install.bat");
+                var batContent = $@"
+@echo off
+:loop
+tasklist /FI ""PID eq {pid}"" 2>NUL | find /I ""{pid}"" >NUL
+if ""%ERRORLEVEL%""==""0"" (
+    timeout /t 1 /nobreak >NUL
+    goto loop
+)
+xcopy /Y /E /H /C /I ""{sourceDir}\*"" ""{baseDir}""
+rmdir /S /Q ""{extPath}""
+del /Q ""{zipPath}""
+start """" ""{currentExe}""
+del ""%~f0""
+";
+                File.WriteAllText(batPath, batContent);
+                using (Process.Start(new ProcessStartInfo("cmd.exe", $"/c \"{batPath}\"") { WindowStyle = ProcessWindowStyle.Hidden, CreateNoWindow = true }))
                 {
                 }
             }

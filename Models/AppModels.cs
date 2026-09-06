@@ -87,6 +87,8 @@ namespace CrimsonOnion.Models
         public string LanAuthPassword   { get; set; } = "";
         public string Language { get; set; } = "ENGLISH";
         public string ThemeColor { get; set; } = "Crimson";
+        public bool PauseGlow { get; set; } = false;
+        public bool DisableGlow { get; set; } = false;
 
         public bool ExpertHardwareAccel { get; set; } = false;
         public bool ExpertStrictNodes { get; set; } = false;
@@ -101,7 +103,7 @@ namespace CrimsonOnion.Models
         public string ExpertExcludeNodes { get; set; } = "";
         public string ExpertExcludeExitNodes { get; set; } = "";
         public string ExpertCustomTorrc { get; set; } = "";
-        public string HaProxyBalancePolicy { get; set; } = "roundrobin";
+        public string HaProxyBalancePolicy { get; set; } = "leastping";
     }
 
     public class AppState

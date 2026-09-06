@@ -276,7 +276,7 @@ namespace CrimsonOnion.Services
                 "random" => "random",
                 "leastconn" => "roundRobin",
                 "first" => "roundRobin",
-                _ => "roundRobin"
+                _ => "leastPing"
             };
         }
 

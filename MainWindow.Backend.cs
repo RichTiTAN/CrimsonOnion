@@ -1,4 +1,4 @@
-﻿/*
+/*
  * CrimsonOnion - A GUI client that runs multiple Tor instances and load-balances them.
  * Copyright (C) 2026 RichTiTAN
  *
@@ -45,18 +45,7 @@ public partial class MainWindow
 
     private System.Threading.CancellationTokenSource? _statsCts;
     private System.Threading.CancellationTokenSource? _pingCts;
-    private static readonly System.Net.Http.HttpClient _geoPingClient = new System.Net.Http.HttpClient(
-        new System.Net.Http.HttpClientHandler { Proxy = new System.Net.WebProxy("http://127.0.0.1:10818"), UseProxy = true })
-    {
-        Timeout = TimeSpan.FromSeconds(30)
-    };
-    
-    private static readonly System.Net.Http.HttpClient _grpcClient = new System.Net.Http.HttpClient(
-        new System.Net.Http.HttpClientHandler())
-    {
-        DefaultRequestVersion = new Version(2, 0),
-        DefaultVersionPolicy = System.Net.Http.HttpVersionPolicy.RequestVersionExact
-    };
+
 
     private static readonly SolidColorBrush BrGray   = new SolidColorBrush(Color.FromRgb(160, 174, 192)); // #A0AEC0
     private static readonly SolidColorBrush _brGreenFallback = new SolidColorBrush(Color.FromRgb(104, 211, 145));
@@ -83,7 +72,10 @@ public partial class MainWindow
         };
 
     private System.Threading.CancellationTokenSource? _geoCts;
-    private System.Threading.CancellationTokenSource? _graphAnimCts;
+    private global::Avalonia.Threading.DispatcherTimer? _graphTimer;
+    private global::Avalonia.Media.TranslateTransform? _graphTranslate;
+    private double _graphTargetX;
+    private double _graphStepX;
     private int _isFetchingStatsInt = 0; 
     private System.Collections.Generic.Queue<double> _upHistory = new();
     private System.Collections.Generic.Queue<double> _dnHistory = new();
@@ -125,216 +117,27 @@ public partial class MainWindow
         try { if (File.Exists(path)) File.Delete(path); } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
     }
 
+    // ── Process management — delegated to VpnEngineService ──────────────────
+
     private void KillPidRef(ref int? pidRef)
-    {
-        if (pidRef.HasValue)
-        {
-            try
-            {
-                using var p = Process.GetProcessById(pidRef.Value);
-                var pName = p.ProcessName;
-                if ((pName.IndexOf("xray", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                     pName.IndexOf("sing-box", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                     pName.IndexOf("sing_box", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                     pName.IndexOf("tor", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                     pName.IndexOf("lyrebird", StringComparison.OrdinalIgnoreCase) >= 0) &&
-                    !p.HasExited)
-                {
-                    p.Kill();
-                    p.WaitForExit(1000);
-                }
-            }
-            catch (ArgumentException) { }
-            catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
-            pidRef = null;
-        }
-    }
+        => CrimsonOnion.Services.VpnEngineService.KillPidRef(ref pidRef);
 
     private void KillPid(int? pid)
-    {
-        if (pid.HasValue)
-        {
-            try
-            {
-                using var p = Process.GetProcessById(pid.Value);
-                var pName = p.ProcessName;
-                if ((pName.IndexOf("xray", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                     pName.IndexOf("sing-box", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                     pName.IndexOf("sing_box", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                     pName.IndexOf("tor", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                     pName.IndexOf("lyrebird", StringComparison.OrdinalIgnoreCase) >= 0) &&
-                    !p.HasExited)
-                {
-                    p.Kill();
-                    p.WaitForExit(1000);
-                }
-            }
-            catch (ArgumentException) { }
-            catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
-        }
-    }
+        => CrimsonOnion.Services.VpnEngineService.KillPid(pid);
 
     private void KillManagedProcesses(params string[] names)
-    {
-        CrimsonOnion.Services.DnsttManager.StopAllTunnels();
-        if (names == null || names.Length == 0) return;
-        var paths = new[]
-        {
-            GetAppPath(@"Data\Xray\xray.exe"),
-
-            GetAppPath(@"Data\sing_box\sing-box.exe"),
-            GetAppPath(@"Data\TorBin\tor.exe"),
-            GetAppPath(@"Data\TorBin\lyrebird.exe")
-        };
-        try
-        {
-            foreach (var p in Process.GetProcesses())
-            {
-                using (p)
-                {
-                    if (!names.Contains(p.ProcessName, StringComparer.OrdinalIgnoreCase))
-                        continue;
-
-                    try
-                    {
-                        var exePath = p.MainModule?.FileName ?? "";
-                        if (paths.Any(path => string.Equals(path, exePath, StringComparison.OrdinalIgnoreCase))
-                            || exePath.IndexOf(@"Data\Tors\", StringComparison.OrdinalIgnoreCase) >= 0)
-                        {
-                            p.Kill();
-                            p.WaitForExit(1000);
-                        }
-                    }
-                    catch (Exception ex) 
-                    { 
-                        if (!(ex is InvalidOperationException || ex is System.ComponentModel.Win32Exception))
-                            CrimsonOnion.Services.SimpleLogger.Log(ex); 
-                    }
-                }
-            }
-        }
-        catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
-    }
+        => CrimsonOnion.Services.VpnEngineService.KillManagedProcesses(_cfg.BaseDir, names);
 
     private int? StartDebugProcess(string exePath, string args, string workingDir, string label, bool warnOnly = true)
-    {
-        try
-        {
-            var psi = new ProcessStartInfo
-            {
-                FileName         = exePath,
-                Arguments        = args,
-                WorkingDirectory = workingDir,
-                UseShellExecute  = false,
-                CreateNoWindow   = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError  = true,
-            };
-            var proc = new Process { StartInfo = psi };
-            proc.Start();
-            try { CrimsonOnion.Services.JobManager.AddProcess(proc); } catch { }
+        => CrimsonOnion.Services.VpnEngineService.StartDebugProcess(exePath, args, workingDir, label, warnOnly);
 
-            int pid = proc.Id;
 
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    var outTask = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            string? line;
-                            while ((line = await proc.StandardOutput.ReadLineAsync()) != null)
-                                if (!string.IsNullOrWhiteSpace(line) && ShouldLog(line, warnOnly))
-                                    CrimsonOnion.Services.SimpleLogger.Log($"[{label}] {line}");
-                        }
-                        catch { }
-                    });
-                    var errTask = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            string? line;
-                            while ((line = await proc.StandardError.ReadLineAsync()) != null)
-                                if (!string.IsNullOrWhiteSpace(line) && ShouldLog(line, warnOnly))
-                                    CrimsonOnion.Services.SimpleLogger.Log($"[{label}] {line}");
-                        }
-                        catch { }
-                    });
-                    await Task.WhenAll(outTask, errTask);
-                }
-                catch { }
-                finally { try { proc.Dispose(); } catch { } }
-            });
-
-            return pid;
-        }
-        catch (Exception ex)
-        {
-            CrimsonOnion.Services.SimpleLogger.Log(ex);
-            return null;
-        }
-    }
-
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> _seenLogs = new();
-
-    private static bool ShouldLog(string line, bool warnOnly)
-    {
-        if (!warnOnly) return true;
-
-        if (line.IndexOf("is relative and will resolve to", StringComparison.OrdinalIgnoreCase) >= 0)
-            return false;
-
-        bool isWarn = line.IndexOf("warn",  StringComparison.OrdinalIgnoreCase) >= 0
-            || line.IndexOf("error", StringComparison.OrdinalIgnoreCase) >= 0
-            || line.IndexOf("fatal", StringComparison.OrdinalIgnoreCase) >= 0
-            || line.IndexOf("alert", StringComparison.OrdinalIgnoreCase) >= 0
-            || line.IndexOf("emerg", StringComparison.OrdinalIgnoreCase) >= 0;
-
-        if (!isWarn) return false;
-
-        string payload = line;
-        string[] tags = { "[warn]", "[warning]", "[error]", "[err]", "[fatal]", "[alert]", "[emerg]" };
-        foreach (var tag in tags)
-        {
-            int idx = line.IndexOf(tag, StringComparison.OrdinalIgnoreCase);
-            if (idx >= 0)
-            {
-                payload = line.Substring(idx + tag.Length).Trim();
-                break;
-            }
-        }
-
-        if (_seenLogs.Count > 2000) _seenLogs.Clear();
-
-        if (payload.Length > 0 && !_seenLogs.TryAdd(payload, 1))
-        {
-            return false;
-        }
-
-        return true;
-    }
 
     private async Task UpdateLanIpAsync()
     {
-        try
-        {
-            var ip = await Task.Run(() => 
-            {
-                return NetworkInterface.GetAllNetworkInterfaces()
-                    .Where(ni => ni.OperationalStatus == OperationalStatus.Up
-                              && ni.NetworkInterfaceType != NetworkInterfaceType.Loopback)
-                    .SelectMany(ni => ni.GetIPProperties().UnicastAddresses)
-                    .Where(ua => ua.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-                    .Select(ua => ua.Address.ToString())
-                    .Where(ipStr => !ipStr.StartsWith("127.") && !ipStr.StartsWith("169.254."))
-                    .FirstOrDefault();
-            });
-            _state.LanIp = ip ?? "UNKNOWN";
-        }
-        catch { _state.LanIp = "UNKNOWN"; }
+        _state.LanIp = await CrimsonOnion.Services.NetworkDiagnosticsService.GetLanIpAsync(_cfg).ConfigureAwait(false);
     }
+
 
     private void UpdateLocalPortUI()
     {
@@ -888,7 +691,7 @@ public partial class MainWindow
         if (_statsCts != null) { try { _statsCts.Cancel(); _statsCts.Dispose(); } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); } _statsCts = null; }
         if (_pingCts != null) { try { _pingCts.Cancel(); _pingCts.Dispose(); } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); } _pingCts = null; }
         if (_geoCts != null) { try { _geoCts.Cancel(); _geoCts.Dispose(); } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); } _geoCts = null; } 
-        if (_graphAnimCts != null) { try { _graphAnimCts.Cancel(); _graphAnimCts.Dispose(); } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); } _graphAnimCts = null; } 
+        if (_graphTimer != null) { _graphTimer.Stop(); _graphTimer = null; } 
         _logTimer?.Stop(); 
         _logClearTimer?.Stop(); 
         ProxyService.SetSystemProxy(false);
@@ -1022,7 +825,6 @@ public partial class MainWindow
         }
     }
 
-    // -------------------------------------------------------------------------------------------------
 
     private void btnConnect_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
     {
@@ -1116,7 +918,8 @@ public partial class MainWindow
 
     private async Task StartEnginesAsyncCore()
     {
-        _seenLogs.Clear();
+        CrimsonOnion.Services.VpnEngineService.ClearSeenLogs();
+
         _bootstrapTimer?.Stop();
         _staggerTimer?.Stop();
         _xrayBootTimer?.Stop();
@@ -2247,78 +2050,63 @@ public partial class MainWindow
         _state.IsGeoTracing = true;
 
         var lblCountry = this.FindControl<TextBlock>("lblCountryName");
-        var lblPing = this.FindControl<TextBlock>("lblPing");
+        var lblPing    = this.FindControl<TextBlock>("lblPing");
         if (lblCountry != null) lblCountry.Text = CrimsonOnion.Localization.AppStrings.GeoTracing;
-        if (lblPing != null) lblPing.Text = "0 ms";
+        if (lblPing    != null) lblPing.Text    = "0 ms";
 
         if (_geoCts != null) { try { _geoCts.Cancel(); _geoCts.Dispose(); } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); } }
         _geoCts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(30));
         var token = _geoCts.Token;
-        var sw    = Stopwatch.StartNew();
 
         _ = Task.Run(async () =>
         {
-            try
+            var geo = await CrimsonOnion.Services.NetworkDiagnosticsService.FetchGeoAsync(token).ConfigureAwait(false);
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                var result = await _geoPingClient.GetStringAsync("https://get.geojs.io/v1/ip/geo.json", token);
-                sw.Stop();
-                var pingMs = sw.ElapsedMilliseconds;
+                _state.IsGeoTracing = false;
+                if (!_state.IsConnected) return;
 
-                await Dispatcher.UIThread.InvokeAsync(() =>
+                if (geo == null)
                 {
-                    _state.IsGeoTracing = false;
-                    if (!_state.IsConnected) return;
-
-                    var data = Newtonsoft.Json.Linq.JObject.Parse(result);
-
-                    var cMap = _continentNames;
-                    var continentCode = data["continent_code"]?.ToString() ?? "";
-                    var countryCode   = data["country_code"]?.ToString() ?? "";
-                    var continent     = cMap.TryGetValue(continentCode, out var c) ? c : continentCode;
-                    var country       = data["country"]?.ToString() ?? "";
-
-                    bool isFa = CrimsonOnion.Localization.AppStrings.IsPersian;
-                    
-                    if (isFa)
-                    {
-                        continent = CrimsonOnion.Localization.GeoTranslation.GetContinentFa(continentCode, continent);
-                        country   = CrimsonOnion.Localization.GeoTranslation.GetCountryFa(countryCode, country);
-                    }
-
-                    string geoStr;
-                    if (_cfg.EnableV2rayChain || _cfg.LastConfig == "Custom")
-                        geoStr = country;
-                    else if (_cfg.LastConfig == "Expert"
-                             && !string.IsNullOrWhiteSpace(_cfg.ExpertExitNodes)
-                             && !_cfg.ExpertExitNodes.Contains(","))
-                        geoStr = country;
-                    else if (_cfg.LastConfig != "Optimized" && _cfg.LastConfig != "Expert")
-                        geoStr = country;
-                    else
-                        geoStr = continent;
-
-                    if (string.IsNullOrWhiteSpace(geoStr)) geoStr = "Unknown";
-
-                    if (lblCountry != null) lblCountry.Text = geoStr.ToUpper();
-                    if (lblPing != null) lblPing.Text = $"{pingMs}ms";
-                });
-            }
-            catch (Exception ex)
-            {
-                if (token != _geoCts?.Token) return;
-
-                CrimsonOnion.Services.SimpleLogger.Log(ex);
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    _state.IsGeoTracing = false;
-                    if (!_state.IsConnected) return;
-
                     if (lblCountry != null) lblCountry.Text = CrimsonOnion.Localization.AppStrings.GeoTimeout;
-                    if (lblPing != null) lblPing.Text = "0 ms";
-                });
-            }
+                    if (lblPing    != null) lblPing.Text    = "0 ms";
+                    return;
+                }
+
+                // Map continent code to display name 
+                var continentDisplay = _continentNames.TryGetValue(geo.ContinentCode, out var c) ? c : geo.ContinentCode;
+                var countryDisplay   = geo.Country;
+                var continentCode    = geo.ContinentCode;
+                var countryCode      = geo.CountryCode;
+
+                bool isFa = CrimsonOnion.Localization.AppStrings.IsPersian;
+                if (isFa)
+                {
+                    continentDisplay = CrimsonOnion.Localization.GeoTranslation.GetContinentFa(continentCode, continentDisplay);
+                    countryDisplay   = CrimsonOnion.Localization.GeoTranslation.GetCountryFa(countryCode, countryDisplay);
+                }
+
+                string geoStr;
+                if (_cfg.EnableV2rayChain || _cfg.LastConfig == "Custom")
+                    geoStr = countryDisplay;
+                else if (_cfg.LastConfig == "Expert"
+                         && !string.IsNullOrWhiteSpace(_cfg.ExpertExitNodes)
+                         && !_cfg.ExpertExitNodes.Contains(","))
+                    geoStr = countryDisplay;
+                else if (_cfg.LastConfig != "Optimized" && _cfg.LastConfig != "Expert")
+                    geoStr = countryDisplay;
+                else
+                    geoStr = continentDisplay;
+
+                if (string.IsNullOrWhiteSpace(geoStr)) geoStr = "Unknown";
+
+                if (lblCountry != null) lblCountry.Text = geoStr.ToUpper();
+                if (lblPing    != null) lblPing.Text    = $"{geo.PingMs}ms";
+            });
         }, token);
     }
+
 
 
     private void StartStatsPolling()
@@ -2343,8 +2131,6 @@ public partial class MainWindow
         }, token);
     }
 
-    private static readonly byte[] _grpcStatsQueryBody = new byte[] { 0x00, 0x00, 0x00, 0x00, 0x02, 0x0A, 0x00 };
-
     private void PollStatsTick()
     {
         if (!_state.IsConnected || System.Threading.Interlocked.CompareExchange(ref _isFetchingStatsInt, 1, 0) != 0) return;
@@ -2353,70 +2139,10 @@ public partial class MainWindow
         {
             try
             {
-                var request = new System.Net.Http.HttpRequestMessage(
-                    System.Net.Http.HttpMethod.Post,
-                    "http://127.0.0.1:10899/xray.app.stats.command.StatsService/QueryStats")
-                {
-                    Version       = new Version(2, 0),
-                    VersionPolicy = System.Net.Http.HttpVersionPolicy.RequestVersionExact
-                };
-                request.Content = new System.Net.Http.ByteArrayContent(_grpcStatsQueryBody);
-                request.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/grpc");
-                request.Headers.Add("TE", "trailers");
+                var (curUpBytes, curDnBytes) = await CrimsonOnion.Services.NetworkDiagnosticsService
+                    .FetchStatsAsync(System.Threading.CancellationToken.None).ConfigureAwait(false);
 
-                using var cts       = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(1.5));
-                using var response = await _grpcClient.SendAsync(request, cts.Token);
-                var bytes          = await response.Content.ReadAsByteArrayAsync(cts.Token);
-
-                long upVal = 0, dnVal = 0;
-                int pos = 5;
-                while (pos < bytes.Length)
-                {
-                    if (bytes[pos] == 0x0A)
-                    {
-                        pos++;
-                        int statLen = ReadVarint(bytes, ref pos);
-                        int statEnd = pos + statLen;
-                        bool isUplink = false;
-                        bool isDownlink = false;
-                        bool isSocks = false;
-                        long value = 0;
-                        while (pos < statEnd)
-                        {
-                            int tag = ReadVarint(bytes, ref pos);
-                            if (tag == 0x0A)
-                            {
-                                int nameLen = ReadVarint(bytes, ref pos);
-                                var span = new ReadOnlySpan<byte>(bytes, pos, nameLen);
-                                if (span.IndexOf("uplink"u8) >= 0) isUplink = true;
-                                if (span.IndexOf("downlink"u8) >= 0) isDownlink = true;
-                                if (span.IndexOf("inbound>>>mixed-in"u8) >= 0) isSocks = true;
-                                pos += nameLen;
-                            }
-                            else if (tag == 0x10)
-                            {
-                                value = ReadVarint64(bytes, ref pos);
-                            }
-                            else
-                            {
-                                int wireType = tag & 7;
-                                if (wireType == 0) ReadVarint64(bytes, ref pos);
-                                else if (wireType == 1) pos += 8;
-                                else if (wireType == 2) pos += ReadVarint(bytes, ref pos);
-                                else if (wireType == 5) pos += 4;
-                            }
-                        }
-                        if (isSocks)
-                        {
-                            if (isUplink)   upVal += value;
-                            if (isDownlink) dnVal += value;
-                        }
-                    }
-                    else break;
-                }
-
-                long curUpBytes = upVal;
-                long curDnBytes = dnVal;
+                if (curUpBytes < 0) return; 
 
                 if (curUpBytes > 0 && _lastUpBytes > 0)
                 {
@@ -2427,12 +2153,12 @@ public partial class MainWindow
                     _upSum += diffUp;
                     _upHistory.Enqueue(diffUp);
                     if (_upHistory.Count > 40) _upSum -= _upHistory.Dequeue();
-                    
+
                     _dnSum += diffDn;
                     _dnHistory.Enqueue(diffDn);
                     if (_dnHistory.Count > 40) _dnSum -= _dnHistory.Dequeue();
 
-                    var now = DateTime.UtcNow;
+                    var now     = DateTime.UtcNow;
                     double elapsed = (now - _lastPollTime).TotalSeconds;
                     if (elapsed <= 0) elapsed = 1.0;
 
@@ -2441,21 +2167,21 @@ public partial class MainWindow
 
                     string spdUp = curSpdUp >= 1048576 ? $"{Math.Round(curSpdUp / 1048576.0, 2)} MB/s"
                                  : curSpdUp >= 1024    ? $"{Math.Round(curSpdUp / 1024.0, 1)} KB/s"
-                                 :                   $"{(int)curSpdUp} B/s";
+                                 :                       $"{(int)curSpdUp} B/s";
                     string spdDn = curSpdDn >= 1048576 ? $"{Math.Round(curSpdDn / 1048576.0, 2)} MB/s"
                                  : curSpdDn >= 1024    ? $"{Math.Round(curSpdDn / 1024.0, 1)} KB/s"
-                                 :                   $"{(int)curSpdDn} B/s";
-                    string tot = _state.SessionDataBytes >= 1073741824
-                                    ? $"{Math.Round(_state.SessionDataBytes / 1073741824.0, 2)} GB"
-                               : _state.SessionDataBytes >= 1048576
-                                    ? $"{Math.Round(_state.SessionDataBytes / 1048576.0, 1)} MB"
-                               :     $"{Math.Round(_state.SessionDataBytes / 1024.0, 1)} KB";
+                                 :                       $"{(int)curSpdDn} B/s";
+                    string tot   = _state.SessionDataBytes >= 1073741824
+                                       ? $"{Math.Round(_state.SessionDataBytes / 1073741824.0, 2)} GB"
+                                  : _state.SessionDataBytes >= 1048576
+                                       ? $"{Math.Round(_state.SessionDataBytes / 1048576.0, 1)} MB"
+                                  :      $"{Math.Round(_state.SessionDataBytes / 1024.0, 1)} KB";
 
                     await Dispatcher.UIThread.InvokeAsync(() =>
                     {
-                        if (lblTotalData != null) lblTotalData.Text = tot;
-                        if (lblDownloadSpeed != null) lblDownloadSpeed.Text = spdDn;
-                        if (lblUploadSpeed != null) lblUploadSpeed.Text = spdUp;
+                        if (lblTotalData      != null) lblTotalData.Text      = tot;
+                        if (lblDownloadSpeed  != null) lblDownloadSpeed.Text  = spdDn;
+                        if (lblUploadSpeed    != null) lblUploadSpeed.Text    = spdUp;
                         DrawGraph();
                     });
                 }
@@ -2468,6 +2194,7 @@ public partial class MainWindow
             finally { System.Threading.Interlocked.Exchange(ref _isFetchingStatsInt, 0); }
         });
     }
+
 
 
     private global::Avalonia.Controls.Shapes.Path? _graphDownload;
@@ -2530,33 +2257,28 @@ public partial class MainWindow
         graphUploadFill.Data = GenerateSmoothSpline(_ptsUpCache, true, width, height);
         graphDownloadFill.Data = GenerateSmoothSpline(_ptsDnCache, true, width, height);
 
-        var canvas = graphUpload.Parent as global::Avalonia.Controls.Canvas;
+                var canvas = graphUpload.Parent as global::Avalonia.Controls.Canvas;
         if (canvas != null && canvas.RenderTransform is global::Avalonia.Media.TranslateTransform t)
         {
+            _graphTranslate = t;
             t.X = 0;
-            var anim = new global::Avalonia.Animation.Animation
+            _graphTargetX = -step;
+            _graphStepX = step / (1000.0 / 33.0);
+            
+            if (_graphTimer == null)
             {
-                Duration = TimeSpan.FromSeconds(1),
-                FillMode = global::Avalonia.Animation.FillMode.Forward,
-                Children =
-                {
-                    new global::Avalonia.Animation.KeyFrame
+                _graphTimer = new global::Avalonia.Threading.DispatcherTimer();
+                _graphTimer.Interval = TimeSpan.FromMilliseconds(33);
+                _graphTimer.Tick += (s, e) => {
+                    if (!this.IsActive) return;
+                    if (_graphTranslate != null && _graphTranslate.X > _graphTargetX)
                     {
-                        Cue = new global::Avalonia.Animation.Cue(1d),
-                        Setters =
-                        {
-                            new global::Avalonia.Styling.Setter
-                            {
-                                Property = global::Avalonia.Media.TranslateTransform.XProperty,
-                                Value = -step
-                            }
-                        }
+                        _graphTranslate.X -= _graphStepX;
+                        if (_graphTranslate.X < _graphTargetX) _graphTranslate.X = _graphTargetX;
                     }
-                }
-            };
-            if (_graphAnimCts != null) { try { _graphAnimCts.Cancel(); _graphAnimCts.Dispose(); } catch { } }
-            _graphAnimCts = new System.Threading.CancellationTokenSource();
-            _ = anim.RunAsync(canvas, _graphAnimCts.Token);
+                };
+                _graphTimer.Start();
+            }
         }
     }
 
@@ -2599,32 +2321,6 @@ public partial class MainWindow
         return geom;
     }
 
-
-    private static int ReadVarint(byte[] data, ref int p)
-    {
-        int result = 0, shift = 0;
-        while (p < data.Length)
-        {
-            byte b = data[p++];
-            if (shift < 32) result |= (b & 0x7F) << shift;
-            if ((b & 0x80) == 0) return result;
-            shift += 7;
-        }
-        return result;
-    }
-
-    private static long ReadVarint64(byte[] data, ref int p)
-    {
-        long result = 0; int shift = 0;
-        while (p < data.Length)
-        {
-            byte b = data[p++];
-            result |= (long)(b & 0x7F) << shift;
-            if ((b & 0x80) == 0) return result;
-            shift += 7;
-        }
-        return result;
-    }
 
 
     private CrimsonOnion.Dialogs.TrayWidget? _trayWidget;
@@ -2770,40 +2466,17 @@ public partial class MainWindow
         CloseAllOverlays();
     }
 
-    // ========================================================================
 
-    private void btnSplitTunnel_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+        private void btnSplitTunnel_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         var panSplitOverlay = this.FindControl<global::Avalonia.Controls.Border>("panSplitOverlay");
-        if (panSplitOverlay != null)
+        if (panSplitOverlay != null && !panSplitOverlay.IsVisible)
         {
-            if (panSplitOverlay.IsVisible) return;
-
+            CloseAllOverlays();
             panSplitOverlay.IsVisible = true;
             panSplitOverlay.Classes.Add("popupOpen");
             var ldo = this.FindControl<global::Avalonia.Controls.Border>("LightDismissOverlay");
             if (ldo != null) ldo.IsVisible = true;
-        }
-        var countriesPopup = this.FindControl<global::Avalonia.Controls.Primitives.Popup>("CountriesPopup");
-        var languagePopup = this.FindControl<global::Avalonia.Controls.Primitives.Popup>("LanguagePopup");
-        if ((countriesPopup != null && countriesPopup.IsOpen) || (languagePopup != null && languagePopup.IsOpen))
-        {
-            _ = ClosePopupAnimatedAsync();
-        }
-        var panSettingsOverlay = this.FindControl<global::Avalonia.Controls.Border>("panSettingsOverlay");
-        if (panSettingsOverlay != null && panSettingsOverlay.IsVisible)
-        {
-            panSettingsOverlay.Classes.Remove("popupOpen"); global::Avalonia.Threading.DispatcherTimer.RunOnce(() => { panSettingsOverlay.IsVisible = false; }, TimeSpan.FromMilliseconds(200));
-        }
-        var panExpertOverlay = this.FindControl<global::Avalonia.Controls.Border>("panExpertOverlay");
-        if (panExpertOverlay != null && panExpertOverlay.IsVisible)
-        {
-            panExpertOverlay.Classes.Remove("popupOpen"); global::Avalonia.Threading.DispatcherTimer.RunOnce(() => { panExpertOverlay.IsVisible = false; }, TimeSpan.FromMilliseconds(200));
-        }
-        var panAboutOverlay = this.FindControl<global::Avalonia.Controls.Border>("panAboutOverlay");
-        if (panAboutOverlay != null && panAboutOverlay.IsVisible)
-        {
-            panAboutOverlay.Classes.Remove("popupOpen"); global::Avalonia.Threading.DispatcherTimer.RunOnce(() => { panAboutOverlay.IsVisible = false; }, TimeSpan.FromMilliseconds(200));
         }
     }
 
@@ -2817,418 +2490,36 @@ public partial class MainWindow
     }
 
 
-    // ========================================================================
-
-    private void btnSettings_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+        private void btnSettings_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
     {
-        
         var panSettingsOverlay = this.FindControl<global::Avalonia.Controls.Border>("panSettingsOverlay");
-        if (panSettingsOverlay != null)
+        if (panSettingsOverlay != null && !panSettingsOverlay.IsVisible)
         {
-            if (panSettingsOverlay.IsVisible) return;
-
+            CloseAllOverlays();
             panSettingsOverlay.IsVisible = true;
             panSettingsOverlay.Classes.Add("popupOpen");
             var ldo = this.FindControl<global::Avalonia.Controls.Border>("LightDismissOverlay");
             if (ldo != null) ldo.IsVisible = true;
-        var pSplitOv = this.FindControl<global::Avalonia.Controls.Border>("panSplitOverlay");
-        if (pSplitOv != null && pSplitOv.IsVisible)
-        {
-            pSplitOv.Classes.Remove("popupOpen"); global::Avalonia.Threading.DispatcherTimer.RunOnce(() => { pSplitOv.IsVisible = false; }, TimeSpan.FromMilliseconds(200));
-        }
-        }
-        var countriesPopup = this.FindControl<global::Avalonia.Controls.Primitives.Popup>("CountriesPopup");
-        var languagePopup = this.FindControl<global::Avalonia.Controls.Primitives.Popup>("LanguagePopup");
-        if ((countriesPopup != null && countriesPopup.IsOpen) || (languagePopup != null && languagePopup.IsOpen))
-        {
-            _ = ClosePopupAnimatedAsync();
-        }
-        var panExpertOverlay = this.FindControl<global::Avalonia.Controls.Border>("panExpertOverlay");
-        if (panExpertOverlay != null && panExpertOverlay.IsVisible)
-        {
-            panExpertOverlay.Classes.Remove("popupOpen"); global::Avalonia.Threading.DispatcherTimer.RunOnce(() => { panExpertOverlay.IsVisible = false; }, TimeSpan.FromMilliseconds(200));
-        }
-        var panAboutOverlay = this.FindControl<global::Avalonia.Controls.Border>("panAboutOverlay");
-        if (panAboutOverlay != null && panAboutOverlay.IsVisible)
-        {
-            panAboutOverlay.Classes.Remove("popupOpen"); global::Avalonia.Threading.DispatcherTimer.RunOnce(() => { panAboutOverlay.IsVisible = false; }, TimeSpan.FromMilliseconds(200));
-        }
-    }
-
-    private void btnSettingsClose_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        var panSettingsOverlay = this.FindControl<global::Avalonia.Controls.Border>("panSettingsOverlay");
-        if (panSettingsOverlay != null)
-        {
-            CloseAllOverlays();
-        }
-    }
-
-    private void btnXrayExitNodeToggle_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-
-        var src = e.Source as global::Avalonia.Controls.Control;
-        while (src != null)
-        {
-            if (src.Name == "togXrayExitNode")
-                return;
-            src = src.Parent as global::Avalonia.Controls.Control;
-        }
-        var panToggle = this.FindControl<global::Avalonia.Controls.Border>("panXrayExitNodeToggle");
-        var btnToggle = this.FindControl<global::Avalonia.Controls.Button>("btnXrayExitNodeToggle");
-        var pan = this.FindControl<global::Avalonia.Controls.Border>("panXrayExitNode");
-        var ico = this.FindControl<global::Avalonia.Controls.PathIcon>("icoXrayExitNodeExpander");
-        var txt = this.FindControl<global::Avalonia.Controls.TextBox>("txtXrayJson");
-        var tog = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togXrayExitNode");
-        
-        if (pan != null && ico != null && txt != null && tog != null)
-        {
-            if (pan.MaxHeight == 0)
-            {
-                txt.Text = _cfg.V2rayChainJson;
-                tog.IsChecked = _cfg.EnableV2rayChain;
-                
-                pan.MaxHeight = 350;
-                pan.Opacity = 1;
-                
-                var transform = new global::Avalonia.Media.RotateTransform(180);
-                ico.RenderTransform = transform;
-                
-                if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
-                if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
-            }
-            else
-            {
-                pan.MaxHeight = 0;
-                pan.Opacity = 0;
-                
-                var transform = new global::Avalonia.Media.RotateTransform(0);
-                ico.RenderTransform = transform;
-                
-                if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
-                if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
-            }
-        }
-    }
-
-    private void btnXrayCancel_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        var pan = this.FindControl<global::Avalonia.Controls.Border>("panXrayExitNode");
-        var ico = this.FindControl<global::Avalonia.Controls.PathIcon>("icoXrayExitNodeExpander");
-        var panToggle = this.FindControl<global::Avalonia.Controls.Border>("panXrayExitNodeToggle");
-        var btnToggle = this.FindControl<global::Avalonia.Controls.Button>("btnXrayExitNodeToggle");
-        if (pan != null && ico != null)
-        {
-            pan.MaxHeight = 0;
-            pan.Opacity = 0;
-            var transform = new global::Avalonia.Media.RotateTransform(0);
-            ico.RenderTransform = transform;
-            if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
-            if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
-        }
-    }
-
-    private async void btnXraySave_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        var txt = this.FindControl<global::Avalonia.Controls.TextBox>("txtXrayJson");
-        var tog = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togXrayExitNode");
-        
-        if (txt != null && tog != null)
-        {
-            var text = txt.Text ?? "";
-            bool enable = tog.IsChecked ?? false;
-            
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                _cfg.V2rayChainJson = "";
-                _cfg.EnableV2rayChain = enable;
-                ConfigService.Save(_cfg, _state, _cfg.CfgFile, _cfg.LastConfig, _cfg.LastBridge, _cfg.LastCount);
-                
-                btnXrayCancel_Click(sender, e);
-                return;
-            }
-            
-            try
-            {
-                var parsed = Newtonsoft.Json.Linq.JObject.Parse(text);
-                Newtonsoft.Json.Linq.JToken? testNode = parsed["outbounds"] is Newtonsoft.Json.Linq.JArray arr ? arr.FirstOrDefault() : parsed;
-                if (testNode?["protocol"] == null)
-                    throw new Exception("Missing 'protocol' field.");
-                
-                var streamSettings = testNode["streamSettings"];
-                if (streamSettings != null)
-                {
-                    if (streamSettings["security"]?.ToString()?.ToLowerInvariant() == "reality")
-                    {
-                        ShowToast(CrimsonOnion.Localization.AppStrings.ToastRealityNotSupported);
-                        return;
-                    }
-                    
-                    var net = streamSettings["network"]?.ToString()?.ToLowerInvariant();
-                    if (net == "kcp" || net == "quic")
-                    {
-                        ShowToast(CrimsonOnion.Localization.AppStrings.ToastKcpQuicNotSupported);
-                        return;
-                    }
-                }
-                
-                var settings = testNode["settings"];
-                if (settings != null)
-                {
-                    var ports = settings.SelectTokens("..port").ToList();
-                    foreach (var portToken in ports)
-                    {
-                        if (int.TryParse(portToken.ToString(), out int port))
-                        {
-                            if (port != 80 && port != 443)
-                            {
-                                bool isLocal = false;
-                                var parentObj = portToken.Parent?.Parent as Newtonsoft.Json.Linq.JObject;
-                                if (parentObj != null && parentObj["address"] != null)
-                                {
-                                    string addr = parentObj["address"]?.ToString()?.ToLowerInvariant() ?? "";
-                                    if (addr == "localhost" || addr == "127.0.0.1" || addr == "::1")
-                                    {
-                                        isLocal = true;
-                                    }
-                                    else if (System.Net.IPAddress.TryParse(addr, out var ip))
-                                    {
-                                        byte[] bytes = ip.GetAddressBytes();
-                                        if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-                                        {
-                                            if (bytes[0] == 10 || 
-                                                (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) || 
-                                                (bytes[0] == 192 && bytes[1] == 168))
-                                            {
-                                                isLocal = true;
-                                            }
-                                        }
-                                        else if (System.Net.IPAddress.IsLoopback(ip))
-                                        {
-                                            isLocal = true;
-                                        }
-                                    }
-                                }
-                                
-                                if (!isLocal)
-                                {
-                                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastPortsSupported);
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                string tempFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), Guid.NewGuid().ToString() + ".json");
-                try
-                {
-                    System.IO.File.WriteAllText(tempFile, text);
-                    
-                    string xrayExe = System.IO.Path.Combine(_cfg.BaseDir, "Data", "xray", "xray.exe");
-                    if (System.IO.File.Exists(xrayExe))
-                    {
-                        var psi = new System.Diagnostics.ProcessStartInfo
-                        {
-                            FileName = xrayExe,
-                            Arguments = $"-test -config \"{tempFile}\"",
-                            RedirectStandardOutput = true,
-                            RedirectStandardError = true,
-                            UseShellExecute = false,
-                            CreateNoWindow = true
-                        };
-                        
-                        using (var proc = System.Diagnostics.Process.Start(psi))
-                        {
-                            if (proc != null)
-                            {
-                                var outTask = proc.StandardOutput.ReadToEndAsync();
-                                var errTask = proc.StandardError.ReadToEndAsync();
-                                await proc.WaitForExitAsync();
-                                if (proc.ExitCode != 0)
-                                {
-                                    string err = await errTask;
-                                    string outStr = await outTask;
-                                    string msg = string.IsNullOrWhiteSpace(err) ? outStr : err;
-                                    var lines = msg.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-                                    msg = string.Join(" ", lines.Where(l => !l.Contains("Xray, Penetrates Everything") && !l.Contains("unified platform")));
-                                    msg = msg.Trim();
-                                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastXrayRejected + msg.Substring(0, System.Math.Min(msg.Length, 150)));
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-                finally
-                {
-                    try { if (System.IO.File.Exists(tempFile)) System.IO.File.Delete(tempFile); } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
-                }
-
-                _cfg.V2rayChainJson = text.Trim();
-                _cfg.EnableV2rayChain = true;
-                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => {
-                    tog.IsChecked = true;
-                });
-                
-                ConfigService.Save(_cfg, _state, _cfg.CfgFile, _cfg.LastConfig, _cfg.LastBridge, _cfg.LastCount);
-                if (_state.IsEngineRunning) SmartRestartXray();
-                
-                btnXrayCancel_Click(sender, e);
-            }
-            catch (Exception ex)
-            {
-                CrimsonOnion.Services.SimpleLogger.Log(ex);
-                ShowToast(CrimsonOnion.Localization.AppStrings.ToastInvalidJson + " " + ex.Message);
-            }
         }
     }
 
 
-    private void txtXrayJson_TextChanged(object? sender, global::Avalonia.Controls.TextChangedEventArgs e)
-    {
-        var txt = sender as global::Avalonia.Controls.TextBox;
-        if (txt == null || string.IsNullOrWhiteSpace(txt.Text)) return;
+    
 
-        string text = txt.Text.Trim();
-        
-        if (text.StartsWith("vless://") || text.StartsWith("vmess://") || text.StartsWith("trojan://") || text.StartsWith("ss://") || text.StartsWith("socks://"))
-        {
-            if (text.Contains("security=reality", StringComparison.OrdinalIgnoreCase))
-            {
-                ShowToast(CrimsonOnion.Localization.AppStrings.ToastRealityNotSupported);
-                return;
-            }
-            if (text.Contains("type=kcp", StringComparison.OrdinalIgnoreCase) || text.Contains("net=kcp", StringComparison.OrdinalIgnoreCase) || text.Contains("type=quic", StringComparison.OrdinalIgnoreCase) || text.Contains("net=quic", StringComparison.OrdinalIgnoreCase))
-            {
-                ShowToast(CrimsonOnion.Localization.AppStrings.ToastKcpQuicNotSupported);
-                return;
-            }
-        }
+    
 
-        if (CrimsonOnion.Services.XrayLinkParser.TryParseLink(text, out string json))
-        {
-            txt.Text = json;
-            ShowToast(CrimsonOnion.Localization.AppStrings.ToastLinkConverted, success: true);
-        }
-    }
+    
 
-    private async void btnXrayImport_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        try
-        {
-            var topLevel = global::Avalonia.Controls.TopLevel.GetTopLevel(this);
-            if (topLevel == null) return;
+    
 
-            var files = await topLevel.StorageProvider.OpenFilePickerAsync(new global::Avalonia.Platform.Storage.FilePickerOpenOptions
-            {
-                Title = "Select Xray JSON File",
-                AllowMultiple = false,
-                FileTypeFilter = new[] { new global::Avalonia.Platform.Storage.FilePickerFileType("JSON Files") { Patterns = new[] { "*.json" } }, new global::Avalonia.Platform.Storage.FilePickerFileType("All Files") { Patterns = new[] { "*.*" } } }
-            });
 
-            if (files != null && files.Count > 0)
-            {
-                var file = files[0];
-                var path = file.Path.LocalPath;
-                if (System.IO.File.Exists(path))
-                {
-                    var txt = this.FindControl<global::Avalonia.Controls.TextBox>("txtXrayJson");
-                    if (txt != null)
-                        txt.Text = System.IO.File.ReadAllText(path);
-                }
-            }
-        }
-        catch
-        {
-            ShowToast(CrimsonOnion.Localization.AppStrings.ToastFailedImport);
-        }
-    }
+    
 
-    private async void SettingTog_CheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        if (_isInitializingSettings) return;
+    
 
-        var tog = sender as global::Avalonia.Controls.ToggleSwitch;
-        if (tog == null) return;
+    
 
-        bool val = tog.IsChecked ?? false;
-
-        switch (tog.Name)
-        {
-            case "btnBootTog":
-                try {
-                    string exe = System.Environment.ProcessPath ?? "";
-                    await CrimsonOnion.Services.ProcessService.UpdateBootScheduledTask(val, exe);
-                    _cfg.LaunchOnBoot = val;
-                } catch (System.Exception ex) {
-                    _cfg.LaunchOnBoot = false;
-                    tog.IsChecked = false;
-                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastTaskFailed + ex.Message);
-                }
-                break;
-            case "btnAutoTog":
-                _cfg.AutoStart = val;
-                break;
-            case "btnStartMinTog":
-                _cfg.StartMinimized = val;
-                break;
-            case "btnTrayTog":
-                _cfg.MinimizeToTray = val;
-                break;
-            case "btnAdBlockTog":
-                _cfg.EnableAdBlock = val;
-                if (_state.IsEngineRunning) SmartRestartXray();
-                break;
-            case "btnLanTog":
-                _cfg.AllowLanConnections = val;
-                UpdateLanPortUI();
-                SmartRestartXray();
-                break;
-            case "btnDebugTog":
-                _cfg.DebugMode = val;
-                CrimsonOnion.Services.SimpleLogger.EnableLogging = val;
-                break;
-        }
-
-        RequestConfigSave();
-    }
-
-    private void Shortcut_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        var btn = sender as global::Avalonia.Controls.Button;
-        if (btn == null) return;
-
-        try
-        {
-            Type? wshType = Type.GetTypeFromProgID("WScript.Shell");
-            if (wshType == null) return;
-            var ws = (dynamic)Activator.CreateInstance(wshType)!;
-
-            string destPath = "";
-            if (btn.Name == "btnDesktopShortcut")
-            {
-                destPath = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop), "CrimsonOnion.lnk");
-            }
-            else if (btn.Name == "btnStartMenuShortcut")
-            {
-                string programsPath = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.StartMenu), "Programs");
-                if (!System.IO.Directory.Exists(programsPath)) System.IO.Directory.CreateDirectory(programsPath);
-                destPath = System.IO.Path.Combine(programsPath, "CrimsonOnion.lnk");
-            }
-
-            dynamic sc = ws.CreateShortcut(destPath);
-            sc.TargetPath = System.Environment.ProcessPath ?? "";
-            sc.WorkingDirectory = _cfg.BaseDir;
-            sc.Save();
-
-            ShowToast(CrimsonOnion.Localization.AppStrings.ToastShortcutCreated, success: true);
-        }
-        catch
-        {
-            ShowToast(CrimsonOnion.Localization.AppStrings.ToastShortcutFailed);
-        }
-    }
+    
 
     private void ApplyRoutingUI(bool showToast = true)
     {
@@ -3254,955 +2545,57 @@ public partial class MainWindow
             ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
         }
     }
-        private void togXrayExitNode_IsCheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        if (_isInitializingSettings) return;
-        var tog = sender as global::Avalonia.Controls.ToggleSwitch;
-        if (tog != null)
-        {
-            if (tog.IsChecked == true)
-            {
-                if (string.IsNullOrWhiteSpace(_cfg.V2rayChainJson))
-                {
-                    global::Avalonia.Threading.Dispatcher.UIThread.Post(() => tog.IsChecked = false);
-                    
-                    var panXrayExitNode = this.FindControl<global::Avalonia.Controls.Border>("panXrayExitNode");
-                    var icoXrayExitNodeExpander = this.FindControl<global::Avalonia.Controls.PathIcon>("icoXrayExitNodeExpander");
-                    
-                    if (panXrayExitNode != null && panXrayExitNode.MaxHeight == 0)
-                    {
-                        panXrayExitNode.MaxHeight = 500;
-                        panXrayExitNode.Opacity = 1;
-                        if (icoXrayExitNodeExpander != null)
-                            icoXrayExitNodeExpander.RenderTransform = new global::Avalonia.Media.RotateTransform(180);
-                        
-                        var panToggle = this.FindControl<global::Avalonia.Controls.Border>("panXrayExitNodeToggle");
-                        var btnToggle = this.FindControl<global::Avalonia.Controls.Button>("btnXrayExitNodeToggle");
-                        if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
-                        if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
-                    }
-                    return;
-                }
-                else if (!_cfg.EnableV2rayChain)
-                {
-                    _cfg.EnableV2rayChain = true;
-                    RequestConfigSave();
-                    if (_state.IsEngineRunning) SmartRestartXray();
-                }
-            }
-            else
-            {
-                if (_cfg.EnableV2rayChain)
-                {
-                    _cfg.EnableV2rayChain = false;
-                    RequestConfigSave();
-                    if (_state.IsEngineRunning) SmartRestartXray();
-                }
-            }
-        }
-    }
-
-    private void btnOutboundToggle_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-
-        var src = e.Source as global::Avalonia.Controls.Control;
-        while (src != null)
-        {
-            if (src.Name == "togOutboundProxy")
-                return;
-            src = src.Parent as global::Avalonia.Controls.Control;
-        }
-
-        var panToggle = this.FindControl<global::Avalonia.Controls.Border>("panOutboundToggle");
-        var btnToggle = this.FindControl<global::Avalonia.Controls.Button>("btnOutboundToggle");
-        var pan = this.FindControl<global::Avalonia.Controls.Border>("panOutboundProxy");
-        var ico = this.FindControl<global::Avalonia.Controls.PathIcon>("icoOutboundExpander");
         
-        var txtAddr = this.FindControl<global::Avalonia.Controls.TextBox>("txtOutboundAddr");
-        var txtPort = this.FindControl<global::Avalonia.Controls.TextBox>("txtOutboundPort");
-        var cmbType = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbOutboundType");
-        var togAuth = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togOutboundAuth");
-        var txtUser = this.FindControl<global::Avalonia.Controls.TextBox>("txtOutboundUser");
-        var txtPass = this.FindControl<global::Avalonia.Controls.TextBox>("txtOutboundPass");
-        var tog = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togOutboundProxy");
-        var panAuth = this.FindControl<global::Avalonia.Controls.Border>("panOutboundAuth");
 
-        if (pan != null && ico != null && txtAddr != null && tog != null && txtPort != null)
-        {
-            if (pan.MaxHeight == 0)
-            {
-                txtAddr.Text = _cfg.OutboundProxyAddress;
-                txtPort.Text = _cfg.OutboundProxyPort;
-                SelectComboItem(cmbType, string.IsNullOrEmpty(_cfg.OutboundProxyType) ? "SOCKS5" : _cfg.OutboundProxyType);
-                if (togAuth != null) togAuth.IsChecked = _cfg.EnableOutboundAuth;
-                if (txtUser != null) txtUser.Text = _cfg.OutboundProxyUser;
-                if (txtPass != null) txtPass.Text = _cfg.OutboundProxyPass;
-                tog.IsChecked = _cfg.EnableOutboundProxy;
+    
 
-                if (panAuth != null)
-                {
-                    if (_cfg.EnableOutboundAuth)
-                    {
-                        panAuth.MaxHeight = 150;
-                        panAuth.Opacity = 1;
-                    }
-                    else
-                    {
-                        panAuth.MaxHeight = 0;
-                        panAuth.Opacity = 0;
-                    }
-                }
-                
-                pan.MaxHeight = 350;
-                pan.Opacity = 1;
-                
-                var transform = new global::Avalonia.Media.RotateTransform(180);
-                ico.RenderTransform = transform;
-                
-                if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
-                if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
-            }
-            else
-            {
-                pan.MaxHeight = 0;
-                pan.Opacity = 0;
-                var transform = new global::Avalonia.Media.RotateTransform(0);
-                ico.RenderTransform = transform;
-                if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
-                if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
-            }
-        }
-    }
+    
 
-    private void SelectComboItem(global::Avalonia.Controls.ComboBox? combo, string content)
-    {
-        if (combo == null) return;
-        foreach (var itemObj in combo.Items)
-        {
-            if (itemObj is global::Avalonia.Controls.ComboBoxItem item)
-            {
-                if ((string?)item.Content == content) { combo.SelectedItem = item; return; }
-            }
-        }
-        if (combo.Items.Count > 0) combo.SelectedIndex = 0;
-    }
+    
 
-    private void btnOutboundCancel_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        var pan = this.FindControl<global::Avalonia.Controls.Border>("panOutboundProxy");
-        var ico = this.FindControl<global::Avalonia.Controls.PathIcon>("icoOutboundExpander");
-        var panToggle = this.FindControl<global::Avalonia.Controls.Border>("panOutboundToggle");
-        var btnToggle = this.FindControl<global::Avalonia.Controls.Button>("btnOutboundToggle");
-        if (pan != null && ico != null)
-        {
-            pan.MaxHeight = 0;
-            pan.Opacity = 0;
-            var transform = new global::Avalonia.Media.RotateTransform(0);
-            ico.RenderTransform = transform;
-            if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
-            if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
-        }
-    }
+    
 
-    private void btnOutboundSave_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        var txtAddr = this.FindControl<global::Avalonia.Controls.TextBox>("txtOutboundAddr");
-        var txtPort = this.FindControl<global::Avalonia.Controls.TextBox>("txtOutboundPort");
-        var cmbType = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbOutboundType");
-        var togAuth = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togOutboundAuth");
-        var txtUser = this.FindControl<global::Avalonia.Controls.TextBox>("txtOutboundUser");
-        var txtPass = this.FindControl<global::Avalonia.Controls.TextBox>("txtOutboundPass");
-        var tog = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togOutboundProxy");
+    
 
-        if (txtAddr != null && tog != null)
-        {
-            var addr = txtAddr.Text?.Trim() ?? "";
-            var port = txtPort?.Text?.Trim() ?? "";
-            bool enable = tog.IsChecked ?? false;
+    
 
-            if (string.IsNullOrWhiteSpace(addr))
-            {
-                _cfg.OutboundProxyAddress = "";
-                _cfg.OutboundProxyPort = "";
-                _cfg.EnableOutboundProxy = enable;
-                RequestConfigSave();
-                btnOutboundCancel_Click(sender, e);
-                if (_state.IsEngineRunning) ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
-                return;
-            }
+    
 
-            _cfg.OutboundProxyAddress = addr;
-            _cfg.OutboundProxyPort = port;
-            _cfg.OutboundProxyType = cmbType?.SelectedItem is global::Avalonia.Controls.ComboBoxItem pt ? (string?)pt.Content ?? "SOCKS5" : "SOCKS5";
-            _cfg.EnableOutboundAuth = togAuth?.IsChecked ?? false;
-            _cfg.OutboundProxyUser = txtUser?.Text?.Trim() ?? "";
-            _cfg.OutboundProxyPass = txtPass?.Text?.Trim() ?? "";
-            
-            _cfg.EnableOutboundProxy = true;
-            global::Avalonia.Threading.Dispatcher.UIThread.Post(() => {
-                tog.IsChecked = true;
-            });
-            
-            RequestConfigSave();
-            btnOutboundCancel_Click(sender, e);
-            if (_state.IsEngineRunning) ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
-        }
-    }
+    
 
-    private void togOutboundAuth_IsCheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        if (_isInitializingSettings) return;
-        var tog = sender as global::Avalonia.Controls.ToggleSwitch;
-        var panAuth = this.FindControl<global::Avalonia.Controls.Border>("panOutboundAuth");
-        if (tog != null && panAuth != null)
-        {
-            if (tog.IsChecked == true)
-            {
-                panAuth.MaxHeight = 150;
-                panAuth.Opacity = 1;
-            }
-            else
-            {
-                panAuth.MaxHeight = 0;
-                panAuth.Opacity = 0;
-            }
-        }
-    }
+    
 
-    private void togDirectUDP_IsCheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        if (_isInitializingSettings) return;
-        var tog = sender as global::Avalonia.Controls.ToggleSwitch;
-        if (tog != null)
-        {
-            _cfg.EnableDirectUDP = tog.IsChecked == true;
-            RequestConfigSave();
-            
-            string runningMode = _cfg.LastXrayMode;
+    
+    
 
-            if (_activeBridge == "snowflake")
-            {
-                ApplyModeUI(_pollMode);
-                
-                if (!_cfg.EnableDirectUDP && _cfg.LastXrayMode == "VPN Mode")
-                {
-                    _cfg.LastXrayMode = "Proxy Mode";
-                    _pollMode = "Proxy Mode";
-                    ApplyModeUI(_pollMode);
-                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastVpnDisabledSnowflake);
-                }
-            }
+    
 
-            if (_state.IsEngineRunning)
-            {
-                if (runningMode == "Proxy Mode" || runningMode == "Clear Proxy")
-                    SmartRestartXray();
-                else
-                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
-            }
-        }
-    }
+    
 
-    private void togOutboundProxy_IsCheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        if (_isInitializingSettings) return;
-        var tog = sender as global::Avalonia.Controls.ToggleSwitch;
-        if (tog != null)
-        {
-            if (tog.IsChecked == true)
-            {
-                if (string.IsNullOrWhiteSpace(_cfg.OutboundProxyAddress))
-                {
-                    global::Avalonia.Threading.Dispatcher.UIThread.Post(() => {
-                        tog.IsChecked = false;
-                    });
-                    
-                    var pan = this.FindControl<global::Avalonia.Controls.Border>("panOutboundProxy");
-                    var ico = this.FindControl<global::Avalonia.Controls.PathIcon>("icoOutboundExpander");
-                    
-                    if (pan != null && pan.MaxHeight == 0)
-                    {
-                        pan.MaxHeight = 350;
-                        pan.Opacity = 1;
-                        if (ico != null)
-                            ico.RenderTransform = new global::Avalonia.Media.RotateTransform(180);
-                        
-                        var panToggle = this.FindControl<global::Avalonia.Controls.Border>("panOutboundToggle");
-                        var btnToggle = this.FindControl<global::Avalonia.Controls.Button>("btnOutboundToggle");
-                        if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
-                        if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
-                    }
-                    return;
-                }
-                else if (!_cfg.EnableOutboundProxy)
-                {
-                    _cfg.EnableOutboundProxy = true;
-                    RequestConfigSave();
-                    if (_state.IsEngineRunning) ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
-                }
-            }
-            else
-            {
-                if (_cfg.EnableOutboundProxy)
-                {
-                    _cfg.EnableOutboundProxy = false;
-                    RequestConfigSave();
-                    if (_state.IsEngineRunning) ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
-                }
-            }
-            UpdateAdapterBindingMutualExclusivity();
-        }
-    }
-
-    private void btnDirectUdpToggle_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        var src = e.Source as global::Avalonia.Controls.Control;
-        while (src != null)
-        {
-            if (src.Name == "togDirectUDP") return;
-            src = src.Parent as global::Avalonia.Controls.Control;
-        }
-
-        var pan = this.FindControl<global::Avalonia.Controls.Border>("panDirectUdpSettings");
-        var ico = this.FindControl<global::Avalonia.Controls.PathIcon>("icoDirectUdpExpander");
-        var panToggle = this.FindControl<global::Avalonia.Controls.Border>("panDirectUdpToggle");
-        var btnToggle = this.FindControl<global::Avalonia.Controls.Button>("btnDirectUdpToggle");
-        if (pan != null)
-        {
-            if (pan.MaxHeight == 0)
-            {
-                pan.MaxHeight = 200;
-                pan.Opacity = 1;
-                if (ico != null) ico.RenderTransform = new global::Avalonia.Media.RotateTransform(180);
-                if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
-                if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
-                
-                var cmb = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbDirectUdpAdapters");
-                if (cmb != null && cmb.Items.Count == 0)
-                {
-                    btnScanDirectUdpAdapters_Click(null, null);
-                }
-            }
-            else
-            {
-                pan.MaxHeight = 0;
-                pan.Opacity = 0;
-                if (ico != null) ico.RenderTransform = new global::Avalonia.Media.RotateTransform(0);
-                if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
-                if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
-            }
-        }
-    }
-
-    private void cmbDirectUdpAdapters_SelectionChanged(object? sender, global::Avalonia.Controls.SelectionChangedEventArgs e)
-    {
-        var cmb = sender as global::Avalonia.Controls.ComboBox;
-        if (cmb != null && cmb.SelectedItem is string selectedText && !string.IsNullOrWhiteSpace(selectedText))
-        {
-            if (selectedText == "default")
-            {
-                bool changed = _cfg.DirectUdpAdapterIp != "";
-                _cfg.DirectUdpAdapterName = "default";
-                _cfg.DirectUdpAdapterIp = "";
-                RequestConfigSave();
-                if (changed && _cfg.EnableDirectUDP && _state.IsEngineRunning)
-                {
-                    string runningMode = _cfg.LastXrayMode;
-                    if (runningMode == "Proxy Mode" || runningMode == "Clear Proxy")
-                        SmartRestartXray();
-                    else
-                        ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
-                }
-                return;
-            }
-
-            var parts = selectedText.Split(new[] { " - " }, StringSplitOptions.None);
-            if (parts.Length >= 2)
-            {
-                var newIp   = parts[parts.Length - 1];
-                var newName = string.Join(" - ", parts, 0, parts.Length - 1);
-
-                bool changed = newIp != _cfg.DirectUdpAdapterIp;
-
-                _cfg.DirectUdpAdapterName = newName;
-                _cfg.DirectUdpAdapterIp = newIp;
-                RequestConfigSave();
-                
-                if (changed && _cfg.EnableDirectUDP && _state.IsEngineRunning)
-                {
-                    string runningMode = _cfg.LastXrayMode;
-                    if (runningMode == "Proxy Mode" || runningMode == "Clear Proxy")
-                        SmartRestartXray();
-                    else
-                        ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
-                }
-            }
-        }
-    }
-
-    private void btnScanDirectUdpAdapters_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs? e = null)
-    {
-        var cmb = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbDirectUdpAdapters");
-        if (cmb == null) return;
-        
-        cmb.Items.Clear();
-        cmb.Items.Add("default");
-
-        var adapters = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
-        foreach (var adapter in adapters)
-        {
-            if (adapter.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up && 
-                adapter.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Loopback)
-            {
-                var properties = adapter.GetIPProperties();
-                var ipv4 = properties.UnicastAddresses.FirstOrDefault(a => a.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
-                if (ipv4 != null && !string.IsNullOrWhiteSpace(ipv4.Address.ToString()))
-                {
-                    cmb.Items.Add($"{adapter.Name} - {ipv4.Address}");
-                }
-            }
-        }
-        
-        if (_cfg.DirectUdpAdapterName == "default" || string.IsNullOrWhiteSpace(_cfg.DirectUdpAdapterIp))
-        {
-            cmb.SelectedIndex = 0;
-        }
-        else if (!string.IsNullOrWhiteSpace(_cfg.DirectUdpAdapterName) && !string.IsNullOrWhiteSpace(_cfg.DirectUdpAdapterIp))
-        {
-            var toSelect = $"{_cfg.DirectUdpAdapterName} - {_cfg.DirectUdpAdapterIp}";
-            var itemsList = cmb.Items.Cast<string>().ToList();
-            var index = itemsList.IndexOf(toSelect);
-            if (index >= 0)
-            {
-                cmb.SelectedIndex = index;
-            }
-            else
-            {
-                ShowToast(CrimsonOnion.Localization.AppStrings.ToastDirectUdpAdapterLost);
-                _cfg.DirectUdpAdapterName = "default";
-                _cfg.DirectUdpAdapterIp = "";
-                RequestConfigSave();
-                
-                cmb.SelectedIndex = 0;
-            }
-        }
-        else if (cmb.Items.Count > 0)
-        {
-            cmb.SelectedIndex = 0;
-        }
-    }
-    private void btnAdapterBindingToggle_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        var src = e.Source as global::Avalonia.Controls.Control;
-        while (src != null)
-        {
-            if (src.Name == "togAdapterBinding") return;
-            src = src.Parent as global::Avalonia.Controls.Control;
-        }
-
-        var pan = this.FindControl<global::Avalonia.Controls.Border>("panAdapterBinding");
-        var ico = this.FindControl<global::Avalonia.Controls.PathIcon>("icoAdapterBindingExpander");
-        var panToggle = this.FindControl<global::Avalonia.Controls.Border>("panAdapterBindingToggle");
-        var btnToggle = this.FindControl<global::Avalonia.Controls.Button>("btnAdapterBindingToggle");
-        if (pan != null)
-        {
-            if (pan.MaxHeight == 0)
-            {
-                pan.MaxHeight = 200;
-                pan.Opacity = 1;
-                if (ico != null) ico.RenderTransform = new global::Avalonia.Media.RotateTransform(180);
-                if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
-                if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
-                
-                var cmb = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbAdapters");
-                if (cmb != null && cmb.Items.Count == 0)
-                {
-                    btnScanAdapters_Click(null, null);
-                }
-            }
-            else
-            {
-                pan.MaxHeight = 0;
-                pan.Opacity = 0;
-                if (ico != null) ico.RenderTransform = new global::Avalonia.Media.RotateTransform(0);
-                if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
-                if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
-            }
-        }
-    }
-
-    private void togAdapterBinding_IsCheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        if (_isInitializingSettings) return;
-        var tog = sender as global::Avalonia.Controls.ToggleSwitch;
-        if (tog != null)
-        {
-            if (tog.IsChecked == true)
-            {
-                if (string.IsNullOrWhiteSpace(_cfg.SelectedAdapterIp))
-                {
-                    global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { tog.IsChecked = false; });
-                    var pan = this.FindControl<global::Avalonia.Controls.Border>("panAdapterBinding");
-                    if (pan != null && pan.MaxHeight == 0)
-                    {
-                        pan.MaxHeight = 200;
-                        pan.Opacity = 1;
-                        var ico = this.FindControl<global::Avalonia.Controls.PathIcon>("icoAdapterBindingExpander");
-                        if (ico != null) ico.RenderTransform = new global::Avalonia.Media.RotateTransform(180);
-                        
-                        var cmb = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbAdapters");
-                        if (cmb != null && cmb.Items.Count == 0)
-                        {
-                            btnScanAdapters_Click(null, null);
-                        }
-                    }
-                    return;
-                }
-                else if (!_cfg.EnableAdapterBinding)
-                {
-                    _cfg.EnableAdapterBinding = true;
-                    RequestConfigSave();
-                    if (_activeBridge == "snowflake")
-                        ShowToast(CrimsonOnion.Localization.AppStrings.ToastAdapterBindingSnowflake);
-                    else if (_state.IsEngineRunning)
-                        ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
-                }
-            }
-            else
-            {
-                if (_cfg.EnableAdapterBinding)
-                {
-                    _cfg.EnableAdapterBinding = false;
-                    RequestConfigSave();
-                    if (_state.IsEngineRunning) ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
-                }
-            }
-            UpdateAdapterBindingMutualExclusivity();
-        }
-    }
-
-    private void cmbAdapters_SelectionChanged(object? sender, global::Avalonia.Controls.SelectionChangedEventArgs e)
-    {
-        var cmb = sender as global::Avalonia.Controls.ComboBox;
-        if (cmb != null && cmb.SelectedItem is string selectedText && !string.IsNullOrWhiteSpace(selectedText))
-        {
-            var parts = selectedText.Split(new[] { " - " }, StringSplitOptions.None);
-            if (parts.Length >= 2)
-            {
-                var newIp   = parts[parts.Length - 1];
-                var newName = string.Join(" - ", parts, 0, parts.Length - 1);
-
-                bool changed = newIp != _cfg.SelectedAdapterIp;
-
-                _cfg.SelectedAdapterName = newName;
-                _cfg.SelectedAdapterIp = newIp;
-                RequestConfigSave();
-
-                if (changed && _cfg.EnableAdapterBinding && _state.IsEngineRunning)
-                {
-                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
-                }
-            }
-        }
-    }
-
-    private void btnScanAdapters_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs? e = null)
-    {
-        var cmb = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbAdapters");
-        if (cmb == null) return;
-        
-        cmb.Items.Clear();
-        var adapters = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
-        foreach (var adapter in adapters)
-        {
-            if (adapter.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up && 
-                adapter.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Loopback)
-            {
-                var properties = adapter.GetIPProperties();
-                var ipv4 = properties.UnicastAddresses.FirstOrDefault(a => a.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
-                if (ipv4 != null && !string.IsNullOrWhiteSpace(ipv4.Address.ToString()))
-                {
-                    cmb.Items.Add($"{adapter.Name} - {ipv4.Address}");
-                }
-            }
-        }
-        
-        if (!string.IsNullOrWhiteSpace(_cfg.SelectedAdapterName) && !string.IsNullOrWhiteSpace(_cfg.SelectedAdapterIp))
-        {
-            var toSelect = $"{_cfg.SelectedAdapterName} - {_cfg.SelectedAdapterIp}";
-            var itemsList = cmb.Items.Cast<string>().ToList();
-            var index = itemsList.IndexOf(toSelect);
-            if (index >= 0)
-            {
-                cmb.SelectedIndex = index;
-            }
-            else
-            {
-                ShowToast(CrimsonOnion.Localization.AppStrings.ToastSelectedAdapterLost);
-                _cfg.SelectedAdapterName = "";
-                _cfg.SelectedAdapterIp = "";
-                RequestConfigSave();
-                
-                if (cmb.Items.Count > 0) cmb.SelectedIndex = 0;
-            }
-        }
-        else if (cmb.Items.Count > 0)
-        {
-            cmb.SelectedIndex = 0;
-        }
-    }
+    
 
     private string?   _savedDnsAdapterName;
     private string[]? _savedDnsServers;
 
-    private void btnDnsToggle_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        var src = e.Source as global::Avalonia.Controls.Control;
-        while (src != null)
-        {
-            if (src.Name == "togDnsSettings" || src.Name == "togSysDns")
-                return;
-            src = src.Parent as global::Avalonia.Controls.Control;
-        }
+    
 
-        var panToggle = this.FindControl<global::Avalonia.Controls.Border>("panDnsToggle");
-        var btnToggle = this.FindControl<global::Avalonia.Controls.Button>("btnDnsToggle");
-        var pan       = this.FindControl<global::Avalonia.Controls.Border>("panDnsSettings");
-        var ico       = this.FindControl<global::Avalonia.Controls.PathIcon>("icoDnsExpander");
-        var cmbDohUrl = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbDohUrl");
+    
+    
 
-        if (pan != null && ico != null && cmbDohUrl != null)
-        {
-            if (pan.MaxHeight == 0)
-            {
-                cmbDohUrl.Text = _cfg.UpstreamDohUrl;
+    
 
-                var txtPrimary   = this.FindControl<global::Avalonia.Controls.TextBox>("txtSysDnsPrimary");
-                var txtSecondary = this.FindControl<global::Avalonia.Controls.TextBox>("txtSysDnsSecondary");
-                if (txtPrimary   != null) txtPrimary.Text   = _cfg.SystemDnsPrimary;
-                if (txtSecondary != null) txtSecondary.Text = _cfg.SystemDnsSecondary;
+    
 
-                pan.MaxHeight = 340;
-                pan.Opacity   = 1;
+    
 
-                var transform = new global::Avalonia.Media.RotateTransform(180);
-                ico.RenderTransform = transform;
+    
 
-                if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
-                if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
-            }
-            else
-            {
-                CloseDnsPanel();
-            }
-        }
-    }
+    
 
-    private void CloseDnsPanel()
-    {
-        var pan       = this.FindControl<global::Avalonia.Controls.Border>("panDnsSettings");
-        var ico       = this.FindControl<global::Avalonia.Controls.PathIcon>("icoDnsExpander");
-        var panToggle = this.FindControl<global::Avalonia.Controls.Border>("panDnsToggle");
-        var btnToggle = this.FindControl<global::Avalonia.Controls.Button>("btnDnsToggle");
-        if (pan != null && ico != null)
-        {
-            pan.MaxHeight = 0;
-            pan.Opacity   = 0;
-            var transform = new global::Avalonia.Media.RotateTransform(0);
-            ico.RenderTransform = transform;
-            if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
-            if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
-        }
-    }
-    private void btnDohSave_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        var cmbDohUrl = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbDohUrl");
-        var tog       = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togDnsSettings");
-
-        if (cmbDohUrl != null && tog != null)
-        {
-            var url = cmbDohUrl.Text?.Trim() ?? "";
-            _cfg.UpstreamDohUrl    = url;
-            _cfg.EnableUpstreamDoh = true;
-
-            global::Avalonia.Threading.Dispatcher.UIThread.Post(() => {
-                tog.IsChecked = true;
-            });
-
-            RequestConfigSave();
-            if (_state.IsEngineRunning) SmartRestartXray();
-        }
-    }
-
-    private void togDnsSettings_IsCheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        if (_isInitializingSettings) return;
-        var tog = sender as global::Avalonia.Controls.ToggleSwitch;
-        if (tog == null) return;
-
-        if (tog.IsChecked == true)
-        {
-            var cmbDohUrl = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbDohUrl");
-            var liveUrl   = cmbDohUrl?.Text?.Trim() ?? "";
-            if (!string.IsNullOrWhiteSpace(liveUrl))
-                _cfg.UpstreamDohUrl = liveUrl;
-
-            if (string.IsNullOrWhiteSpace(_cfg.UpstreamDohUrl))
-            {
-                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { tog.IsChecked = false; });
-                return;
-            }
-
-            _cfg.EnableUpstreamDoh = true;
-            RequestConfigSave();
-            if (_state.IsEngineRunning) SmartRestartXray();
-        }
-        else
-        {
-            if (_cfg.EnableUpstreamDoh)
-            {
-                _cfg.EnableUpstreamDoh = false;
-                RequestConfigSave();
-                if (_state.IsEngineRunning) SmartRestartXray();
-            }
-        }
-    }
-
-    private void btnSysDnsSave_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        var txtPrimary   = this.FindControl<global::Avalonia.Controls.TextBox>("txtSysDnsPrimary");
-        var txtSecondary = this.FindControl<global::Avalonia.Controls.TextBox>("txtSysDnsSecondary");
-        var tog          = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togSysDns");
-
-        var primary   = txtPrimary?.Text?.Trim()   ?? "";
-        var secondary = txtSecondary?.Text?.Trim() ?? "";
-
-        if (!DnsService.IsValidIpv4(primary))
-        {
-            ShowToast(CrimsonOnion.Localization.AppStrings.ToastInvalidPrimaryDns);
-            return;
-        }
-        if (!string.IsNullOrWhiteSpace(secondary) && !DnsService.IsValidIpv4(secondary))
-        {
-            ShowToast(CrimsonOnion.Localization.AppStrings.ToastInvalidSecondaryDns);
-            return;
-        }
-
-        _cfg.SystemDnsPrimary   = primary;
-        _cfg.SystemDnsSecondary = secondary;
-        _cfg.EnableSystemDns    = true;
-
-        global::Avalonia.Threading.Dispatcher.UIThread.Post(() => {
-            if (tog != null) tog.IsChecked = true;
-        });
-
-        RequestConfigSave();
-        if (_state.IsEngineRunning)
-            ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectDns);
-    }
-
-    private void togSysDns_IsCheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        if (_isInitializingSettings) return;
-        var tog = sender as global::Avalonia.Controls.ToggleSwitch;
-        if (tog == null) return;
-
-        if (tog.IsChecked == true)
-        {
-            var txtPrimary   = this.FindControl<global::Avalonia.Controls.TextBox>("txtSysDnsPrimary");
-            var txtSecondary = this.FindControl<global::Avalonia.Controls.TextBox>("txtSysDnsSecondary");
-            var livePrimary   = txtPrimary?.Text?.Trim()   ?? "";
-            var liveSecondary = txtSecondary?.Text?.Trim() ?? "";
-
-            if (!string.IsNullOrWhiteSpace(livePrimary))
-            {
-                if (!DnsService.IsValidIpv4(livePrimary))
-                {
-                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastInvalidPrimaryDns);
-                    global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { tog.IsChecked = false; });
-                    return;
-                }
-                if (!string.IsNullOrWhiteSpace(liveSecondary) && !DnsService.IsValidIpv4(liveSecondary))
-                {
-                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastInvalidSecondaryDns);
-                    global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { tog.IsChecked = false; });
-                    return;
-                }
-                _cfg.SystemDnsPrimary   = livePrimary;
-                _cfg.SystemDnsSecondary = liveSecondary;
-            }
-
-            if (string.IsNullOrWhiteSpace(_cfg.SystemDnsPrimary))
-            {
-                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { tog.IsChecked = false; });
-                return;
-            }
-
-            _cfg.EnableSystemDns = true;
-            RequestConfigSave();
-            if (_state.IsEngineRunning)
-                ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectDns);
-        }
-        else
-        {
-            if (_cfg.EnableSystemDns)
-            {
-                _cfg.EnableSystemDns = false;
-                RequestConfigSave();
-                if (_state.IsEngineRunning)
-                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectDns);
-            }
-        }
-    }
-
-    private void btnLanToggle_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        var src = e.Source as global::Avalonia.Controls.Control;
-        while (src != null)
-        {
-            if (src.Name == "btnLanTog" || src.Name == "togLanAuth") return;
-            src = src.Parent as global::Avalonia.Controls.Control;
-        }
-
-        var panToggle = this.FindControl<global::Avalonia.Controls.Border>("panLanToggle");
-        var btnToggle = this.FindControl<global::Avalonia.Controls.Button>("btnLanToggle");
-        var pan       = this.FindControl<global::Avalonia.Controls.Border>("panLanSettings");
-        var ico       = this.FindControl<global::Avalonia.Controls.PathIcon>("icoLanExpander");
-
-        if (pan == null || ico == null) return;
-
-        if (pan.MaxHeight == 0)
-        {
-            var txtUser = this.FindControl<global::Avalonia.Controls.TextBox>("txtLanUser");
-            var txtPass = this.FindControl<global::Avalonia.Controls.TextBox>("txtLanPass");
-            var tog     = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togLanAuth");
-            if (txtUser != null) txtUser.Text = _cfg.LanAuthUsername;
-            if (txtPass != null) txtPass.Text = _cfg.LanAuthPassword;
-            if (tog     != null) tog.IsChecked = _cfg.EnableLanAuth;
-
-            pan.MaxHeight = 160;
-            pan.Opacity   = 1;
-            ico.RenderTransform = new global::Avalonia.Media.RotateTransform(180);
-            if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
-            if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
-        }
-        else
-        {
-            pan.MaxHeight = 0;
-            pan.Opacity   = 0;
-            ico.RenderTransform = new global::Avalonia.Media.RotateTransform(0);
-            if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
-            if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8);
-        }
-    }
-
-    private void togLanAuth_IsCheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        if (_isInitializingSettings) return;
-        var tog = sender as global::Avalonia.Controls.ToggleSwitch;
-        if (tog == null) return;
-
-        if (tog.IsChecked == true)
-        {
-            var txtUser = this.FindControl<global::Avalonia.Controls.TextBox>("txtLanUser");
-            var txtPass = this.FindControl<global::Avalonia.Controls.TextBox>("txtLanPass");
-            var liveUser = txtUser?.Text?.Trim() ?? "";
-            var livePass = txtPass?.Text?.Trim() ?? "";
-
-            if (!string.IsNullOrWhiteSpace(liveUser))
-            {
-                _cfg.LanAuthUsername = liveUser;
-                _cfg.LanAuthPassword = livePass;
-            }
-
-            if (string.IsNullOrWhiteSpace(_cfg.LanAuthUsername))
-            {
-                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { tog.IsChecked = false; });
-                return;
-            }
-
-            _cfg.EnableLanAuth = true;
-            RequestConfigSave();
-
-            if (_state.IsEngineRunning)
-            {
-                if (_pollMode == "VPN Mode")
-                    ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
-                else
-                    SmartRestartXray();
-            }
-        }
-        else
-        {
-            if (_cfg.EnableLanAuth)
-            {
-                _cfg.EnableLanAuth = false;
-                RequestConfigSave();
-
-                if (_state.IsEngineRunning)
-                {
-                    if (_pollMode == "VPN Mode")
-                        ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
-                    else
-                        SmartRestartXray();
-                }
-            }
-        }
-    }
-
-    private void btnLanAuthSave_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        var txtUser = this.FindControl<global::Avalonia.Controls.TextBox>("txtLanUser");
-        var txtPass = this.FindControl<global::Avalonia.Controls.TextBox>("txtLanPass");
-        var tog     = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togLanAuth");
-
-        var user = txtUser?.Text?.Trim() ?? "";
-        var pass = txtPass?.Text?.Trim() ?? "";
-
-        if (string.IsNullOrWhiteSpace(user))
-        {
-            ShowToast(CrimsonOnion.Localization.AppStrings.ToastEnterUsername);
-            return;
-        }
-
-        _cfg.LanAuthUsername = user;
-        _cfg.LanAuthPassword = pass;
-        _cfg.EnableLanAuth   = true;
-
-        global::Avalonia.Threading.Dispatcher.UIThread.Post(() => {
-            if (tog != null) tog.IsChecked = true;
-        });
-
-        RequestConfigSave();
-
-        if (_state.IsEngineRunning)
-        {
-            if (_pollMode == "VPN Mode")
-                ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
-            else
-                SmartRestartXray();
-        }
-        else
-        {
-            ShowToast(CrimsonOnion.Localization.AppStrings.ToastCredentialsSaved, success: true);
-        }
-    }
+    
  
-    private bool _lanPassVisible = false;
-    private void btnLanPassEye_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
-    {
-        var txtPass = this.FindControl<global::Avalonia.Controls.TextBox>("txtLanPass");
-        var ico     = this.FindControl<global::Avalonia.Controls.PathIcon>("icoLanPassEye");
-        if (txtPass == null) return;
-
-        _lanPassVisible = !_lanPassVisible;
-        txtPass.PasswordChar = _lanPassVisible ? '\0' : '\u2022';
-
-        if (ico != null)
-            ico.Data = _lanPassVisible
-                ? global::Avalonia.Media.Geometry.Parse("M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z")
-                : global::Avalonia.Media.Geometry.Parse("M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z");
-    }
+    
+    
 
     private async Task ApplySystemDnsAsync()
     {

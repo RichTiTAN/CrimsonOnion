@@ -1,0 +1,143 @@
+﻿<!--
+  CrimsonOnion - A GUI client that runs multiple Tor instances and load-balances them.
+  Copyright (C) 2026 RichTiTAN
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="460"
+             x:Class="CrimsonOnion.Views.Overlays.ThemesOverlay">
+    <Grid>
+        <ScrollViewer>
+            <StackPanel Margin="20,20,20,20" Spacing="20">
+                <Border Background="#1A1B1E" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="15,10">
+                    <StackPanel Spacing="0">
+                        <Grid ColumnDefinitions="*, Auto">
+                            <TextBlock x:Name="lblThemesHeader" Text="THEMES" FontSize="11" FontWeight="SemiBold" Foreground="#8B949E" LetterSpacing="1" VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                <Button Background="Transparent" BorderThickness="0" Cursor="Hand" Click="CloseOverlay_Click" HorizontalAlignment="Right" VerticalAlignment="Top" Padding="5" Margin="0,4,4,0">
+                                    <Button.Styles>
+                                        <Style Selector="Button:pointerover /template/ ContentPresenter">
+                                            <Setter Property="Background" Value="Transparent"/>
+                                        </Style>
+                                        <Style Selector="Button:pointerover PathIcon">
+                                            <Setter Property="Foreground" Value="#E2E8F0"/>
+                                        </Style>
+                                    </Button.Styles>
+                                    <PathIcon Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" Width="10" Height="10" Foreground="#8B949E"/>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <WrapPanel x:Name="panThemesWrap" Margin="0,15,0,10" HorizontalAlignment="Center">
+                            <!-- Crimson -->
+                            <Button Classes="ThemeColorButton" Cursor="Hand" Click="ThemeSelect_Click" CommandParameter="Crimson" Margin="5,5,5,5" Background="Transparent" Padding="0" BorderThickness="0">
+                                <Border Width="40" Height="40" CornerRadius="20" ClipToBounds="True">
+                                    <Panel Classes="animatedGradient" Background="Transparent">
+                                        <Rectangle Fill="{DynamicResource ThemeCrimsonBrush}" RadiusX="20" RadiusY="20"/>
+                                        <Rectangle Classes="rectGradient" Width="80" Height="80" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{DynamicResource ThemeCrimsonBrush}">
+                                            <Rectangle.RenderTransform><RotateTransform Angle="0"/></Rectangle.RenderTransform>
+                                        </Rectangle>
+                                    </Panel>
+                                </Border>
+                            </Button>
+                            <!-- Blue -->
+                            <Button Classes="ThemeColorButton" Cursor="Hand" Click="ThemeSelect_Click" CommandParameter="Blue" Margin="5,5,5,5" Background="Transparent" Padding="0" BorderThickness="0">
+                                <Border Width="40" Height="40" CornerRadius="20" ClipToBounds="True">
+                                    <Panel Classes="animatedGradient" Background="Transparent">
+                                        <Rectangle Fill="{DynamicResource ThemeBlueBrush}" RadiusX="20" RadiusY="20"/>
+                                        <Rectangle Classes="rectGradient" Width="80" Height="80" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{DynamicResource ThemeBlueBrush}">
+                                            <Rectangle.RenderTransform><RotateTransform Angle="0"/></Rectangle.RenderTransform>
+                                        </Rectangle>
+                                    </Panel>
+                                </Border>
+                            </Button>
+                            <!-- Purple -->
+                            <Button Classes="ThemeColorButton" Cursor="Hand" Click="ThemeSelect_Click" CommandParameter="Purple" Margin="5,5,5,5" Background="Transparent" Padding="0" BorderThickness="0">
+                                <Border Width="40" Height="40" CornerRadius="20" ClipToBounds="True">
+                                    <Panel Classes="animatedGradient" Background="Transparent">
+                                        <Rectangle Fill="{DynamicResource ThemePurpleBrush}" RadiusX="20" RadiusY="20"/>
+                                        <Rectangle Classes="rectGradient" Width="80" Height="80" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{DynamicResource ThemePurpleBrush}">
+                                            <Rectangle.RenderTransform><RotateTransform Angle="0"/></Rectangle.RenderTransform>
+                                        </Rectangle>
+                                    </Panel>
+                                </Border>
+                            </Button>
+                            <!-- Green -->
+                            <Button Classes="ThemeColorButton" Cursor="Hand" Click="ThemeSelect_Click" CommandParameter="Green" Margin="5,5,5,5" Background="Transparent" Padding="0" BorderThickness="0">
+                                <Border Width="40" Height="40" CornerRadius="20" ClipToBounds="True">
+                                    <Panel Classes="animatedGradient" Background="Transparent">
+                                        <Rectangle Fill="{DynamicResource ThemeGreenBrush}" RadiusX="20" RadiusY="20"/>
+                                        <Rectangle Classes="rectGradient" Width="80" Height="80" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{DynamicResource ThemeGreenBrush}">
+                                            <Rectangle.RenderTransform><RotateTransform Angle="0"/></Rectangle.RenderTransform>
+                                        </Rectangle>
+                                    </Panel>
+                                </Border>
+                            </Button>
+                            <!-- Pink -->
+                            <Button Classes="ThemeColorButton" Cursor="Hand" Click="ThemeSelect_Click" CommandParameter="Pink" Margin="5,5,5,5" Background="Transparent" Padding="0" BorderThickness="0">
+                                <Border Width="40" Height="40" CornerRadius="20" ClipToBounds="True">
+                                    <Panel Classes="animatedGradient" Background="Transparent">
+                                        <Rectangle Fill="{DynamicResource ThemePinkBrush}" RadiusX="20" RadiusY="20"/>
+                                        <Rectangle Classes="rectGradient" Width="80" Height="80" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{DynamicResource ThemePinkBrush}">
+                                            <Rectangle.RenderTransform><RotateTransform Angle="0"/></Rectangle.RenderTransform>
+                                        </Rectangle>
+                                    </Panel>
+                                </Border>
+                            </Button>
+                            <!-- Yellow -->
+                            <Button Classes="ThemeColorButton" Cursor="Hand" Click="ThemeSelect_Click" CommandParameter="Yellow" Margin="5,5,5,5" Background="Transparent" Padding="0" BorderThickness="0">
+                                <Border Width="40" Height="40" CornerRadius="20" ClipToBounds="True">
+                                    <Panel Classes="animatedGradient" Background="Transparent">
+                                        <Rectangle Fill="{DynamicResource ThemeYellowBrush}" RadiusX="20" RadiusY="20"/>
+                                        <Rectangle Classes="rectGradient" Width="80" Height="80" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{DynamicResource ThemeYellowBrush}">
+                                            <Rectangle.RenderTransform><RotateTransform Angle="0"/></Rectangle.RenderTransform>
+                                        </Rectangle>
+                                    </Panel>
+                                </Border>
+                            </Button>
+                        </WrapPanel>
+                        
+                        <Rectangle Height="1" Fill="#2D3748" Margin="-15,5,-15,15"/>
+
+                        <StackPanel Spacing="15" Margin="0,5,0,5">
+                            <!-- Pause Glow Toggle -->
+                            <Grid ColumnDefinitions="*, Auto">
+                                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock x:Name="lblPauseGlow" Classes="settingTitle" Text="PAUSE BACKGROUND GLOW" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" HorizontalAlignment="Left" TextAlignment="Left" />
+                                    <TextBlock x:Name="lblPauseGlowDesc" Text="Stops the rotation animation to reduce GPU usage." FontSize="10" Foreground="#A0AEC0" TextWrapping="Wrap" HorizontalAlignment="Left" TextAlignment="Left" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" x:Name="togPauseGlow" Theme="{DynamicResource FluentToggleSwitchTheme}" OnContent="{x:Null}" OffContent="{x:Null}" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="40" Margin="0,0,10,0" IsCheckedChanged="togPauseGlow_IsCheckedChanged"/>
+                            </Grid>
+                            
+                            <!-- Disable Glow Toggle -->
+                            <Grid ColumnDefinitions="*, Auto">
+                                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock x:Name="lblDisableGlow" Classes="settingTitle" Text="DISABLE BACKGROUND GLOW" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" HorizontalAlignment="Left" TextAlignment="Left" />
+                                    <TextBlock x:Name="lblDisableGlowDesc" Text="Turns off the background glow completely for maximum performance." FontSize="10" Foreground="#A0AEC0" TextWrapping="Wrap" HorizontalAlignment="Left" TextAlignment="Left" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1" x:Name="togDisableGlow" Theme="{DynamicResource FluentToggleSwitchTheme}" OnContent="{x:Null}" OffContent="{x:Null}" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="40" Margin="0,0,10,0" IsCheckedChanged="togDisableGlow_IsCheckedChanged"/>
+                            </Grid>
+                        </StackPanel>
+
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
