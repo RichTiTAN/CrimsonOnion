@@ -1,4 +1,4 @@
-/*
+﻿/*
  * CrimsonOnion - A GUI client that runs multiple Tor instances and load-balances them.
  * Copyright (C) 2026 RichTiTAN
  *
@@ -16,9 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using CrimsonOnion.Models;
+using CrimsonOnion.Services;
+using S = CrimsonOnion.Localization.AppStrings;
 
 namespace CrimsonOnion.Views.Overlays
 {
@@ -34,7 +36,6 @@ namespace CrimsonOnion.Views.Overlays
             InitializeComponent();
         }
 
-        
     public bool HasUnsavedInput
     {
         get
@@ -42,7 +43,7 @@ namespace CrimsonOnion.Views.Overlays
             var txtDomains = this.FindControl<global::Avalonia.Controls.TextBox>("txtSplitDomains");
             var txtApps = this.FindControl<global::Avalonia.Controls.TextBox>("txtSplitApps");
             var txtBlock = this.FindControl<global::Avalonia.Controls.TextBox>("txtSplitBlock");
-            
+
             return (txtDomains != null && !string.IsNullOrWhiteSpace(txtDomains.Text)) ||
                    (txtApps != null && !string.IsNullOrWhiteSpace(txtApps.Text)) ||
                    (txtBlock != null && !string.IsNullOrWhiteSpace(txtBlock.Text));
@@ -54,7 +55,6 @@ namespace CrimsonOnion.Views.Overlays
             _main = main;
             UpdateSplitTunnelUI();
         }
-        
 
     private void InitPanel(Border panel, Border togglePanel, TextBox tb, Button btnToggle)
     {
@@ -62,7 +62,7 @@ namespace CrimsonOnion.Views.Overlays
         panel.Height = hasText ? 34 : 0;
         btnToggle.Content = hasText ? CrimsonOnion.Localization.AppStrings.Edit : CrimsonOnion.Localization.AppStrings.Add;
         togglePanel.CornerRadius = hasText ? new global::Avalonia.CornerRadius(4, 4, 0, 0) : new global::Avalonia.CornerRadius(4);
-        
+
         if (hasText)
         {
             tb.Height = 17;
@@ -86,7 +86,7 @@ namespace CrimsonOnion.Views.Overlays
         if (panel.Height < 110)
         {
             tempStore = tb.Text ?? "";
-            
+
             tb.Height = 56;
             tb.Margin = new global::Avalonia.Thickness(0, 5, 0, 0);
             tb.IsHitTestVisible = true;
@@ -95,7 +95,7 @@ namespace CrimsonOnion.Views.Overlays
             tb.Cursor = new global::Avalonia.Input.Cursor(global::Avalonia.Input.StandardCursorType.Ibeam);
             btnToggle.Content = CrimsonOnion.Localization.AppStrings.Edit;
             togglePanel.CornerRadius = new global::Avalonia.CornerRadius(4, 4, 0, 0);
-            
+
             panel.Height = 110;
             tb.Focus();
         }
@@ -107,10 +107,10 @@ namespace CrimsonOnion.Views.Overlays
     private void ClosePanel(Border panel, Border togglePanel, TextBox tb, Button btnToggle)
     {
         bool hasText = !string.IsNullOrWhiteSpace(tb.Text);
-        
+
         btnToggle.Content = hasText ? CrimsonOnion.Localization.AppStrings.Edit : CrimsonOnion.Localization.AppStrings.Add;
         togglePanel.CornerRadius = hasText ? new global::Avalonia.CornerRadius(4, 4, 0, 0) : new global::Avalonia.CornerRadius(4);
-        
+
         if (hasText)
         {
             tb.Height = 17;
@@ -120,15 +120,44 @@ namespace CrimsonOnion.Views.Overlays
             tb.Focusable = false;
             tb.Cursor = new global::Avalonia.Input.Cursor(global::Avalonia.Input.StandardCursorType.Arrow);
         }
-        
+
         panel.Height = hasText ? 34 : 0;
     }
 
-
 ﻿
+private void ApplyLanguage()
+{
+    var lblSplitTunnelingHeader = this.FindControl<TextBlock>("lblSplitTunnelingHeader");
+    S.Apply(lblSplitTunnelingHeader, S.SplitTunneling, forceLtr: true);
+
+    S.Apply(this.FindControl<TextBlock>("lblDomainsAndIps"), S.DomainsAndIps);
+    S.Apply(this.FindControl<TextBlock>("lblApplications"), S.Applications);
+    S.Apply(this.FindControl<TextBlock>("lblBlockedDomainsIps"), S.BlockedDomains);
+
+    var lblSplitAppsWarning = this.FindControl<TextBlock>("lblSplitAppsWarning");
+    if (lblSplitAppsWarning != null) lblSplitAppsWarning.Text = S.LblSplitAppsWarning;
+
+    var lblDirectUdpHeader = this.FindControl<TextBlock>("lblDirectUdpHeader");
+    S.Apply(lblDirectUdpHeader, S.SplitTunnelDirectUDP);
+    S.ApplyToolTip(lblDirectUdpHeader, S.SplitTunnelDirectUDPTooltip);
+
+    var btnSplitDisabled  = this.FindControl<Button>("btnSplitDisabled");
+    var btnSplitExclusive = this.FindControl<Button>("btnSplitExclusive");
+    var btnSplitInclusive = this.FindControl<Button>("btnSplitInclusive");
+
+    S.ApplyToolTip(btnSplitDisabled, S.TtSplitDis);
+    S.ApplyToolTip(btnSplitExclusive, S.TtSplitExc);
+    S.ApplyToolTip(btnSplitInclusive, S.TtSplitInc);
+
+    if (btnSplitDisabled?.Content  is TextBlock tbDis) S.Apply(tbDis, S.Disabled);
+    if (btnSplitExclusive?.Content is TextBlock tbEx)  S.Apply(tbEx, S.Exclusive);
+    if (btnSplitInclusive?.Content is TextBlock tbIn)  S.Apply(tbIn, S.Inclusive);
+}
+
 public void UpdateSplitTunnelUI()
     {
         if (_main == null) return;
+        ApplyLanguage();
         this.FindControl<global::Avalonia.Controls.Button>("btnSplitDisabled")?.Classes.Remove("activeOpt");
         this.FindControl<global::Avalonia.Controls.Button>("btnSplitExclusive")?.Classes.Remove("activeOpt");
         this.FindControl<global::Avalonia.Controls.Button>("btnSplitInclusive")?.Classes.Remove("activeOpt");
@@ -160,7 +189,7 @@ public void UpdateSplitTunnelUI()
                 lblSplitExplanation.Text = CrimsonOnion.Localization.AppStrings.TtSplitExc;
             else if (modeStr == "INCLUSIVE")
                 lblSplitExplanation.Text = CrimsonOnion.Localization.AppStrings.TtSplitInc;
-                
+
             lblSplitExplanation.FlowDirection = CrimsonOnion.Localization.AppStrings.IsPersian 
                 ? global::Avalonia.Media.FlowDirection.RightToLeft 
                 : global::Avalonia.Media.FlowDirection.LeftToRight;
@@ -171,12 +200,11 @@ public void UpdateSplitTunnelUI()
 
         if (panSplitDomains != null && panSplitApps != null)
         {
-
-            if (_main!.Cfg.LastXrayMode == "VPN Mode")
+            if (_main!.Cfg.LastXrayMode == XrayModes.VpnMode)
             {
                 panSplitDomains.IsEnabled = false;
                 panSplitDomains.Opacity = 0.3;
-                
+
                 panSplitApps.IsEnabled = true;
                 panSplitApps.Opacity = 1.0;
             }
@@ -184,26 +212,26 @@ public void UpdateSplitTunnelUI()
             {
                 panSplitDomains.IsEnabled = true;
                 panSplitDomains.Opacity = 1.0;
-                
+
                 panSplitApps.IsEnabled = false;
                 panSplitApps.Opacity = 0.3;
             }
         }
-        
+
         var txtSplitDomains = this.FindControl<global::Avalonia.Controls.TextBox>("txtSplitDomains");
         if (txtSplitDomains != null)
         {
             if (txtSplitDomains.Text != _main!.Cfg.LastManualSplit) txtSplitDomains.Text = _main!.Cfg.LastManualSplit;
             InitPanel(this.FindControl<global::Avalonia.Controls.Border>("panDomainsEdit")!, this.FindControl<global::Avalonia.Controls.Border>("panDomainsToggle")!, txtSplitDomains, this.FindControl<global::Avalonia.Controls.Button>("btnToggleDomains")!);
         }
-            
+
         var txtSplitApps = this.FindControl<global::Avalonia.Controls.TextBox>("txtSplitApps");
         if (txtSplitApps != null)
         {
             if (txtSplitApps.Text != _main!.Cfg.LastAppSplit) txtSplitApps.Text = _main!.Cfg.LastAppSplit;
             InitPanel(this.FindControl<global::Avalonia.Controls.Border>("panAppsEdit")!, this.FindControl<global::Avalonia.Controls.Border>("panAppsToggle")!, txtSplitApps, this.FindControl<global::Avalonia.Controls.Button>("btnToggleApps")!);
         }
-            
+
         var txtSplitBlock = this.FindControl<global::Avalonia.Controls.TextBox>("txtSplitBlock");
         if (txtSplitBlock != null)
         {
@@ -217,7 +245,7 @@ private void SplitTunnel_Click(object? sender, global::Avalonia.Interactivity.Ro
         if (sender is global::Avalonia.Controls.Button clickedBtn)
         {
             string oldMode = _main!.Cfg.SplitTunnelMode ?? "DISABLED";
-            
+
             if (clickedBtn.Name == "btnSplitExclusive") _main!.Cfg.SplitTunnelMode = "EXCLUSIVE";
             else if (clickedBtn.Name == "btnSplitInclusive") _main!.Cfg.SplitTunnelMode = "INCLUSIVE";
             else _main!.Cfg.SplitTunnelMode = "DISABLED";
@@ -228,17 +256,10 @@ private void SplitTunnel_Click(object? sender, global::Avalonia.Interactivity.Ro
 
             UpdateSplitTunnelUI();
             _main!.TriggerRequestConfigSave();
-            
-            if (_main!.State.IsEngineRunning)
-            {
-                bool hasAnyInput = !string.IsNullOrWhiteSpace(_main!.Cfg.LastManualSplit) || 
-                                   !string.IsNullOrWhiteSpace(_main!.Cfg.LastAppSplit) || 
-                                   !string.IsNullOrWhiteSpace(_main!.Cfg.LastBlockSplit);
 
-                if (hasAnyInput)
-                {
-                    _main!.TriggerSmartRestartXray();
-                }
+            if (_main!.State.IsEngineRunning && SplitTunnelService.HasAnySplitInput(_main!.Cfg))
+            {
+                _main!.TriggerSmartRestartXray();
             }
         }
     }
@@ -291,7 +312,7 @@ private void SplitSave_Click(object? sender, RoutedEventArgs e)
                 }
                 ClosePanel(this.FindControl<Border>("panBlockEdit")!, this.FindControl<Border>("panBlockToggle")!, tb, this.FindControl<Button>("btnToggleBlock")!);
             }
-            
+
             if (changed)
             {
                 _main!.TriggerRequestConfigSave();
@@ -326,14 +347,13 @@ private void SplitCancel_Click(object? sender, RoutedEventArgs e)
         }
     }
 
-    
 private async void BrowseApp_Click(object? sender, RoutedEventArgs e)
     {
         if (global::Avalonia.Application.Current?.ApplicationLifetime is global::Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop)
         {
             var mainWindow = desktop.MainWindow;
             if (mainWindow == null) return;
-            
+
             var storageProvider = mainWindow.StorageProvider;
             var fileOptions = new global::Avalonia.Platform.Storage.FilePickerOpenOptions
             {
@@ -351,7 +371,7 @@ private async void BrowseApp_Click(object? sender, RoutedEventArgs e)
             {
                 var file = result[0];
                 var exeName = file.Name;
-                
+
                 var txtSplitApps = this.FindControl<TextBox>("txtSplitApps");
                 if (txtSplitApps != null)
                 {
@@ -359,12 +379,12 @@ private async void BrowseApp_Click(object? sender, RoutedEventArgs e)
                         txtSplitApps.Text = exeName;
                     else if (!txtSplitApps.Text.Split(',').Any(a => a.Trim().Equals(exeName, StringComparison.OrdinalIgnoreCase)))
                         txtSplitApps.Text += $", {exeName}";
-                        
+
                     _main!.Cfg.LastAppSplit = txtSplitApps.Text;
                     _main!.TriggerRequestConfigSave();
-                    
+
                     ClosePanel(this.FindControl<Border>("panAppsEdit")!, this.FindControl<Border>("panAppsToggle")!, txtSplitApps, this.FindControl<Button>("btnToggleApps")!);
-                    
+
                     if (_main!.State.IsEngineRunning)
                         _main!.TriggerSmartRestartXray();
                 }
@@ -380,25 +400,14 @@ private void togDirectUDP_IsCheckedChanged(object? sender, global::Avalonia.Inte
         {
             _main!.Cfg.EnableDirectUDP = tog.IsChecked == true;
             _main!.TriggerRequestConfigSave();
-            
+
             string runningMode = _main!.Cfg.LastXrayMode;
 
-            if (_main!.ActiveBridge == "snowflake")
-            {
-                _main!.TriggerApplyModeUI(_main!.PollMode);
-                
-                if (!_main!.Cfg.EnableDirectUDP && _main!.Cfg.LastXrayMode == "VPN Mode")
-                {
-                    _main!.Cfg.LastXrayMode = "Proxy Mode";
-                    _main!.PollMode = "Proxy Mode";
-                    _main!.TriggerApplyModeUI(_main!.PollMode);
-                    _main!.ShowToast(CrimsonOnion.Localization.AppStrings.ToastVpnDisabledSnowflake);
-                }
-            }
+            _main!.TriggerUpdateModeUI();
 
             if (_main!.State.IsEngineRunning)
             {
-                if (runningMode == "Proxy Mode" || runningMode == "Clear Proxy")
+                if (SplitTunnelService.RestartAppliesChange(runningMode))
                     _main!.TriggerSmartRestartXray();
                 else
                     _main!.ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
@@ -427,7 +436,7 @@ private void btnDirectUdpToggle_Click(object? sender, global::Avalonia.Interacti
                 if (ico != null) ico.RenderTransform = new global::Avalonia.Media.RotateTransform(180);
                 if (panToggle != null) panToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
                 if (btnToggle != null) btnToggle.CornerRadius = new global::Avalonia.CornerRadius(8, 8, 0, 0);
-                
+
                 var cmb = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbDirectUdpAdapters");
                 if (cmb != null && cmb.Items.Count == 0)
                 {
@@ -449,16 +458,15 @@ private void cmbDirectUdpAdapters_SelectionChanged(object? sender, global::Avalo
         var cmb = sender as global::Avalonia.Controls.ComboBox;
         if (cmb != null && cmb.SelectedItem is string selectedText && !string.IsNullOrWhiteSpace(selectedText))
         {
-            if (selectedText == "default")
+            if (selectedText == SplitTunnelService.DefaultAdapter)
             {
                 bool changed = _main!.Cfg.DirectUdpAdapterIp != "";
-                _main!.Cfg.DirectUdpAdapterName = "default";
+                _main!.Cfg.DirectUdpAdapterName = SplitTunnelService.DefaultAdapter;
                 _main!.Cfg.DirectUdpAdapterIp = "";
                 _main!.TriggerRequestConfigSave();
                 if (changed && _main!.Cfg.EnableDirectUDP && _main!.State.IsEngineRunning)
                 {
-                    string runningMode = _main!.Cfg.LastXrayMode;
-                    if (runningMode == "Proxy Mode" || runningMode == "Clear Proxy")
+                    if (SplitTunnelService.RestartAppliesChange(_main!.Cfg.LastXrayMode))
                         _main!.TriggerSmartRestartXray();
                     else
                         _main!.ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
@@ -466,22 +474,17 @@ private void cmbDirectUdpAdapters_SelectionChanged(object? sender, global::Avalo
                 return;
             }
 
-            var parts = selectedText.Split(new[] { " - " }, StringSplitOptions.None);
-            if (parts.Length >= 2)
+            if (SplitTunnelService.TryParseAdapterEntry(selectedText, out var newName, out var newIp))
             {
-                var newIp   = parts[parts.Length - 1];
-                var newName = string.Join(" - ", parts, 0, parts.Length - 1);
-
                 bool changed = newIp != _main!.Cfg.DirectUdpAdapterIp;
 
                 _main!.Cfg.DirectUdpAdapterName = newName;
                 _main!.Cfg.DirectUdpAdapterIp = newIp;
                 _main!.TriggerRequestConfigSave();
-                
+
                 if (changed && _main!.Cfg.EnableDirectUDP && _main!.State.IsEngineRunning)
                 {
-                    string runningMode = _main!.Cfg.LastXrayMode;
-                    if (runningMode == "Proxy Mode" || runningMode == "Clear Proxy")
+                    if (SplitTunnelService.RestartAppliesChange(_main!.Cfg.LastXrayMode))
                         _main!.TriggerSmartRestartXray();
                     else
                         _main!.ShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
@@ -493,34 +496,17 @@ private void btnScanDirectUdpAdapters_Click(object? sender, global::Avalonia.Int
     {
         var cmb = this.FindControl<global::Avalonia.Controls.ComboBox>("cmbDirectUdpAdapters");
         if (cmb == null) return;
-        
-        cmb.Items.Clear();
-        cmb.Items.Add("default");
 
-        var adapters = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
-        foreach (var adapter in adapters)
-        {
-            if (adapter.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up && 
-                adapter.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Loopback)
-            {
-                var properties = adapter.GetIPProperties();
-                var ipv4 = properties.UnicastAddresses.FirstOrDefault(a => a.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
-                if (ipv4 != null && !string.IsNullOrWhiteSpace(ipv4.Address.ToString()))
-                {
-                    cmb.Items.Add($"{adapter.Name} - {ipv4.Address}");
-                }
-            }
-        }
-        
-        if (_main!.Cfg.DirectUdpAdapterName == "default" || string.IsNullOrWhiteSpace(_main!.Cfg.DirectUdpAdapterIp))
+        cmb.Items.Clear();
+        foreach (var entry in SplitTunnelService.ListUsableAdapters(includeDefault: true)) cmb.Items.Add(entry);
+
+        if (_main!.Cfg.DirectUdpAdapterName == SplitTunnelService.DefaultAdapter || string.IsNullOrWhiteSpace(_main!.Cfg.DirectUdpAdapterIp))
         {
             cmb.SelectedIndex = 0;
         }
         else if (!string.IsNullOrWhiteSpace(_main!.Cfg.DirectUdpAdapterName) && !string.IsNullOrWhiteSpace(_main!.Cfg.DirectUdpAdapterIp))
         {
-            var toSelect = $"{_main!.Cfg.DirectUdpAdapterName} - {_main!.Cfg.DirectUdpAdapterIp}";
-            var itemsList = cmb.Items.Cast<string>().ToList();
-            var index = itemsList.IndexOf(toSelect);
+            var index = SplitTunnelService.FindAdapterIndex(cmb.Items.Cast<string>(), _main!.Cfg.DirectUdpAdapterName, _main!.Cfg.DirectUdpAdapterIp);
             if (index >= 0)
             {
                 cmb.SelectedIndex = index;
@@ -528,10 +514,10 @@ private void btnScanDirectUdpAdapters_Click(object? sender, global::Avalonia.Int
             else
             {
                 _main!.ShowToast(CrimsonOnion.Localization.AppStrings.ToastDirectUdpAdapterLost);
-                _main!.Cfg.DirectUdpAdapterName = "default";
+                _main!.Cfg.DirectUdpAdapterName = SplitTunnelService.DefaultAdapter;
                 _main!.Cfg.DirectUdpAdapterIp = "";
                 _main!.TriggerRequestConfigSave();
-                
+
                 cmb.SelectedIndex = 0;
             }
         }
@@ -545,6 +531,6 @@ private void btnScanDirectUdpAdapters_Click(object? sender, global::Avalonia.Int
     {
         _main?.TriggerCloseAllOverlays();
     }
+}
+}
 
-}
-}

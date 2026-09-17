@@ -16,9 +16,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System;
-using System.IO;
-using System.Threading.Tasks;
 using System.Threading.Channels;
 
 namespace CrimsonOnion.Services
@@ -27,7 +24,7 @@ namespace CrimsonOnion.Services
     {
         private static readonly string LogFile = Path.Combine(AppContext.BaseDirectory, "Logs", "error.log");
         private static bool _dirCreated = false;
-        
+
         private static readonly Channel<string> _logChannel = Channel.CreateUnbounded<string>();
 
         static SimpleLogger()
@@ -52,7 +49,7 @@ namespace CrimsonOnion.Services
                                 TrimLogFile();
                             }
                             File.AppendAllText(LogFile, msg);
-                            
+
                             if (++_writeCount >= 50)
                             {
                                 _writeCount = 0;
@@ -95,7 +92,7 @@ namespace CrimsonOnion.Services
             }
             catch { }
         }
-        
+
         public static void Log(string message)
         {
             if (!EnableLogging) return;
@@ -108,3 +105,4 @@ namespace CrimsonOnion.Services
         }
     }
 }
+

@@ -16,7 +16,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System.IO;
 using Newtonsoft.Json;
 using CrimsonOnion.Models;
 
@@ -41,6 +40,8 @@ namespace CrimsonOnion.Services
                 IsLogsOpen = state.IsLogsOpen,
                 DebugMode = config.DebugMode,
                 ThemeColor = config.ThemeColor,
+                PauseGlow = config.PauseGlow,
+                DisableGlow = config.DisableGlow,
                 LastConfig = lastConfig,
                 SelectedBridge = lastBridge,
                 InstanceCount = lastCount,
@@ -87,7 +88,7 @@ namespace CrimsonOnion.Services
                 ExpertExcludeNodes = config.ExpertExcludeNodes,
                 ExpertExcludeExitNodes = config.ExpertExcludeExitNodes,
                 ExpertCustomTorrc = config.ExpertCustomTorrc,
-                HaProxyBalancePolicy = config.HaProxyBalancePolicy,
+                XrayBalancePolicy = config.XrayBalancePolicy,
                 EnableSnowflakeAmpCache = config.EnableSnowflakeAmpCache,
                 EnableConjureAmpCache = config.EnableConjureAmpCache,
                 EnableConjureDnsRegistration = config.EnableConjureDnsRegistration,
@@ -122,15 +123,28 @@ namespace CrimsonOnion.Services
                 if (jobj["IsLogsOpen"] != null)
                     state.IsLogsOpen = jobj.Value<bool>("IsLogsOpen");
 
+                if (jobj["XrayBalancePolicy"] == null && jobj["HaProxyBalancePolicy"] != null)
+                    config.XrayBalancePolicy = jobj.Value<string>("HaProxyBalancePolicy") ?? "";
+                config.XrayBalancePolicy = NormalizeLbPolicy(config.XrayBalancePolicy);
+
                 if (config.LastConfig == "Stable" || config.LastConfig == "Fast")
                     config.LastConfig = "Optimized";
-                if (config.LastBridge == "snowflake" && config.LastXrayMode == "VPN Mode")
-                    config.LastXrayMode = "Proxy Mode";
+                if (config.LastBridge == BridgeNames.Snowflake && config.LastXrayMode == XraySupervisor.VpnMode)
+                    config.LastXrayMode = XraySupervisor.ProxyMode;
             }
             catch (Exception ex)
             {
                 SimpleLogger.Log(ex);
             }
         }
+
+        private static string NormalizeLbPolicy(string? policy) => (policy ?? string.Empty).Trim().ToLowerInvariant() switch
+        {
+            "roundrobin" => "roundrobin",
+            "random"     => "random",
+            "leastload"  => "leastload",
+            _            => "leastping",   
+        };
     }
 }
+

@@ -16,12 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace CrimsonOnion.Services;
 
@@ -200,3 +196,4 @@ public static class VpnEngineService
         return payload.Length > 0 && _seenLogs.TryAdd(payload, 1);
     }
 }
+

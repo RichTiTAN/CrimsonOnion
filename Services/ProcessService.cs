@@ -16,11 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace CrimsonOnion.Services
 {
@@ -49,41 +45,6 @@ namespace CrimsonOnion.Services
             {
                 Debug.WriteLine($"Process launch failed for '{filePath}': {ex.Message}");
                 return null;
-            }
-        }
-
-        public static void KillProcess(int? pid)
-        {
-            if (pid == null) return;
-            try
-            {
-                using var p = Process.GetProcessById(pid.Value);
-                p.Kill();
-            }
-            catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
-        }
-
-        public static void KillAppProcesses(string[] names, string[] appPaths)
-        {
-            foreach (var name in names)
-            {
-                try
-                {
-                    var procs = Process.GetProcessesByName(name);
-                    foreach (var p in procs)
-                    {
-                        using (p)
-                        {
-                            try
-                            {
-                                if (appPaths.Any(path => string.Equals(path, p.MainModule?.FileName, StringComparison.OrdinalIgnoreCase)))
-                                    p.Kill();
-                            }
-                            catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
-                        }
-                    }
-                }
-                catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
             }
         }
 
@@ -145,5 +106,4 @@ namespace CrimsonOnion.Services
         }
     }
 }
-
 

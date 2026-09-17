@@ -24,8 +24,8 @@
              x:Class="CrimsonOnion.Views.Overlays.ThemesOverlay">
     <Grid>
         <ScrollViewer>
-            <StackPanel Margin="20,20,20,20" Spacing="20">
-                <Border Background="#1A1B1E" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="15,10">
+            <StackPanel Margin="20,20,20,20" Spacing="8">
+                <Border Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="15,10">
                     <StackPanel Spacing="0">
                         <Grid ColumnDefinitions="*, Auto">
                             <TextBlock x:Name="lblThemesHeader" Text="THEMES" FontSize="11" FontWeight="SemiBold" Foreground="#8B949E" LetterSpacing="1" VerticalAlignment="Center"/>
@@ -44,7 +44,7 @@
                             </StackPanel>
                         </Grid>
 
-                        <WrapPanel x:Name="panThemesWrap" Margin="0,15,0,10" HorizontalAlignment="Center">
+                        <WrapPanel x:Name="panThemesWrap" Margin="0,15,0,0" HorizontalAlignment="Center">
                             <!-- Crimson -->
                             <Button Classes="ThemeColorButton" Cursor="Hand" Click="ThemeSelect_Click" CommandParameter="Crimson" Margin="5,5,5,5" Background="Transparent" Padding="0" BorderThickness="0">
                                 <Border Width="40" Height="40" CornerRadius="20" ClipToBounds="True">
@@ -112,31 +112,26 @@
                                 </Border>
                             </Button>
                         </WrapPanel>
-                        
-                        <Rectangle Height="1" Fill="#2D3748" Margin="-15,5,-15,15"/>
-
-                        <StackPanel Spacing="15" Margin="0,5,0,5">
-                            <!-- Pause Glow Toggle -->
-                            <Grid ColumnDefinitions="*, Auto">
-                                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
-                                    <TextBlock x:Name="lblPauseGlow" Classes="settingTitle" Text="PAUSE BACKGROUND GLOW" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" HorizontalAlignment="Left" TextAlignment="Left" />
-                                    <TextBlock x:Name="lblPauseGlowDesc" Text="Stops the rotation animation to reduce GPU usage." FontSize="10" Foreground="#A0AEC0" TextWrapping="Wrap" HorizontalAlignment="Left" TextAlignment="Left" />
-                                </StackPanel>
-                                <ToggleSwitch Grid.Column="1" x:Name="togPauseGlow" Theme="{DynamicResource FluentToggleSwitchTheme}" OnContent="{x:Null}" OffContent="{x:Null}" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="40" Margin="0,0,10,0" IsCheckedChanged="togPauseGlow_IsCheckedChanged"/>
-                            </Grid>
-                            
-                            <!-- Disable Glow Toggle -->
-                            <Grid ColumnDefinitions="*, Auto">
-                                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
-                                    <TextBlock x:Name="lblDisableGlow" Classes="settingTitle" Text="DISABLE BACKGROUND GLOW" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" HorizontalAlignment="Left" TextAlignment="Left" />
-                                    <TextBlock x:Name="lblDisableGlowDesc" Text="Turns off the background glow completely for maximum performance." FontSize="10" Foreground="#A0AEC0" TextWrapping="Wrap" HorizontalAlignment="Left" TextAlignment="Left" />
-                                </StackPanel>
-                                <ToggleSwitch Grid.Column="1" x:Name="togDisableGlow" Theme="{DynamicResource FluentToggleSwitchTheme}" OnContent="{x:Null}" OffContent="{x:Null}" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="40" Margin="0,0,10,0" IsCheckedChanged="togDisableGlow_IsCheckedChanged"/>
-                            </Grid>
-                        </StackPanel>
-
                     </StackPanel>
                 </Border>
+
+                <!-- ANIMATION OPTIONS -->
+                <Grid ColumnDefinitions="*, *">
+                    <Border Grid.Column="0" Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,5,0">
+                        <Grid ColumnDefinitions="Auto, *, Auto" MinHeight="36">
+                            <PathIcon Grid.Column="0" Data="M6 19h4V5H6v14zm8-14v14h4V5h-4z" Width="14" Height="14" Foreground="#8B949E" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="lblPauseGlow" Grid.Column="1" Classes="settingTitle" Text="PAUSE ANIMATIONS" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                            <ToggleSwitch x:Name="togPauseGlow" Grid.Column="2" Theme="{DynamicResource FluentToggleSwitchTheme}" OnContent="{x:Null}" OffContent="{x:Null}" VerticalAlignment="Center" IsCheckedChanged="togPauseGlow_IsCheckedChanged"/>
+                        </Grid>
+                    </Border>
+                    <Border Grid.Column="1" Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="5,0,0,0">
+                        <Grid ColumnDefinitions="Auto, *, Auto" MinHeight="36">
+                            <PathIcon Grid.Column="0" Data="M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z" Width="14" Height="14" Foreground="#8B949E" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="lblDisableGlow" Grid.Column="1" Classes="settingTitle" Text="DISABLE ANIMATIONS" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                            <ToggleSwitch x:Name="togDisableGlow" Grid.Column="2" Theme="{DynamicResource FluentToggleSwitchTheme}" OnContent="{x:Null}" OffContent="{x:Null}" VerticalAlignment="Center" IsCheckedChanged="togDisableGlow_IsCheckedChanged"/>
+                        </Grid>
+                    </Border>
+                </Grid>
             </StackPanel>
         </ScrollViewer>
     </Grid>

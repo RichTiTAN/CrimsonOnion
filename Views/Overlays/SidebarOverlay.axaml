@@ -1,0 +1,101 @@
+﻿<!--
+  CrimsonOnion - A GUI client that runs multiple Tor instances and load-balances them.
+  Copyright (C) 2026 RichTiTAN
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="460"
+             x:Class="CrimsonOnion.Views.Overlays.SidebarOverlay">
+    <Border x:Name="SidebarBorder" Classes="sidebar" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="15,10,15,15" CornerRadius="12" Background="#99141414" BorderBrush="#2D3748" BorderThickness="1" ClipToBounds="True" PointerEntered="SidebarBorder_PointerEntered" PointerExited="SidebarBorder_PointerExited">
+        <StackPanel VerticalAlignment="Top" Spacing="6" Margin="0,8,0,8">
+            <Button Classes="sidebarControl" Click="SidebarConnection_Click">
+                <Grid ColumnDefinitions="50, *">
+                    <PathIcon Grid.Column="0" Data="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z" Width="22" Height="22" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="lblSidebarConnection" Grid.Column="1" Classes="sidebarText" Text="CONNECTION" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" Margin="5,0,3,0"/>
+                </Grid>
+            </Button>
+
+            <Button x:Name="btnCountries" Classes="sidebarControl" Click="SidebarCountries_Click" >
+                <Grid ColumnDefinitions="50, *">
+                    <PathIcon Grid.Column="0" Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" Width="22" Height="22" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="lblSidebarCountries" Grid.Column="1" Classes="sidebarText" Text="COUNTRIES" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" Margin="5,0,3,0"/>
+                </Grid>
+            </Button>
+
+            <Button x:Name="btnSplitTunnel" Classes="sidebarControl" Click="btnSplitTunnel_Click" >
+                <Grid ColumnDefinitions="50, *">
+                    <PathIcon Grid.Column="0" Data="M15 3l2.3 2.3-2.89 2.87 1.42 1.42L18.7 6.7 21 9V3zM3 9l2.3-2.3 2.87 2.89 1.42-1.42L6.7 5.3 9 3H3zm6 12l-2.3-2.3 2.89-2.87-1.42-1.42L5.3 17.3 3 15v6zm12-6l-2.3 2.3-2.87-2.89-1.42 1.42 2.89 2.87L15 21h6z" Width="20" Height="20" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="lblSidebarSplitTunnel" Grid.Column="1" Classes="sidebarText" Text="SPLIT TUNNEL" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" Margin="5,0,3,0"/>
+                </Grid>
+            </Button>
+
+            <Button x:Name="btnSettings" Classes="sidebarControl" Click="btnSettings_Click">
+                <Grid ColumnDefinitions="50, *">
+                    <PathIcon Grid.Column="0" Data="M19.43 12.98c.04-.32.07-.64.07-.98 0-.34-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65A.488.488 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.5.42h4c.25 0 .46-.18.5-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z" Width="22" Height="22" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="lblSidebarSettings" Grid.Column="1" Classes="sidebarText" Text="SETTINGS" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" Margin="5,0,3,0"/>
+                </Grid>
+            </Button>
+
+            <Button Classes="sidebarControl" Click="SidebarAbout_Click">
+                <Grid ColumnDefinitions="50, *">
+                    <PathIcon Grid.Column="0" Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" Width="22" Height="22" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="lblSidebarAbout" Grid.Column="1" Classes="sidebarText" Text="ABOUT" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" Margin="5,0,3,0"/>
+                </Grid>
+            </Button>
+            <Button x:Name="btnThemes" Classes="sidebarControl" Click="SidebarThemes_Click" Height="40" Padding="0">
+                    <Button.Styles>
+                        <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+                            <Setter Property="Background" Value="Transparent"/>
+                        </Style>
+                    </Button.Styles>
+                    <Panel>
+                        <Border x:Name="rectAllThemes" Opacity="0" CornerRadius="12" ClipToBounds="True">
+                            <Border.Transitions>
+                                <Transitions>
+                                    <DoubleTransition Property="Opacity" Duration="0:0:0.3"/>
+                                </Transitions>
+                            </Border.Transitions>
+                            <Panel Classes="animatedGradient" Background="Transparent" ClipToBounds="True">
+                                <Rectangle Fill="{DynamicResource ThemeAllBrush}" RadiusX="12" RadiusY="12"/>
+                                <Rectangle Classes="rectGradient" Width="500" Height="500" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{DynamicResource ThemeAllBrush}">
+                                    <Rectangle.RenderTransform><RotateTransform Angle="0"/></Rectangle.RenderTransform>
+                                </Rectangle>
+                            </Panel>
+                        </Border>
+                        <Grid ColumnDefinitions="50, *" Margin="0,0,0,0">
+                            <Border x:Name="borderCurrentThemeIcon" Grid.Column="0" Grid.ColumnSpan="2" Height="40" CornerRadius="12" HorizontalAlignment="Stretch" Margin="5,0,5,0" ClipToBounds="True">
+                                <Panel x:Name="panCurrentThemeIcon" Classes="animatedGradient" Background="Transparent" ClipToBounds="True">
+                                    <Panel.Transitions>
+                                        <Transitions>
+                                            <DoubleTransition Property="Opacity" Duration="0:0:0.3"/>
+                                        </Transitions>
+                                    </Panel.Transitions>
+                                    <Rectangle Fill="{DynamicResource ThemeCurrentBrush}" RadiusX="12" RadiusY="12"/>
+                                    <Rectangle Classes="rectGradient" Width="500" Height="500" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{DynamicResource ThemeCurrentBrush}">
+                                        <Rectangle.RenderTransform><RotateTransform Angle="0"/></Rectangle.RenderTransform>
+                                    </Rectangle>
+                                </Panel>
+                            </Border>
+                        </Grid>
+                    </Panel>
+                </Button>
+
+        </StackPanel>
+    </Border>
+</UserControl>

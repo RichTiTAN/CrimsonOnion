@@ -1,0 +1,92 @@
+﻿<!--
+  CrimsonOnion - A GUI client that runs multiple Tor instances and load-balances them.
+  Copyright (C) 2026 RichTiTAN
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="460"
+             x:Class="CrimsonOnion.Views.Overlays.ExpertOverlay">
+    <Grid RowDefinitions="Auto,Auto,Auto">
+        <TextBlock x:Name="lblExpertTitle" Grid.Row="0" Text="EXPERT ROUTING CONFIGURATION" FontSize="16" FontWeight="Bold" Foreground="#E2E8F0" Margin="0,0,0,20"/>
+
+        <Grid Grid.Row="1" ColumnDefinitions="Auto, *, Auto, *" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" Margin="0">
+                <TextBlock x:Name="lblHardwareAccel" Grid.Row="0" Grid.Column="0" Text="Hardware Accel:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
+                <ComboBox x:Name="cmbHW" Grid.Row="0" Grid.Column="1" Background="#0A0C0F" Foreground="#E2E8F0" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontSize="11" Margin="0,0,20,10" HorizontalAlignment="Stretch">
+                    <ComboBoxItem Content="Disabled"/><ComboBoxItem Content="Enabled"/>
+                </ComboBox>
+
+                <TextBlock x:Name="lblFascistFirewall" Grid.Row="0" Grid.Column="2" Text="Fascist Firewall:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
+                <ComboBox x:Name="cmbFF" Grid.Row="0" Grid.Column="3" Background="#0A0C0F" Foreground="#E2E8F0" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontSize="11" Margin="0,0,0,10" HorizontalAlignment="Stretch">
+                    <ComboBoxItem Content="Disabled"/><ComboBoxItem Content="Enabled"/>
+                </ComboBox>
+
+                <TextBlock x:Name="lblStrictNodes" Grid.Row="1" Grid.Column="0" Text="Strict Nodes:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
+                <ComboBox x:Name="cmbSN" Grid.Row="1" Grid.Column="1" Background="#0A0C0F" Foreground="#E2E8F0" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontSize="11" Margin="0,0,20,10" HorizontalAlignment="Stretch">
+                    <ComboBoxItem Content="Disabled"/><ComboBoxItem Content="Enabled"/>
+                </ComboBox>
+
+                <TextBlock Grid.Row="1" Grid.Column="2" Text="CircuitBuildTimeout:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
+                <TextBox x:Name="txtCBT" Grid.Row="1" Grid.Column="3" Background="#0A0C0F" Foreground="{DynamicResource ThemeGlowBrush}" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontFamily="Consolas" FontSize="11" Margin="0,0,0,10"/>
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="KeepalivePeriod:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
+                <TextBox x:Name="txtKP" Grid.Row="2" Grid.Column="1" Background="#0A0C0F" Foreground="{DynamicResource ThemeGlowBrush}" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontFamily="Consolas" FontSize="11" Margin="0,0,20,10"/>
+
+                <TextBlock Grid.Row="2" Grid.Column="2" Text="NewCircuitPeriod:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
+                <TextBox x:Name="txtNCP" Grid.Row="2" Grid.Column="3" Background="#0A0C0F" Foreground="{DynamicResource ThemeGlowBrush}" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontFamily="Consolas" FontSize="11" Margin="0,0,0,10"/>
+
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="MaxCircuitDirtiness:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
+                <TextBox x:Name="txtMCD" Grid.Row="3" Grid.Column="1" Background="#0A0C0F" Foreground="{DynamicResource ThemeGlowBrush}" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontFamily="Consolas" FontSize="11" Margin="0,0,20,10"/>
+
+                <TextBlock Grid.Row="3" Grid.Column="2" Text="NumEntryGuards:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
+                <TextBox x:Name="txtNEG" Grid.Row="3" Grid.Column="3" Background="#0A0C0F" Foreground="{DynamicResource ThemeGlowBrush}" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontFamily="Consolas" FontSize="11" Margin="0,0,0,10"/>
+
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="EntryNodes {us}:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
+                <TextBox x:Name="txtEN" Grid.Row="4" Grid.Column="1" Background="#0A0C0F" Foreground="{DynamicResource ThemeGlowBrush}" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontFamily="Consolas" FontSize="11" Margin="0,0,20,10"/>
+
+                <TextBlock Grid.Row="4" Grid.Column="2" Text="ExitNodes {uk},{de}:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
+                <TextBox x:Name="txtExit" Grid.Row="4" Grid.Column="3" Background="#0A0C0F" Foreground="{DynamicResource ThemeGlowBrush}" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontFamily="Consolas" FontSize="11" Margin="0,0,0,10"/>
+
+                <TextBlock Grid.Row="5" Grid.Column="0" Text="ExcludeNodes:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
+                <TextBox x:Name="txtExNodes" Grid.Row="5" Grid.Column="1" Background="#0A0C0F" Foreground="{DynamicResource ThemeGlowBrush}" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontFamily="Consolas" FontSize="11" Margin="0,0,20,10"/>
+
+                <TextBlock Grid.Row="5" Grid.Column="2" Text="ExcludeExitNodes:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
+                <TextBox x:Name="txtExExit" Grid.Row="5" Grid.Column="3" Background="#0A0C0F" Foreground="{DynamicResource ThemeGlowBrush}" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontFamily="Consolas" FontSize="11" Margin="0,0,0,10"/>
+
+                <TextBlock x:Name="lblCustomTorrc" Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="4" Text="Custom Torrc Lines (Advanced - One per line):" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,5,0,10"/>
+                <TextBox x:Name="txtRaw" Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="4" Height="60" AcceptsReturn="True" TextWrapping="Wrap" Background="#0A0C0F" Foreground="{DynamicResource ThemeGlowBrush}" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" FontFamily="Consolas" FontSize="11" ScrollViewer.VerticalScrollBarVisibility="Auto" Margin="0"/>
+            </Grid>
+          <Grid Grid.Row="2" ColumnDefinitions="*,1,*" Margin="0,10,0,0" HorizontalAlignment="Right" Width="150">
+            <Button x:Name="btnExpertSave" Click="btnExpertSave_Click" Grid.Column="0" Content="SAVE" FontSize="11" FontWeight="Bold" Foreground="#A0AEC0" Background="Transparent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalAlignment="Stretch" Cursor="Hand" BorderThickness="0" CornerRadius="0" Padding="0,8">
+                <Button.Styles>
+                    <Style Selector="Button:pointerover /template/ ContentPresenter">
+                        <Setter Property="Background" Value="#2AFFFFFF"/>
+                    </Style>
+                </Button.Styles>
+            </Button>
+            <Border Grid.Column="1" Background="#2D3748"/>
+            <Button x:Name="btnExpertCancel" Click="btnExpertCancel_Click" Grid.Column="2" Content="CANCEL" FontSize="11" FontWeight="Bold" Foreground="#A0AEC0" Background="Transparent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalAlignment="Stretch" Cursor="Hand" BorderThickness="0" CornerRadius="0" Padding="0,8">
+                <Button.Styles>
+                    <Style Selector="Button:pointerover /template/ ContentPresenter">
+                        <Setter Property="Background" Value="#2AFFFFFF"/>
+                    </Style>
+                </Button.Styles>
+            </Button>
+        </Grid>
+    </Grid>
+</UserControl>

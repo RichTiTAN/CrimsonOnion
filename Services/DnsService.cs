@@ -16,9 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -71,21 +69,6 @@ namespace CrimsonOnion.Services
             catch
             {
                 return Array.Empty<string>();
-            }
-        }
-
-        public static bool IsDhcpDns(NetworkInterface nic)
-        {
-            try
-            {
-                var props = nic.GetIPProperties().GetIPv4Properties();
-                return props?.IsDhcpEnabled == true &&
-                       !nic.GetIPProperties().DnsAddresses
-                           .Any(a => a.AddressFamily == AddressFamily.InterNetwork);
-            }
-            catch
-            {
-                return false;
             }
         }
 
@@ -151,3 +134,4 @@ namespace CrimsonOnion.Services
         }
     }
 }
+

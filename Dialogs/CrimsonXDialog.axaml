@@ -26,23 +26,23 @@
         CanResize="False" ShowInTaskbar="False" WindowStartupLocation="CenterOwner"
         Background="#1E1E1E" Foreground="White"
         FontFamily="Segoe UI, Tahoma, sans-serif">
-    
+
     <Grid RowDefinitions="Auto,*,Auto" Margin="25">
-        
+
         <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="0,0,0,15">
             <Image Source="avares://CrimsonOnion/Assets/CrimsonX.ico" Width="24" Height="24" RenderOptions.BitmapInterpolationMode="HighQuality"/>
             <TextBlock Text="{Binding DialogHeader}" FontWeight="Bold" FontSize="18" Foreground="#FF4500" VerticalAlignment="Center"/>
         </StackPanel>
-        
+
         <TextBlock Grid.Row="1" Text="{Binding DialogMessage}" TextWrapping="Wrap" FontSize="14" Margin="0,0,0,25" LineHeight="22" />
-        
+
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
             <Button Content="{Binding BtnGithub}" Command="{Binding ButtonCommand}" CommandParameter="Primary" 
                     Background="#FF4500" Foreground="White" FontWeight="Bold" Padding="12,6" FontSize="11" Cursor="Hand" />
-            
+
             <Button Content="{Binding BtnClose}" Command="{Binding ButtonCommand}" CommandParameter="Cancel" 
                     Background="Transparent" Foreground="#AAAAAA" Padding="12,6" FontSize="11" Cursor="Hand" />
         </StackPanel>
-        
+
     </Grid>
 </Window>

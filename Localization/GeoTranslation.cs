@@ -16,7 +16,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System.Collections.Generic;
 
 namespace CrimsonOnion.Localization
 {
@@ -127,7 +126,7 @@ namespace CrimsonOnion.Localization
             ["OM"] = "عمان",
             ["YE"] = "یمن"
         };
-        
+
         public static string GetCountryFa(string code, string fallback)
         {
             if (string.IsNullOrWhiteSpace(code)) return fallback;
@@ -141,3 +140,4 @@ namespace CrimsonOnion.Localization
         }
     }
 }
+

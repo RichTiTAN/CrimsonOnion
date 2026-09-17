@@ -35,7 +35,7 @@
         <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="Transparent"/>
         <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="Transparent"/>
         <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="Transparent"/>
-        
+
         <SolidColorBrush x:Key="SliderThumbBackground" Color="#B82E42"/>
         <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="#D13A51"/>
         <SolidColorBrush x:Key="SliderThumbBackgroundPressed" Color="#932535"/>

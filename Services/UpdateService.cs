@@ -16,13 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 using Avalonia.Threading;
 using Newtonsoft.Json.Linq;
 
@@ -30,8 +24,8 @@ namespace CrimsonOnion.Services
 {
     public static class UpdateService
     {
-        public const string AppVersion = "2.3.2";
-        
+        public const string AppVersion = "2.4.0";
+
         private static readonly HttpClient _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
 
         public static async Task<(string? remoteVer, string? remoteMin)> CheckForUpdatesAsync(CancellationToken token = default)
@@ -39,7 +33,7 @@ namespace CrimsonOnion.Services
             var url = $"https://raw.githubusercontent.com/RichTiTAN/CrimsonOnion/main/version.json?t={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
             var response = await _httpClient.GetAsync(url, token).ConfigureAwait(false);
             response.EnsureSuccessStatusCode();
-            
+
             var raw = await response.Content.ReadAsStringAsync(token).ConfigureAwait(false);
             var json = JObject.Parse(raw);
             var remoteVer = json["version"]?.ToString() ?? "0.0.0";
@@ -49,7 +43,7 @@ namespace CrimsonOnion.Services
             {
                 return (remoteVer, remoteMin);
             }
-            
+
             return (null, null);
         }
 
@@ -58,7 +52,7 @@ namespace CrimsonOnion.Services
             var zipUrl = "https://github.com/RichTiTAN/CrimsonOnion/releases/latest/download/CrimsonOnion.zip";
             var zipPath = Path.Combine(baseDir, "update_temp.zip");
             var extPath = Path.Combine(baseDir, "update_extracted");
-            
+
             if (Directory.Exists(extPath)) Directory.Delete(extPath, true);
 
             Dispatcher.UIThread.Post(() => progressCallback($"DOWNLOADING UPDATE... 0% (CLICK TO CANCEL)"));
@@ -67,9 +61,9 @@ namespace CrimsonOnion.Services
             {
                 using var dlResponse = await _httpClient.GetAsync(zipUrl, HttpCompletionOption.ResponseHeadersRead, token).ConfigureAwait(false);
                 dlResponse.EnsureSuccessStatusCode();
-                
+
                 var total = dlResponse.Content.Headers.ContentLength ?? -1L;
-                
+
                 using (var stream = await dlResponse.Content.ReadAsStreamAsync(token).ConfigureAwait(false))
                 using (var fs = File.Create(zipPath))
                 {
@@ -77,7 +71,7 @@ namespace CrimsonOnion.Services
                     long downloaded = 0;
                     int read;
                     int lastPct = -1;
-                    
+
                     while ((read = await stream.ReadAsync(buffer, token).ConfigureAwait(false)) > 0)
                     {
                         await fs.WriteAsync(buffer.AsMemory(0, read), token).ConfigureAwait(false);
@@ -94,9 +88,8 @@ namespace CrimsonOnion.Services
                     }
                 }
 
-
                 Dispatcher.UIThread.Post(() => progressCallback("EXTRACTING UPDATE..."));
-                
+
                 await Task.Run(() => {
                     token.ThrowIfCancellationRequested();
                     System.IO.Compression.ZipFile.ExtractToDirectory(zipPath, extPath, true);
@@ -107,7 +100,7 @@ namespace CrimsonOnion.Services
 
                 var sourceDir = Path.GetDirectoryName(exeFile)!;
                 var currentExe = Process.GetCurrentProcess().MainModule?.FileName ?? "";
-                
+
                 var pid = Process.GetCurrentProcess().Id;
                 var batPath = Path.Combine(baseDir, "update_install.bat");
                 var batContent = $@"
@@ -138,3 +131,4 @@ del ""%~f0""
         }
     }
 }
+

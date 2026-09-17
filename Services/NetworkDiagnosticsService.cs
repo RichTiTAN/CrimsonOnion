@@ -16,12 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System;
-using System.Linq;
-using System.Net.Http;
 using System.Net.NetworkInformation;
-using System.Threading;
-using System.Threading.Tasks;
 using CrimsonOnion.Models;
 
 namespace CrimsonOnion.Services;
@@ -48,14 +43,12 @@ public static class NetworkDiagnosticsService
         Timeout = TimeSpan.FromSeconds(30)
     };
 
-    // One plain client for the xray gRPC stats endpoint (no proxy needed).
     private static readonly HttpClient _grpcClient = new HttpClient(new HttpClientHandler())
     {
         DefaultRequestVersion  = new Version(2, 0),
         DefaultVersionPolicy   = HttpVersionPolicy.RequestVersionExact
     };
 
-    // Pre-built body for the xray QueryStats gRPC call.
     private static readonly byte[] _grpcStatsQueryBody =
         { 0x00, 0x00, 0x00, 0x00, 0x02, 0x0A, 0x00 };
 
@@ -242,3 +235,4 @@ public static class NetworkDiagnosticsService
         return result;
     }
 }
+

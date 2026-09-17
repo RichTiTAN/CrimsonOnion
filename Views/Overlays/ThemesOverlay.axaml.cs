@@ -35,10 +35,10 @@ namespace CrimsonOnion.Views.Overlays
         {
             _main = main;
             _isInitializing = true;
-            
+
             var togPauseGlow = this.FindControl<ToggleSwitch>("togPauseGlow");
             if (togPauseGlow != null) togPauseGlow.IsChecked = _main.Cfg.PauseGlow;
-            
+
             var togDisableGlow = this.FindControl<ToggleSwitch>("togDisableGlow");
             if (togDisableGlow != null) togDisableGlow.IsChecked = _main.Cfg.DisableGlow;
 

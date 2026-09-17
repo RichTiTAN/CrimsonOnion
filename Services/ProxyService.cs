@@ -57,12 +57,6 @@ namespace CrimsonOnion.Services
             });
         }
 
-
-        public static void DisableSystemProxy()
-        {
-            SetSystemProxy(false);
-        }
-
         public static void RefreshProxy()
         {
             try

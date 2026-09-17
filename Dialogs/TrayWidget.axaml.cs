@@ -16,12 +16,10 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.Media;
-using Avalonia;
 using CrimsonOnion.Localization;
 
 namespace CrimsonOnion.Dialogs
@@ -41,7 +39,7 @@ namespace CrimsonOnion.Dialogs
         {
             InitializeComponent();
             _main = main;
-            
+
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             _timer.Tick += (s, e) => UpdateUI();
             _timer.Start();
@@ -126,3 +124,4 @@ namespace CrimsonOnion.Dialogs
         }
     }
 }
+

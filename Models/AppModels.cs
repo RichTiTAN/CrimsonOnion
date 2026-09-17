@@ -22,7 +22,6 @@ namespace CrimsonOnion.Models
 {
     public class AppConfig
     {
-
         [JsonIgnore] public string BaseDir { get; set; } = "";
         [JsonIgnore] public string CfgFile { get; set; } = "";
         [JsonIgnore] public string XrayDir { get; set; } = "";
@@ -36,11 +35,11 @@ namespace CrimsonOnion.Models
         public double WindowTop { get; set; } = double.NaN;
         public string LastConfig { get; set; } = "Optimized";
         [JsonProperty("SelectedBridge")]
-        public string LastBridge { get; set; } = "Direct";
+        public string LastBridge { get; set; } = BridgeNames.Direct;
         [JsonProperty("InstanceCount")]
         public string LastCount { get; set; } = "6";
         [JsonProperty("XrayMode")]
-        public string LastXrayMode { get; set; } = "Proxy Mode";
+        public string LastXrayMode { get; set; } = XrayModes.ProxyMode;
         public string SplitTunnelMode { get; set; } = "DISABLED"; 
         [JsonProperty("ManualSplit")]
         public string LastManualSplit { get; set; } = "";
@@ -53,7 +52,7 @@ namespace CrimsonOnion.Models
         public string DirectUdpAdapterName { get; set; } = "";
         public string DirectUdpAdapterIp { get; set; } = "";
         public bool ShowAdvancedRouting { get; set; } = false;
-        
+
         public bool EnableSnowflakeAmpCache { get; set; } = false;
         public bool EnableConjureAmpCache { get; set; } = false;
         public bool EnableConjureDnsRegistration { get; set; } = false;
@@ -103,7 +102,7 @@ namespace CrimsonOnion.Models
         public string ExpertExcludeNodes { get; set; } = "";
         public string ExpertExcludeExitNodes { get; set; } = "";
         public string ExpertCustomTorrc { get; set; } = "";
-        public string HaProxyBalancePolicy { get; set; } = "leastping";
+        public string XrayBalancePolicy { get; set; } = "leastping";
     }
 
     public class AppState
@@ -117,7 +116,7 @@ namespace CrimsonOnion.Models
         public bool IsLogsOpen { get; set; } = false;
         public bool IgnoreComboChange { get; set; } = false;
         public bool AppInitialized { get; set; } = false;
-        public string PreviousBridge { get; set; } = "Direct";
+        public string PreviousBridge { get; set; } = BridgeNames.Direct;
         public string PreviousConfig { get; set; } = "Optimized";
         public string LanIp { get; set; } = "UNKNOWN";
         public DateTime? SessionStartTime { get; set; } = null;
@@ -126,6 +125,26 @@ namespace CrimsonOnion.Models
         public double[] SpeedSamples { get; set; } = new double[5];
         public string TempProxyType { get; set; } = "SOCKS5";
         public int[] TorPcts { get; set; } = System.Linq.Enumerable.Repeat(-1, 32).ToArray();
+    }
+    public static class BridgeNames
+    {
+        public const string Direct    = "Direct";
+        public const string Obfs4     = "obfs4";
+        public const string Snowflake = "snowflake";
+        public const string MeekLite  = "meek_lite";
+        public const string Conjure   = "conjure";
+        public const string Custom    = "Custom";
+    }
+    public static class XrayModes
+    {
+        public const string VpnMode    = "VPN Mode";
+        public const string ProxyMode  = "Proxy Mode";
+        public const string ClearProxy = "Clear Proxy";
+    }
+    public static class MoatTransports
+    {
+        public const string WebTunnel = "webtunnel";
+        public const string Obfs4     = "obfs4";
     }
 
     public class BridgeEntry

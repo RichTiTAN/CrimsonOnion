@@ -66,10 +66,10 @@
                                             </Grid>
                                         </Border>
                                     </Grid>
-                                    
+
                                     <TextBlock x:Name="lblSectionConnection" Text="CONNECTION" FontSize="11" FontWeight="SemiBold" Foreground="#8B949E" LetterSpacing="1" Margin="5,15,0,0"/>
                                     <StackPanel Spacing="8">
-                                        
+
                                         <Border Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="12,8">
                                             <Grid ColumnDefinitions="Auto, *, Auto" MinHeight="36">
                                                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
@@ -115,10 +115,10 @@
                                                 </Border.Transitions>
                                                 <StackPanel Margin="15,15,15,15" Spacing="10">
                                                     <TextBox x:Name="txtXrayJson" TextChanged="txtXrayJson_TextChanged" Height="120" AcceptsReturn="True" TextWrapping="Wrap" Background="#1A1C20" Foreground="{DynamicResource ThemeGlowBrush}" BorderBrush="#2D3748" BorderThickness="1" FontFamily="Consolas" FontSize="11" CornerRadius="4" VerticalAlignment="Stretch"/>
-                                                    
+
                                                     <Grid ColumnDefinitions="Auto, *">
                                                         <Button Grid.Column="0" x:Name="btnXrayImport" Click="btnXrayImport_Click" Content="IMPORT .JSON" Classes="optBtn" FontSize="10" FontWeight="Bold" Background="#1AFFFFFF" Padding="12,6" VerticalAlignment="Center"/>
-                                                        
+
                                                         <Border Grid.Column="1" Background="#0A0C0F" CornerRadius="3" BorderBrush="#2D3748" BorderThickness="1" HorizontalAlignment="Right" Width="140" Margin="0">
                                                             <Grid ColumnDefinitions="*, 1, *">
                                                                 <Button x:Name="btnXraySave" Click="btnXraySave_Click" Grid.Column="0" Content="SAVE" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0" Background="Transparent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalAlignment="Stretch" Cursor="Hand" BorderThickness="0" CornerRadius="3,0,0,3">
@@ -188,14 +188,14 @@
                                                             <TextBox x:Name="txtOutboundPort" Width="80" MinHeight="26" Height="26" VerticalContentAlignment="Center" Background="#1A1C20" Foreground="{DynamicResource ThemeGlowBrush}" BorderBrush="#2D3748" BorderThickness="1" FontFamily="Consolas" FontSize="11" CornerRadius="4"/>
                                                         </StackPanel>
                                                     </Grid>
-                                                    
+
                                                     <Grid ColumnDefinitions="Auto, *">
                                                         <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                                             <TextBlock x:Name="lblOutboundAuth" Text="AUTHENTICATION" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0" VerticalAlignment="Center"/>
                                                         </StackPanel>
                                                         <ToggleSwitch Grid.Column="1" x:Name="togOutboundAuth" OnContent="{x:Null}" OffContent="{x:Null}" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="40" IsCheckedChanged="togOutboundAuth_IsCheckedChanged"/>
                                                     </Grid>
-                                                    
+
                                                     <Border x:Name="panOutboundAuth" MaxHeight="0" Opacity="0" ClipToBounds="True">
                                                         <Border.Transitions>
                                                             <Transitions>
@@ -445,7 +445,7 @@
                                             </Border>
                                         </StackPanel>
                                     </StackPanel>
-                                    
+
                                     <TextBlock x:Name="lblSectionSystem" Text="SYSTEM" FontSize="11" FontWeight="SemiBold" Foreground="#8B949E" LetterSpacing="1" Margin="5,15,0,0"/>
                                     <StackPanel Spacing="8">
                                         <Border Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="12,8">
@@ -466,7 +466,7 @@
                                             <Grid ColumnDefinitions="Auto, *, Auto" MinHeight="36">
                                                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                                     <PathIcon Data="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8h16v10zm-2-1h-6v-2h6v2zM7.5 17l-1.41-1.41L8.67 13l-2.59-2.59L7.5 9l4 4-4 4z" Width="14" Height="14" Foreground="#8B949E"/>
-                                                    <TextBlock x:Name="lblDebugMode" Classes="settingTitle" Text="DEBUG MODE" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" VerticalAlignment="Center" ToolTip.Tip="Show console windows for Tor, Xray, HAProxy, and sing-box instead of hiding them. Helpful for reading live logs when something fails to connect. Does not change routing or securityÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Âonly visibility."/>
+                                                    <TextBlock x:Name="lblDebugMode" Classes="settingTitle" Text="DEBUG MODE" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" VerticalAlignment="Center" ToolTip.Tip="Captures live logs from Tor, Xray (frontend &amp; backend), dnstt-client, and sing-box. Helpful for diagnosing issues when something fails to connect. Does not change routing or security."/>
                                                 </StackPanel>
                                                 <ToggleSwitch x:Name="btnDebugTog" Grid.Column="2" IsCheckedChanged="SettingTog_CheckedChanged" OnContent="{x:Null}" OffContent="{x:Null}" VerticalAlignment="Center"/>
                                             </Grid>
@@ -494,7 +494,7 @@
                                     </StackPanel>
                                 </StackPanel>
                             </ScrollViewer>
-                            
+
                             <Button x:Name="btnSettingsClose" Background="Transparent" BorderThickness="0" Cursor="Hand" Click="btnSettingsClose_Click" HorizontalAlignment="Right" VerticalAlignment="Top" Padding="5" Margin="0,8,8,0">
                                 <Button.Styles>
                                     <Style Selector="Button:pointerover /template/ ContentPresenter">
@@ -508,6 +508,5 @@
                             </Button>
                         </Grid>
                     </Border>
-
 
 </UserControl>

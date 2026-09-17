@@ -29,38 +29,38 @@
         WindowDecorations="None" WindowStartupLocation="CenterScreen"
         Background="Transparent" TransparencyLevelHint="Transparent" 
         Foreground="#E2E8F0" FontFamily="Segoe UI" ToolTip.ShowDelay="1500" ToolTip.BetweenShowDelay="0">
-        
+
     <Window.Resources>
         <LinearGradientBrush x:Key="ThemeCrimsonBrush" StartPoint="0%,0%" EndPoint="100%,100%">
             <GradientStop Color="#4A0811" Offset="0"/>
             <GradientStop Color="#B82E42" Offset="0.5"/>
             <GradientStop Color="#FF6B83" Offset="1"/>
         </LinearGradientBrush>
-        
+
         <LinearGradientBrush x:Key="ThemeBlueBrush" StartPoint="0%,0%" EndPoint="100%,100%">
             <GradientStop Color="#1A365D" Offset="0"/>
             <GradientStop Color="#3182CE" Offset="0.5"/>
             <GradientStop Color="#90CDF4" Offset="1"/>
         </LinearGradientBrush>
-        
+
         <LinearGradientBrush x:Key="ThemePurpleBrush" StartPoint="0%,0%" EndPoint="100%,100%">
             <GradientStop Color="#44337A" Offset="0"/>
             <GradientStop Color="#805AD5" Offset="0.5"/>
             <GradientStop Color="#D6BCFA" Offset="1"/>
         </LinearGradientBrush>
-        
+
         <LinearGradientBrush x:Key="ThemeGreenBrush" StartPoint="0%,0%" EndPoint="100%,100%">
             <GradientStop Color="#1C4532" Offset="0"/>
             <GradientStop Color="#38A169" Offset="0.5"/>
             <GradientStop Color="#9AE6B4" Offset="1"/>
         </LinearGradientBrush>
-        
+
         <LinearGradientBrush x:Key="ThemePinkBrush" StartPoint="0%,0%" EndPoint="100%,100%">
             <GradientStop Color="#702459" Offset="0"/>
             <GradientStop Color="#D53F8C" Offset="0.5"/>
             <GradientStop Color="#FBB6CE" Offset="1"/>
         </LinearGradientBrush>
-        
+
         <LinearGradientBrush x:Key="ThemeYellowBrush" StartPoint="0%,0%" EndPoint="100%,100%">
             <GradientStop Color="#744210" Offset="0"/>
             <GradientStop Color="#D69E2E" Offset="0.5"/>
@@ -96,7 +96,7 @@
         <Style Selector="Button:pointerover Rectangle.rectGradient">
             <Setter Property="Opacity" Value="1"/>
         </Style>
-        
+
         <Style Selector="Rectangle.solidHover">
             <Setter Property="Opacity" Value="0"/>
             <Setter Property="Transitions">
@@ -192,7 +192,7 @@
         <Style Selector="Border.sidebar:pointerover">
             <Setter Property="Width" Value="175"/>
         </Style>
-        
+
         <Style Selector="Border.sidebar TextBlock.sidebarText">
             <Setter Property="Opacity" Value="0"/>
             <Setter Property="Transitions">
@@ -204,8 +204,6 @@
         <Style Selector="Border.sidebar:pointerover TextBlock.sidebarText">
             <Setter Property="Opacity" Value="1"/>
         </Style>
-
-
 
         <Style Selector="TextBlock.settingTitle">
             <Setter Property="Foreground" Value="#8B949E"/>
@@ -263,6 +261,17 @@
             <Setter Property="Foreground" Value="#FFFFFF"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
+        <Style Selector="TextBlock.statHoverText">
+            <Setter Property="Foreground" Value="#8B949E"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Foreground" Duration="0:0:0.2"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="TextBlock.statHoverText:pointerover">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+        </Style>
 
         <Style Selector="Button.graphHover /template/ ContentPresenter#PART_ContentPresenter">
             <Setter Property="Background" Value="Transparent"/>
@@ -296,7 +305,7 @@
                             <GradientStop Color="#00FFFFFF" Offset="1"/>
                         </RadialGradientBrush>
                     </Ellipse.OpacityMask>
-                    
+
                     <Ellipse.RenderTransform>
                         <TranslateTransform X="0" Y="0" />
                     </Ellipse.RenderTransform>
@@ -304,9 +313,9 @@
             </Canvas>
 
             <Grid RowDefinitions="45, *">
-                
+
                   <Grid Grid.Row="0" Background="#110A0C0F" PointerPressed="TitleBar_PointerPressed">
-                      
+
                       <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="15,0,0,0" IsHitTestVisible="False">
                           <Image Source="avares://CrimsonOnion/Assets/icon.ico" Width="20" Height="20" RenderOptions.BitmapInterpolationMode="HighQuality"/>
                           <TextBlock Text="CrimsonOnion" VerticalAlignment="Center" Margin="10,0,0,0" FontSize="16" FontFamily="Segoe UI" FontWeight="SemiBold" Foreground="#E2E8F0"/>
@@ -316,7 +325,7 @@
                               HorizontalAlignment="Center" VerticalAlignment="Center"
                               Background="Transparent" Foreground="{DynamicResource ThemeGlowBrush}" FontWeight="Bold" FontSize="12"
                               Cursor="Hand" BorderThickness="0" Click="BtnTitleUpdate_Click"/>
-  
+
                       <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
                           <Button Classes="windowControl" Click="BtnCrimsonXPromo_Click" ToolTip.Tip="Discover CrimsonX">
                               <Image Source="avares://CrimsonOnion/Assets/CrimsonX.ico" Width="20" Height="20" RenderOptions.BitmapInterpolationMode="HighQuality"/>
@@ -327,87 +336,12 @@
                 </Grid>
 
                 <Grid Grid.Row="1" ColumnDefinitions="Auto, *">
-                    
-                    <Border x:Name="SidebarBorder" Grid.Column="0" Classes="sidebar" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="15,10,15,15" CornerRadius="12" Background="#99141414" BorderBrush="#2D3748" BorderThickness="1" ClipToBounds="True" PointerEntered="SidebarBorder_PointerEntered" PointerExited="SidebarBorder_PointerExited" ZIndex="500">
-                        <StackPanel VerticalAlignment="Top" Spacing="6" Margin="0,8,0,8">
-                            <Button Classes="sidebarControl" Click="SidebarConnection_Click">
-                                <Grid ColumnDefinitions="50, *">
-                                    <PathIcon Grid.Column="0" Data="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z" Width="22" Height="22" HorizontalAlignment="Center"/>
-                                    <TextBlock x:Name="lblSidebarConnection" Grid.Column="1" Classes="sidebarText" Text="CONNECTION" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" Margin="5,0,3,0"/>
-                                </Grid>
-                            </Button>
-                            
-                            <Button x:Name="btnCountries" Classes="sidebarControl" Click="SidebarCountries_Click" >
-                                <Grid ColumnDefinitions="50, *">
-                                    <PathIcon Grid.Column="0" Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" Width="22" Height="22" HorizontalAlignment="Center"/>
-                                    <TextBlock x:Name="lblSidebarCountries" Grid.Column="1" Classes="sidebarText" Text="COUNTRIES" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" Margin="5,0,3,0"/>
-                                </Grid>
-                            </Button>
 
-                            <Button x:Name="btnSplitTunnel" Classes="sidebarControl" Click="btnSplitTunnel_Click" >
-                                <Grid ColumnDefinitions="50, *">
-                                    <PathIcon Grid.Column="0" Data="M15 3l2.3 2.3-2.89 2.87 1.42 1.42L18.7 6.7 21 9V3zM3 9l2.3-2.3 2.87 2.89 1.42-1.42L6.7 5.3 9 3H3zm6 12l-2.3-2.3 2.89-2.87-1.42-1.42L5.3 17.3 3 15v6zm12-6l-2.3 2.3-2.87-2.89-1.42 1.42 2.89 2.87L15 21h6z" Width="20" Height="20" HorizontalAlignment="Center"/>
-                                    <TextBlock x:Name="lblSidebarSplitTunnel" Grid.Column="1" Classes="sidebarText" Text="SPLIT TUNNEL" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" Margin="5,0,3,0"/>
-                                </Grid>
-                            </Button>
+                    <overlays:SidebarOverlay x:Name="ucSidebar" ZIndex="500"/>
 
-                            <Button x:Name="btnSettings" Classes="sidebarControl" Click="btnSettings_Click">
-                                <Grid ColumnDefinitions="50, *">
-                                    <PathIcon Grid.Column="0" Data="M19.43 12.98c.04-.32.07-.64.07-.98 0-.34-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65A.488.488 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.5.42h4c.25 0 .46-.18.5-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z" Width="22" Height="22" HorizontalAlignment="Center"/>
-                                    <TextBlock x:Name="lblSidebarSettings" Grid.Column="1" Classes="sidebarText" Text="SETTINGS" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" Margin="5,0,3,0"/>
-                                </Grid>
-                            </Button>
-
-                            <Button Classes="sidebarControl" Click="SidebarAbout_Click">
-                                <Grid ColumnDefinitions="50, *">
-                                    <PathIcon Grid.Column="0" Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" Width="22" Height="22" HorizontalAlignment="Center"/>
-                                    <TextBlock x:Name="lblSidebarAbout" Grid.Column="1" Classes="sidebarText" Text="ABOUT" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" Margin="5,0,3,0"/>
-                                </Grid>
-                            </Button>
-                            <Button x:Name="btnThemes" Classes="sidebarControl" Click="SidebarThemes_Click" Height="40" Padding="0">
-                                    <Button.Styles>
-                                        <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-                                            <Setter Property="Background" Value="Transparent"/>
-                                        </Style>
-                                    </Button.Styles>
-                                    <Panel>
-                                        <Border x:Name="rectAllThemes" Opacity="0" CornerRadius="12" ClipToBounds="True">
-                                            <Border.Transitions>
-                                                <Transitions>
-                                                    <DoubleTransition Property="Opacity" Duration="0:0:0.3"/>
-                                                </Transitions>
-                                            </Border.Transitions>
-                                            <Panel Classes="animatedGradient" Background="Transparent" ClipToBounds="True">
-                                                <Rectangle Fill="{DynamicResource ThemeAllBrush}" RadiusX="12" RadiusY="12"/>
-                                                <Rectangle Classes="rectGradient" Width="500" Height="500" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{DynamicResource ThemeAllBrush}">
-                                                    <Rectangle.RenderTransform><RotateTransform Angle="0"/></Rectangle.RenderTransform>
-                                                </Rectangle>
-                                            </Panel>
-                                        </Border>
-                                        <Grid ColumnDefinitions="50, *" Margin="0,0,0,0">
-                                            <Border x:Name="borderCurrentThemeIcon" Grid.Column="0" Grid.ColumnSpan="2" Height="40" CornerRadius="12" HorizontalAlignment="Stretch" Margin="5,0,5,0" ClipToBounds="True">
-                                                <Panel x:Name="panCurrentThemeIcon" Classes="animatedGradient" Background="Transparent" ClipToBounds="True">
-                                                    <Panel.Transitions>
-                                                        <Transitions>
-                                                            <DoubleTransition Property="Opacity" Duration="0:0:0.3"/>
-                                                        </Transitions>
-                                                    </Panel.Transitions>
-                                                    <Rectangle Fill="{DynamicResource ThemeCurrentBrush}" RadiusX="12" RadiusY="12"/>
-                                                    <Rectangle Classes="rectGradient" Width="500" Height="500" HorizontalAlignment="Center" VerticalAlignment="Center" Fill="{DynamicResource ThemeCurrentBrush}">
-                                                        <Rectangle.RenderTransform><RotateTransform Angle="0"/></Rectangle.RenderTransform>
-                                                    </Rectangle>
-                                                </Panel>
-                                            </Border>
-                                        </Grid>
-                                    </Panel>
-                                </Button>
-                                
-                        </StackPanel>
-                    </Border>
-                    
                     <Grid x:Name="panMainInteraction" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Top" Margin="0,20,0,0">
                         <Grid RowDefinitions="Auto, Auto, Auto">
-                            
+
                             <Button x:Name="btnCurrentCountry" Grid.Row="0" Background="Transparent" BorderThickness="0" CornerRadius="6" HorizontalAlignment="Center" Margin="0,0,0,10" Padding="15,8,15,8" Cursor="Hand" Click="MainCountries_Click">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <PathIcon x:Name="iconCurrentRouting" Data="M7 2v11h3v9l7-12h-4l4-8z" Width="14" Height="14" Foreground="#E2E8F0" HorizontalAlignment="Center" VerticalAlignment="Center"/>
@@ -438,18 +372,18 @@
                                                       </ConicGradientBrush>
                                                   </Rectangle.Fill>
                                                   <Rectangle.Styles>
-                                                      
+
                                                   </Rectangle.Styles>
                                               </Rectangle>
                                           </Panel>
-                                          
+
                                           <Border Margin="2" CornerRadius="12" Background="#0A0C0F" />
                                       </Panel>
                                   </Border>
 
                                   <Border x:Name="panConnectBox" Background="#99141414" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="12" Padding="3">
                                       <Grid RowDefinitions="Auto, Auto">
-                                          
+
                                             <Button x:Name="btnConnect" Grid.Row="0" Classes="connectBtn" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="Transparent" BorderThickness="0" CornerRadius="8" Padding="0" Cursor="Hand" Margin="2,2,2,2" Click="btnConnect_Click">
                                                 <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
                                                     <!-- Main Text (CONNECT / CONNECTING) -->
@@ -460,7 +394,7 @@
                                                             </Transitions>
                                                         </TextBlock.Transitions>
                                                     </TextBlock>
-                                                    
+
                                                     <!-- Success Text (CONNECTED) -->
                                                     <TextBlock x:Name="txtConnectedBtn" Text="CONNECTED" FontSize="19" FontWeight="Bold" LetterSpacing="2" Foreground="{DynamicResource ThemeGlowBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,8,0,8" Opacity="0" IsHitTestVisible="False">
                                                         <TextBlock.Transitions>
@@ -476,17 +410,17 @@
                                               <Button x:Name="btnProxyMode" Grid.Column="0" Classes="modeBtn activeMode" Background="Transparent" BorderThickness="0" CornerRadius="6" Padding="14,8,14,8" Margin="2,2,2,2" Cursor="Hand" Click="Mode_Click" >
                                                   <TextBlock x:Name="lblProxyMode" Classes="modeText" Text="PROXY MODE" FontSize="11" FontWeight="SemiBold"/>
                                               </Button>
-                                              
+
                                               <Border Grid.Column="1" Width="1" Background="#2D3748" Margin="0,6,0,6"/>
-                                              
+
                                               <Panel x:Name="panVpnMode" Grid.Column="2" Background="Transparent" Margin="2,2,2,2">
                                                   <Button x:Name="btnVpnMode" Classes="modeBtn" Background="Transparent" BorderThickness="0" CornerRadius="6" Padding="14,8,14,8" Cursor="Hand" Click="Mode_Click" >
                                                       <TextBlock x:Name="lblVpnMode" Classes="modeText" Text="VPN MODE" FontSize="11" FontWeight="SemiBold"/>
                                                   </Button>
                                               </Panel>
-                                              
+
                                               <Border Grid.Column="3" Width="1" Background="#2D3748" Margin="0,6,0,6"/>
-                                              
+
                                               <Button x:Name="btnClearProxy" Grid.Column="4" Classes="modeBtn" Background="Transparent" BorderThickness="0" CornerRadius="6" Padding="14,8,14,8" Margin="2,2,2,2" Cursor="Hand" Click="Mode_Click" >
                                                   <TextBlock x:Name="lblClearProxy" Classes="modeText" Text="CLEAR PROXY" FontSize="11" FontWeight="SemiBold"/>
                                               </Button>
@@ -548,7 +482,7 @@
 
                             <Border x:Name="panMainConfig" Grid.Row="2" Background="#99141414" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="12" Padding="6" Margin="10,50,25,15" HorizontalAlignment="Stretch">
                                 <StackPanel Spacing="6">
-                                    
+
                                     <Border Background="#400A0C0F" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="12,8">
                                         <StackPanel>
                                             <Grid ColumnDefinitions="Auto, *, Auto" MinHeight="36">
@@ -614,10 +548,10 @@
                                                                 <RowDefinition Height="1"/>
                                                                 <RowDefinition Height="26"/>
                                                             </Grid.RowDefinitions>
-                                                            
+
                                                             <TextBlock x:Name="lblGetBridges" Grid.Row="0" Text="GET BRIDGES" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-1,0,0"/>
                                                             <Border Grid.Row="1" Background="#2D3748"/>
-                                                            
+
                                                             <Button x:Name="btnGetWebTunnel" Click="btnGetWebTunnel_Click" Grid.Row="2" Content="WEBTUNNEL" FontSize="10" FontWeight="Bold" Foreground="#E2E8F0" Background="Transparent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalAlignment="Stretch" Cursor="Hand" BorderThickness="0" CornerRadius="0">
                                                                 <Button.Styles>
                                                                     <Style Selector="Button:pointerover /template/ ContentPresenter">
@@ -626,7 +560,7 @@
                                                                 </Button.Styles>
                                                             </Button>
                                                             <Border Grid.Row="3" Background="#2D3748"/>
-                                                            
+
                                                             <Button x:Name="btnGetObfs4" Click="btnGetObfs4_Click" Grid.Row="4" Content="OBFS4" FontSize="10" FontWeight="Bold" Foreground="#E2E8F0" Background="Transparent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalAlignment="Stretch" Cursor="Hand" BorderThickness="0" CornerRadius="0">
                                                                 <Button.Styles>
                                                                     <Style Selector="Button:pointerover /template/ ContentPresenter">
@@ -635,7 +569,7 @@
                                                                 </Button.Styles>
                                                             </Button>
                                                             <Border Grid.Row="5" Background="#2D3748"/>
-                                                            
+
                                                             <Border Grid.Row="6" Background="#0A0C0F" CornerRadius="0,0,3,3">
                                                                 <Grid>
                                                                     <Grid.ColumnDefinitions>
@@ -742,49 +676,57 @@
                                           </StackPanel>
                                       </Border>
 
-                                      <Border Background="#400A0C0F" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="12,8">
+                                      <Border Background="#400A0C0F" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="8">
                                           <StackPanel>
                                                 <Border x:Name="panStats" Background="Transparent" BorderThickness="0">
-                                                    <Grid ColumnDefinitions="*,Auto" Margin="0,5,0,0">
+                                                    <Grid ColumnDefinitions="*,Auto">
                                                         <Grid x:Name="panLeftStats" Grid.Column="0" RowDefinitions="Auto, *">
                                                             <Grid.Transitions>
                                                                 <Transitions>
                                                                     <DoubleTransition Property="Opacity" Duration="0:0:0.3" Easing="CubicEaseOut"/>
                                                                 </Transitions>
                                                             </Grid.Transitions>
-                                                            
-                                                            <Panel Grid.Row="0" MinHeight="36" Margin="5,-10,0,0">
-                                                                <StackPanel x:Name="panTimerContent" HorizontalAlignment="Left" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="False">
-                                                                    <TextBlock x:Name="lblConnectedFor" Text="CONNECTED FOR" FontSize="11" FontWeight="SemiBold" Foreground="#A0AEC0" VerticalAlignment="Center"/>
-                                                                    <TextBlock x:Name="lblTimer" Text="00:00:00" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource ThemeGlowBrush}" LetterSpacing="1" VerticalAlignment="Center"/>
-                                                                    <TextBlock x:Name="lblConnectedTo" Text="TO" FontSize="11" FontWeight="SemiBold" Foreground="#A0AEC0" VerticalAlignment="Center"/>
-                                                                    <TextBlock x:Name="lblCountryName" Text="UNKNOWN" FontSize="11" FontWeight="Bold" Foreground="#A0AEC0" VerticalAlignment="Center"/>
-                                                                </StackPanel>
-                                                                <TextBlock x:Name="lblDisconnected" HorizontalAlignment="Left" Text="DISCONNECTED" FontSize="11" FontWeight="SemiBold" Foreground="#A0AEC0" VerticalAlignment="Center"/>
-                                                            </Panel>
 
-                                                            <Button Grid.Row="1" Classes="graphHover" Background="Transparent" BorderThickness="0" Padding="8,4" Margin="-3,0,0,0" Cursor="Hand" HorizontalAlignment="Left" CornerRadius="4" VerticalAlignment="Top">
-                                                                <Grid ColumnDefinitions="Auto, 15, Auto" RowDefinitions="Auto, Auto">
-                                                                    <TextBlock Grid.Row="0" Grid.Column="0" x:Name="lblLocalPortLabel" Text="OPEN LOCAL PORT:" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0" Margin="0,0,0,2"/>
-                                                                    <TextBlock Grid.Row="0" Grid.Column="2" x:Name="lblLanPortLabel" Text="OPEN LAN PORT:" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0" Margin="0,0,0,2"/>
-                                                                    <TextBlock Grid.Row="1" Grid.Column="0" x:Name="lblLocalIp" FontSize="11" FontWeight="Bold" FontFamily="Consolas" Classes="portHoverText" PointerPressed="CopyIp_PointerPressed" VerticalAlignment="Center"/>
-                                                                    <TextBlock Grid.Row="1" Grid.Column="2" x:Name="lblLanIp" FontSize="11" FontWeight="Bold" FontFamily="Consolas" Classes="portHoverText" PointerPressed="CopyIp_PointerPressed" VerticalAlignment="Center"/>
-                                                                </Grid>
-                                                            </Button>
+                                                            <Grid ColumnDefinitions="Auto, 4, Auto" RowDefinitions="Auto, Auto" Margin="0,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
+                                                                <Button Grid.Row="0" Grid.Column="0" Classes="graphHover" Background="Transparent" BorderThickness="0" Padding="5,4" CornerRadius="4" VerticalAlignment="Top" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left">
+                                                                    <StackPanel>
+                                                                        <TextBlock x:Name="lblSessionLabel" Text="SESSION:" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0" Margin="0,0,0,2"/>
+                                                                        <TextBlock x:Name="lblTimer" Text="Disconnected" FontSize="11" FontWeight="Bold" FontFamily="Consolas" LineHeight="13" Classes="statHoverText"/>
+                                                                    </StackPanel>
+                                                                </Button>
+                                                                <Button Grid.Row="0" Grid.Column="2" Classes="graphHover" Background="Transparent" BorderThickness="0" Padding="8,4" Cursor="Hand" CornerRadius="4" VerticalAlignment="Top" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left">
+                                                                    <StackPanel>
+                                                                        <TextBlock x:Name="lblLocalPortLabel" Text="LOCAL PORT:" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0" Margin="0,0,0,2"/>
+                                                                        <TextBlock x:Name="lblLocalIp" FontSize="11" FontWeight="Bold" FontFamily="Consolas" LineHeight="13" Classes="portHoverText" PointerPressed="CopyIp_PointerPressed" VerticalAlignment="Center"/>
+                                                                    </StackPanel>
+                                                                </Button>
+                                                                <Button x:Name="btnLocation" Grid.Row="1" Grid.Column="0" Classes="graphHover" Background="Transparent" BorderThickness="0" Padding="5,4" Cursor="Hand" CornerRadius="4" VerticalAlignment="Top" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Click="RefreshLocation_Click" ToolTip.Tip="Click to refresh location and ping">
+                                                                    <StackPanel>
+                                                                        <TextBlock x:Name="lblLocationLabel" Text="LOCATION:" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0" Margin="0,0,0,2"/>
+                                                                        <TextBlock x:Name="lblCountryName" Text="Disconnected" FontSize="11" FontWeight="Bold" FontFamily="Consolas" LineHeight="13" Classes="statHoverText"/>
+                                                                    </StackPanel>
+                                                                </Button>
+                                                                <Button Grid.Row="1" Grid.Column="2" Classes="graphHover" Background="Transparent" BorderThickness="0" Padding="8,4" Cursor="Hand" CornerRadius="4" VerticalAlignment="Top" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left">
+                                                                    <StackPanel>
+                                                                        <TextBlock x:Name="lblLanPortLabel" Text="LAN PORT:" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0" Margin="0,0,0,2"/>
+                                                                        <TextBlock x:Name="lblLanIp" FontSize="11" FontWeight="Bold" FontFamily="Consolas" LineHeight="13" Classes="portHoverText" PointerPressed="CopyIp_PointerPressed" VerticalAlignment="Center"/>
+                                                                    </StackPanel>
+                                                                </Button>
+                                                            </Grid>
                                                         </Grid>
 
                                                         <Button x:Name="btnRefreshPing" Grid.Column="1" Classes="graphHover" Background="Transparent" BorderThickness="0" Padding="8,4" Cursor="Hand" Click="RefreshPing_Click" VerticalAlignment="Top" HorizontalAlignment="Right" HorizontalContentAlignment="Stretch">
                                                             <Grid ColumnDefinitions="Auto,Auto,Auto" Margin="5,0,5,0" VerticalAlignment="Center">
-                                                                  
+
                                                                 <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="8" Margin="0,0,15,0">
                                                                     <StackPanel HorizontalAlignment="Left">
-                                                                        <TextBlock x:Name="lblPingLabel" Text="Ping" FontSize="10" Foreground="#8B949E"/>
-                                                                        <TextBlock x:Name="lblPing" Text="0 ms" FontSize="10" Foreground="#8B949E" Margin="0,2,0,0"/>
+                                                                        <TextBlock x:Name="lblPingLabel" Text="PING" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0"/>
+                                                                        <TextBlock x:Name="lblPing" Text="0 ms" FontSize="11" FontWeight="Bold" FontFamily="Consolas" Foreground="#8B949E" Margin="0,2,0,0"/>
                                                                     </StackPanel>
-                                                                    
+
                                                                     <StackPanel HorizontalAlignment="Left">
-                                                                        <TextBlock x:Name="lblTotalLabel" Text="Total" FontSize="10" Foreground="#8B949E"/>
-                                                                        <TextBlock x:Name="lblTotalData" Text="0 MB" FontSize="10" Foreground="#8B949E" Margin="0,2,0,0"/>
+                                                                        <TextBlock x:Name="lblTotalLabel" Text="TOTAL" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0"/>
+                                                                        <TextBlock x:Name="lblTotalData" Text="0 MB" FontSize="11" FontWeight="Bold" FontFamily="Consolas" Foreground="#8B949E" Margin="0,2,0,0"/>
                                                                     </StackPanel>
                                                                 </StackPanel>
 
@@ -792,17 +734,17 @@
                                                                     <StackPanel HorizontalAlignment="Left">
                                                                         <StackPanel Orientation="Horizontal" Spacing="4">
                                                                             <Rectangle Width="8" Height="2" Fill="#A0AEC0" VerticalAlignment="Center" RadiusX="1" RadiusY="1"/>
-                                                                            <TextBlock x:Name="lblDownloadLabel" Text="Download" FontSize="10" Foreground="#8B949E" VerticalAlignment="Center"/>
+                                                                            <TextBlock x:Name="lblDownloadLabel" Text="DOWNLOAD" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0" VerticalAlignment="Center"/>
                                                                         </StackPanel>
-                                                                        <TextBlock x:Name="lblDownloadSpeed" Text="0 KB/s" FontSize="10" Foreground="#8B949E" Margin="12,2,0,0"/>
+                                                                        <TextBlock x:Name="lblDownloadSpeed" Text="0 KB/s" FontSize="11" FontWeight="Bold" FontFamily="Consolas" Foreground="#8B949E" Margin="12,2,0,0"/>
                                                                     </StackPanel>
-                                                                    
+
                                                                     <StackPanel HorizontalAlignment="Left">
                                                                         <StackPanel Orientation="Horizontal" Spacing="4">
                                                                             <Rectangle Width="8" Height="1" Fill="#718096" VerticalAlignment="Center" RadiusX="0.5" RadiusY="0.5"/>
-                                                                            <TextBlock x:Name="lblUploadLabel" Text="Upload" FontSize="10" Foreground="#8B949E" VerticalAlignment="Center"/>
+                                                                            <TextBlock x:Name="lblUploadLabel" Text="UPLOAD" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0" VerticalAlignment="Center"/>
                                                                         </StackPanel>
-                                                                        <TextBlock x:Name="lblUploadSpeed" Text="0 KB/s" FontSize="10" Foreground="#8B949E" Margin="12,2,0,0"/>
+                                                                        <TextBlock x:Name="lblUploadSpeed" Text="0 KB/s" FontSize="11" FontWeight="Bold" FontFamily="Consolas" Foreground="#8B949E" Margin="12,2,0,0"/>
                                                                     </StackPanel>
                                                                 </StackPanel>
 
@@ -815,12 +757,12 @@
                                                                             <GradientStop Color="#00000000" Offset="1"/>
                                                                         </LinearGradientBrush>
                                                                     </Grid.OpacityMask>
-                                                                    
+
                                                                     <Canvas x:Name="graphCanvas" Width="150" Height="40" ClipToBounds="False" HorizontalAlignment="Left" VerticalAlignment="Center">
                                                                         <Canvas.RenderTransform>
                                                                             <TranslateTransform X="0"/>
                                                                         </Canvas.RenderTransform>
-                                                                        
+
                                                                         <Path x:Name="graphDownloadFill" Fill="#2A8B949E" />
                                                                         <Path x:Name="graphUploadFill" Fill="#1A718096" />
                                                                         <Path x:Name="graphUpload" Stroke="#718096" StrokeThickness="1" />
@@ -838,77 +780,11 @@
                         </Grid>
                     </Grid>
 
-                    <Border x:Name="panExpertOverlay" Classes="popupContent" Grid.Column="1" Background="#F2101116" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="12" Margin="-5,10,25,15" ZIndex="400" IsVisible="False" Padding="30,20,30,10" VerticalAlignment="Top"  BoxShadow="0 0 50 1000 #B3000000">
-                        <Grid RowDefinitions="Auto,Auto,Auto">
-                            <TextBlock x:Name="lblExpertTitle" Grid.Row="0" Text="EXPERT ROUTING CONFIGURATION" FontSize="16" FontWeight="Bold" Foreground="#E2E8F0" Margin="0,0,0,20"/>
-                            
-                            <Grid Grid.Row="1" ColumnDefinitions="Auto, *, Auto, *" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" Margin="0">
-                                    <TextBlock x:Name="lblHardwareAccel" Grid.Row="0" Grid.Column="0" Text="Hardware Accel:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
-                                    <ComboBox x:Name="cmbHW" Grid.Row="0" Grid.Column="1" Background="#0A0C0F" Foreground="#E2E8F0" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontSize="11" Margin="0,0,20,10" HorizontalAlignment="Stretch">
-                                        <ComboBoxItem Content="Disabled"/><ComboBoxItem Content="Enabled"/>
-                                    </ComboBox>
-                                    
-                                    <TextBlock x:Name="lblFascistFirewall" Grid.Row="0" Grid.Column="2" Text="Fascist Firewall:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
-                                    <ComboBox x:Name="cmbFF" Grid.Row="0" Grid.Column="3" Background="#0A0C0F" Foreground="#E2E8F0" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontSize="11" Margin="0,0,0,10" HorizontalAlignment="Stretch">
-                                        <ComboBoxItem Content="Disabled"/><ComboBoxItem Content="Enabled"/>
-                                    </ComboBox>
-
-                                    <TextBlock x:Name="lblStrictNodes" Grid.Row="1" Grid.Column="0" Text="Strict Nodes:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
-                                    <ComboBox x:Name="cmbSN" Grid.Row="1" Grid.Column="1" Background="#0A0C0F" Foreground="#E2E8F0" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontSize="11" Margin="0,0,20,10" HorizontalAlignment="Stretch">
-                                        <ComboBoxItem Content="Disabled"/><ComboBoxItem Content="Enabled"/>
-                                    </ComboBox>
-
-                                    <TextBlock Grid.Row="1" Grid.Column="2" Text="CircuitBuildTimeout:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
-                                    <TextBox x:Name="txtCBT" Grid.Row="1" Grid.Column="3" Background="#0A0C0F" Foreground="{DynamicResource ThemeGlowBrush}" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontFamily="Consolas" FontSize="11" Margin="0,0,0,10"/>
-
-                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="KeepalivePeriod:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
-                                    <TextBox x:Name="txtKP" Grid.Row="2" Grid.Column="1" Background="#0A0C0F" Foreground="{DynamicResource ThemeGlowBrush}" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontFamily="Consolas" FontSize="11" Margin="0,0,20,10"/>
-
-                                    <TextBlock Grid.Row="2" Grid.Column="2" Text="NewCircuitPeriod:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
-                                    <TextBox x:Name="txtNCP" Grid.Row="2" Grid.Column="3" Background="#0A0C0F" Foreground="{DynamicResource ThemeGlowBrush}" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontFamily="Consolas" FontSize="11" Margin="0,0,0,10"/>
-
-                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="MaxCircuitDirtiness:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
-                                    <TextBox x:Name="txtMCD" Grid.Row="3" Grid.Column="1" Background="#0A0C0F" Foreground="{DynamicResource ThemeGlowBrush}" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontFamily="Consolas" FontSize="11" Margin="0,0,20,10"/>
-
-                                    <TextBlock Grid.Row="3" Grid.Column="2" Text="NumEntryGuards:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
-                                    <TextBox x:Name="txtNEG" Grid.Row="3" Grid.Column="3" Background="#0A0C0F" Foreground="{DynamicResource ThemeGlowBrush}" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontFamily="Consolas" FontSize="11" Margin="0,0,0,10"/>
-
-                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="EntryNodes {us}:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
-                                    <TextBox x:Name="txtEN" Grid.Row="4" Grid.Column="1" Background="#0A0C0F" Foreground="{DynamicResource ThemeGlowBrush}" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontFamily="Consolas" FontSize="11" Margin="0,0,20,10"/>
-
-                                    <TextBlock Grid.Row="4" Grid.Column="2" Text="ExitNodes {uk},{de}:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
-                                    <TextBox x:Name="txtExit" Grid.Row="4" Grid.Column="3" Background="#0A0C0F" Foreground="{DynamicResource ThemeGlowBrush}" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontFamily="Consolas" FontSize="11" Margin="0,0,0,10"/>
-
-                                    <TextBlock Grid.Row="5" Grid.Column="0" Text="ExcludeNodes:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
-                                    <TextBox x:Name="txtExNodes" Grid.Row="5" Grid.Column="1" Background="#0A0C0F" Foreground="{DynamicResource ThemeGlowBrush}" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontFamily="Consolas" FontSize="11" Margin="0,0,20,10"/>
-
-                                    <TextBlock Grid.Row="5" Grid.Column="2" Text="ExcludeExitNodes:" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,0,10,10"/>
-                                    <TextBox x:Name="txtExExit" Grid.Row="5" Grid.Column="3" Background="#0A0C0F" Foreground="{DynamicResource ThemeGlowBrush}" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" Height="26" MinHeight="26" Padding="4,3" FontFamily="Consolas" FontSize="11" Margin="0,0,0,10"/>
-
-                                    <TextBlock x:Name="lblCustomTorrc" Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="4" Text="Custom Torrc Lines (Advanced - One per line):" Foreground="#8B949E" FontSize="11" VerticalAlignment="Center" Margin="0,5,0,10"/>
-                                    <TextBox x:Name="txtRaw" Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="4" Height="60" AcceptsReturn="True" TextWrapping="Wrap" Background="#0A0C0F" Foreground="{DynamicResource ThemeGlowBrush}" BorderBrush="#3A3F44" BorderThickness="1" CornerRadius="4" FontFamily="Consolas" FontSize="11" ScrollViewer.VerticalScrollBarVisibility="Auto" Margin="0"/>
-                                </Grid>
-                              <Grid Grid.Row="2" ColumnDefinitions="*,1,*" Margin="0,10,0,0" HorizontalAlignment="Right" Width="150">
-                                <Button x:Name="btnExpertSave" Click="btnExpertSave_Click" Grid.Column="0" Content="SAVE" FontSize="11" FontWeight="Bold" Foreground="#A0AEC0" Background="Transparent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalAlignment="Stretch" Cursor="Hand" BorderThickness="0" CornerRadius="0" Padding="0,8">
-                                    <Button.Styles>
-                                        <Style Selector="Button:pointerover /template/ ContentPresenter">
-                                            <Setter Property="Background" Value="#2AFFFFFF"/>
-                                        </Style>
-                                    </Button.Styles>
-                                </Button>
-                                <Border Grid.Column="1" Background="#2D3748"/>
-                                <Button x:Name="btnExpertCancel" Click="btnExpertCancel_Click" Grid.Column="2" Content="CANCEL" FontSize="11" FontWeight="Bold" Foreground="#A0AEC0" Background="Transparent" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalAlignment="Stretch" Cursor="Hand" BorderThickness="0" CornerRadius="0" Padding="0,8">
-                                    <Button.Styles>
-                                        <Style Selector="Button:pointerover /template/ ContentPresenter">
-                                            <Setter Property="Background" Value="#2AFFFFFF"/>
-                                        </Style>
-                                    </Button.Styles>
-                                </Button>
-                            </Grid>
-                        </Grid>
+                    <Border x:Name="panExpertOverlay" Classes="popupContent" Grid.Column="1" Background="#101116" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="12" Margin="-5,10,25,15" ZIndex="400" IsVisible="False" Padding="30,20,30,10" VerticalAlignment="Top"  BoxShadow="0 0 50 1000 #B3000000">
+                        <overlays:ExpertOverlay x:Name="ucExpert"/>
                     </Border>
-                    
-                    <Border x:Name="panThemesOverlay" Classes="popupContent" Grid.Column="1" Background="#F2101116" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="12" Margin="-5,10,25,15" ZIndex="400" IsVisible="False" Padding="0" VerticalAlignment="Top" MaxHeight="460" BoxShadow="0 0 50 1000 #B3000000">
+
+                    <Border x:Name="panThemesOverlay" Classes="popupContent" Grid.Column="1" Background="#101116" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="12" Margin="-5,10,25,15" ZIndex="400" IsVisible="False" Padding="0" VerticalAlignment="Top" MaxHeight="460" BoxShadow="0 0 50 1000 #B3000000">
                           <overlays:ThemesOverlay x:Name="ucThemes" />
                       </Border>
 
@@ -916,309 +792,14 @@
                           <overlays:SettingsOverlay x:Name="ucSettings" />
                       </Border>
 
-<!-- OLD SPLIT OVERLAY
-                    <Border x:Name="panSplitOverlay" Classes="popupContent" Grid.Column="1" Background="#F2101116" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="12" Margin="-5,10,25,15" ZIndex="400" IsVisible="False" Padding="0" VerticalAlignment="Top" MaxHeight="460" BoxShadow="0 0 50 1000 #B3000000">
-                        <Border.Styles>
-                            <Style Selector="TextBox:readonly /template/ Border#PART_BorderElement">
-                                <Setter Property="Background" Value="Transparent"/>
-                                <Setter Property="BorderThickness" Value="0"/>
-                            </Style>
-                            <Style Selector="TextBox:disabled /template/ Border#PART_BorderElement">
-                                <Setter Property="Background" Value="Transparent"/>
-                                <Setter Property="BorderThickness" Value="0"/>
-                            </Style>
-                        </Border.Styles>
-                        <Grid>
-                            <ScrollViewer>
-                                <StackPanel Margin="20,20,20,20" Spacing="20">
-                                    
-                                    <Border Background="#1A1B1E" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="15,10">
-                                        <StackPanel Spacing="0">
-                                            
-                                            <Grid ColumnDefinitions="*, Auto">
-                                                <TextBlock x:Name="lblSplitTunnelingHeader" Grid.Column="0" Text="SPLIT TUNNELING" FontSize="11" FontWeight="SemiBold" Foreground="#8B949E" LetterSpacing="1" VerticalAlignment="Center"/>
-                                                
-                                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                                                    <Button x:Name="btnSplitDisabled" Classes="optBtn activeOpt" Click="SplitTunnel_Click" ToolTip.Tip="Split tunneling is disabled."><TextBlock Text="DISABLED" FontSize="11" FontWeight="SemiBold"/></Button>
-                                                    <Button x:Name="btnSplitExclusive" Classes="optBtn" Click="SplitTunnel_Click" ToolTip.Tip="Only bypass the proxy for the apps, domains, IPs and ports listed here."><TextBlock Text="EXCLUSIVE" FontSize="11" FontWeight="SemiBold"/></Button>
-                                                    <Button x:Name="btnSplitInclusive" Classes="optBtn" Click="SplitTunnel_Click" ToolTip.Tip="Only route the apps, domains, IPs and ports listed here through the proxy."><TextBlock Text="INCLUSIVE" FontSize="11" FontWeight="SemiBold"/></Button>
-                                                </StackPanel>
-                                            </Grid>
-                                            
-                                            <Border x:Name="panSplitConfig" MaxHeight="0" Opacity="0" ClipToBounds="True">
-                                                <Border.Transitions>
-                                                    <Transitions>
-                                                        <DoubleTransition Property="MaxHeight" Duration="0:0:0.3" Easing="CubicEaseOut"/>
-                                                        <DoubleTransition Property="Opacity" Duration="0:0:0.3" Easing="CubicEaseOut"/>
-                                                    </Transitions>
-                                                </Border.Transitions>
-                                                <StackPanel Spacing="13" Margin="0,13,0,0">
-                                                    <TextBlock x:Name="lblSplitExplanation" FontSize="11.5" Foreground="#A0AEC0" TextWrapping="Wrap" LineHeight="17" Margin="2,0,2,2" />
-                                                    
-                                                    <Grid>
-<StackPanel x:Name="panSplitDomains" Spacing="0">
-                                                        <Border x:Name="panDomainsToggle" Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="4" Padding="0">
-                                                            <Grid ColumnDefinitions="*, Auto">
-                                                                <Border Padding="15,5" VerticalAlignment="Center">
-                                                                    <TextBlock x:Name="lblDomainsAndIps" Text="DOMAINS, IPs &amp; PORTS" FontSize="11" FontWeight="Bold" Foreground="#8B949E" LetterSpacing="1" />
-                                                                </Border>
-                                                                <Button Grid.Column="1" x:Name="btnToggleDomains" Classes="optBtn" CornerRadius="0,3,3,0" BorderThickness="1,0,0,0" BorderBrush="#2D3748" Padding="15,5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="SplitToggle_Click" Content="ADD" FontSize="11" FontWeight="SemiBold" Foreground="#8B949E" VerticalContentAlignment="Center" HorizontalContentAlignment="Center">
-                                                                </Button>
-                                                            </Grid>
-                                                        </Border>
-                                                        <Border x:Name="panDomainsEdit" Background="#0A0B0E" BorderBrush="#2D3748" BorderThickness="1,0,1,1" CornerRadius="0,0,4,4" Height="0" ClipToBounds="True">
-                                                            <Border.Transitions>
-                                                                <Transitions>
-                                                                    <DoubleTransition Property="Height" Duration="0:0:0.2" Easing="CubicEaseOut"/>
-                                                                </Transitions>
-                                                            </Border.Transitions>
-                                                            <StackPanel Margin="10,0,10,0">
-                                                                <Border Margin="0,3,0,0">
-                                                                    <TextBox x:Name="txtSplitDomains" Height="20" LineHeight="17" Background="Transparent" BorderThickness="0" PlaceholderText="example.com, 1.2.3.4, 443" FontSize="11" Foreground="#E2E8F0" AcceptsReturn="True" TextWrapping="Wrap"/>
-                                                                </Border>
-                                                                <Border Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="6" HorizontalAlignment="Right" Margin="0,10,0,0" Width="140">
-                                                                    <Grid ColumnDefinitions="*, 1, *">
-                                                                        <Button Grid.Column="0" x:Name="btnSaveDomains" Content="SAVE" FontSize="10" FontWeight="Bold" Background="Transparent" Foreground="#E2E8F0" Padding="0,4" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="SplitSave_Click"/>
-                                                                        <Border Grid.Column="1" Background="#2D3748" Width="1"/>
-                                                                        <Button Grid.Column="2" x:Name="btnCancelDomains" Content="CANCEL" FontSize="10" FontWeight="Bold" Background="Transparent" Foreground="#8B949E" Padding="0,4" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="SplitCancel_Click"/>
-                                                                    </Grid>
-                                                                </Border>
-                                                            </StackPanel>
-                                                        </Border>
-</StackPanel>
-</Grid>
-
-                                                    <Grid>
-<StackPanel x:Name="panSplitApps" Spacing="0">
-                                                        <Border x:Name="panAppsToggle" Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="4" Padding="0">
-                                                            <Grid ColumnDefinitions="*, Auto, Auto">
-                                                                <Border Grid.Column="0" Padding="15,5" VerticalAlignment="Center">
-                                                                    <TextBlock x:Name="lblApplications" Text="APPLICATIONS" FontSize="11" FontWeight="Bold" Foreground="#8B949E" LetterSpacing="1" />
-                                                                </Border>
-                                                                <Button Grid.Column="1" Classes="optBtn" CornerRadius="0" BorderThickness="1,0,0,0" BorderBrush="#2D3748" Padding="15,5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="BrowseApp_Click" Content="BROWSE" FontSize="11" FontWeight="SemiBold" Foreground="#8B949E" VerticalContentAlignment="Center" HorizontalContentAlignment="Center">
-                                                                </Button>
-                                                                <Button Grid.Column="2" x:Name="btnToggleApps" Classes="optBtn" CornerRadius="0,3,3,0" BorderThickness="1,0,0,0" BorderBrush="#2D3748" Padding="15,5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="SplitToggle_Click" Content="ADD" FontSize="11" FontWeight="SemiBold" Foreground="#8B949E" VerticalContentAlignment="Center" HorizontalContentAlignment="Center">
-                                                                </Button>
-                                                            </Grid>
-                                                        </Border>
-                                                        <Border x:Name="panAppsEdit" Background="#0A0B0E" BorderBrush="#2D3748" BorderThickness="1,0,1,1" CornerRadius="0,0,4,4" Height="0" ClipToBounds="True">
-                                                            <Border.Transitions>
-                                                                <Transitions>
-                                                                    <DoubleTransition Property="Height" Duration="0:0:0.2" Easing="CubicEaseOut"/>
-                                                                </Transitions>
-                                                            </Border.Transitions>
-                                                            <StackPanel Margin="10,0,10,0">
-                                                                <Border Margin="0,3,0,0">
-                                                                    <TextBox x:Name="txtSplitApps" Height="20" LineHeight="17" Background="Transparent" BorderThickness="0" PlaceholderText="app.exe, game.exe" FontSize="11" Foreground="#E2E8F0" AcceptsReturn="True" TextWrapping="Wrap"/>
-                                                                </Border>
-                                                                <Grid Margin="0,10,0,0">
-                                                                    <TextBlock x:Name="lblSplitAppsWarning" Text="Warning: Case sensitive" FontSize="10" Foreground="#E53E3E" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="2,0,0,0"/>
-                                                                    <Border Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="6" HorizontalAlignment="Right" Width="140">
-                                                                        <Grid ColumnDefinitions="*, 1, *">
-                                                                            <Button Grid.Column="0" x:Name="btnSaveApps" Content="SAVE" FontSize="10" FontWeight="Bold" Background="Transparent" Foreground="#E2E8F0" Padding="0,4" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="SplitSave_Click"/>
-                                                                            <Border Grid.Column="1" Background="#2D3748" Width="1"/>
-                                                                            <Button Grid.Column="2" x:Name="btnCancelApps" Content="CANCEL" FontSize="10" FontWeight="Bold" Background="Transparent" Foreground="#8B949E" Padding="0,4" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="SplitCancel_Click"/>
-                                                                        </Grid>
-                                                                    </Border>
-                                                                </Grid>
-                                                            </StackPanel>
-                                                        </Border>
-</StackPanel>
-</Grid>
-
-                                                    <StackPanel x:Name="panSplitBlock" Spacing="0">
-                                                        <Border x:Name="panBlockToggle" Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="4" Padding="0">
-                                                            <Grid ColumnDefinitions="*, Auto">
-                                                                <Border Padding="15,5" VerticalAlignment="Center">
-                                                                    <TextBlock x:Name="lblBlockedDomainsIps" Text="BLOCKED DOMAINS, IPs &amp; PORTS" FontSize="11" FontWeight="Bold" Foreground="#8B949E" LetterSpacing="1" />
-                                                                </Border>
-                                                                <Button Grid.Column="1" x:Name="btnToggleBlock" Classes="optBtn" CornerRadius="0,3,3,0" BorderThickness="1,0,0,0" BorderBrush="#2D3748" Padding="15,5" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="SplitToggle_Click" Content="ADD" FontSize="11" FontWeight="SemiBold" Foreground="#8B949E" VerticalContentAlignment="Center" HorizontalContentAlignment="Center">
-                                                                </Button>
-                                                            </Grid>
-                                                        </Border>
-                                                        <Border x:Name="panBlockEdit" Background="#0A0B0E" BorderBrush="#2D3748" BorderThickness="1,0,1,1" CornerRadius="0,0,4,4" Height="0" ClipToBounds="True">
-                                                            <Border.Transitions>
-                                                                <Transitions>
-                                                                    <DoubleTransition Property="Height" Duration="0:0:0.2" Easing="CubicEaseOut"/>
-                                                                </Transitions>
-                                                            </Border.Transitions>
-                                                            <StackPanel Margin="10,0,10,0">
-                                                                <Border Margin="0,3,0,0">
-                                                                    <TextBox x:Name="txtSplitBlock" Height="20" LineHeight="17" Background="Transparent" BorderThickness="0" PlaceholderText="malicious.com, 5.6.7.8, 443" FontSize="11" Foreground="#E2E8F0" AcceptsReturn="True" TextWrapping="Wrap"/>
-                                                                </Border>
-                                                                <Border Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="6" HorizontalAlignment="Right" Margin="0,10,0,0" Width="140">
-                                                                    <Grid ColumnDefinitions="*, 1, *">
-                                                                        <Button Grid.Column="0" x:Name="btnSaveBlock" Content="SAVE" FontSize="10" FontWeight="Bold" Background="Transparent" Foreground="#E2E8F0" Padding="0,4" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="SplitSave_Click"/>
-                                                                        <Border Grid.Column="1" Background="#2D3748" Width="1"/>
-                                                                        <Button Grid.Column="2" x:Name="btnCancelBlock" Content="CANCEL" FontSize="10" FontWeight="Bold" Background="Transparent" Foreground="#8B949E" Padding="0,4" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Click="SplitCancel_Click"/>
-                                                                    </Grid>
-                                                                </Border>
-                                                            </StackPanel>
-                                                        </Border>
-                                                    </StackPanel>
-                                                    
-                                                </StackPanel>
-                                            </Border>
-                                            
-                                        </StackPanel>
-                                    </Border>
-
-                                    <StackPanel Spacing="0" Margin="0,-5,0,0">
-                                        <Border x:Name="panDirectUdpToggle" Background="#1A1B1E" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="0">
-                                            <Button x:Name="btnDirectUdpToggle" Classes="optBtn" CornerRadius="8" BorderThickness="0" Background="Transparent" Padding="15,7" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="btnDirectUdpToggle_Click">
-                                                <Grid ColumnDefinitions="*, Auto, Auto">
-                                                    <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
-                                                        <TextBlock x:Name="lblDirectUdpHeader" Classes="settingTitle" Text="DIRECT UDP" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" HorizontalAlignment="Left" TextAlignment="Left" />
-                                                        <TextBlock x:Name="lblDirectUdpDesc" Text="This option can help with video games, discord voice or other udp dependant platforms." FontSize="10" Foreground="#A0AEC0" TextWrapping="Wrap" HorizontalAlignment="Left" TextAlignment="Left" />
-                                                    </StackPanel>
-                                                    <ToggleSwitch Grid.Column="1" x:Name="togDirectUDP" Theme="{DynamicResource FluentToggleSwitchTheme}" OnContent="{x:Null}" OffContent="{x:Null}" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="40" Margin="0,0,10,0" IsCheckedChanged="togDirectUDP_IsCheckedChanged"/>
-                                                    <PathIcon x:Name="icoDirectUdpExpander" Grid.Column="2" Data="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" Width="12" Height="12" Foreground="#8B949E" VerticalAlignment="Center">
-                                                        <PathIcon.Transitions>
-                                                            <Transitions>
-                                                                <DoubleTransition Property="RotateTransform.Angle" Duration="0:0:0.2" Easing="CubicEaseOut"/>
-                                                            </Transitions>
-                                                        </PathIcon.Transitions>
-                                                    </PathIcon>
-                                                </Grid>
-                                            </Button>
-                                        </Border>
-                                        <Border x:Name="panDirectUdpSettings" Background="#0A0B0E" BorderBrush="#2D3748" BorderThickness="1,0,1,1" CornerRadius="0,0,8,8" MaxHeight="0" Opacity="0" ClipToBounds="True">
-                                            <Border.Transitions>
-                                                <Transitions>
-                                                    <DoubleTransition Property="MaxHeight" Duration="0:0:0.3" Easing="CubicEaseOut"/>
-                                                    <DoubleTransition Property="Opacity" Duration="0:0:0.3" Easing="CubicEaseOut"/>
-                                                </Transitions>
-                                            </Border.Transitions>
-                                            <StackPanel Margin="15,15,15,15" Spacing="10">
-                                                <Grid ColumnDefinitions="*, Auto">
-                                                    <ComboBox Grid.Column="0" x:Name="cmbDirectUdpAdapters" HorizontalAlignment="Stretch" Margin="0,0,10,0" MinHeight="26" Height="26" FontSize="11" VerticalContentAlignment="Center" PlaceholderText="Select an adapter..." SelectionChanged="cmbDirectUdpAdapters_SelectionChanged"/>
-                                                    <Button Grid.Column="1" x:Name="btnScanDirectUdpAdapters" Click="btnScanDirectUdpAdapters_Click" Content="SCAN" Classes="optBtn" FontSize="10" FontWeight="Bold" Background="#1AFFFFFF" Padding="12,6" VerticalAlignment="Center"/>
-                                                </Grid>
-                                            </StackPanel>
-                                        </Border>
-                                    </StackPanel>
-                                    
-                                </StackPanel>
-                            </ScrollViewer>
-                            
-                            <Button Background="Transparent" BorderThickness="0" Cursor="Hand" Click="CloseOverlay_Click" HorizontalAlignment="Right" VerticalAlignment="Top" Padding="5" Margin="0,4,4,0">
-                                <Button.Styles>
-                                    <Style Selector="Button:pointerover /template/ ContentPresenter">
-                                        <Setter Property="Background" Value="Transparent"/>
-                                    </Style>
-                                    <Style Selector="Button:pointerover PathIcon">
-                                        <Setter Property="Foreground" Value="#E2E8F0"/>
-                                    </Style>
-                                </Button.Styles>
-                                <PathIcon Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" Width="10" Height="10" Foreground="#8B949E"/>
-                            </Button>
-                          </Grid>
-                      </Border>
--->
-<Border x:Name="panSplitOverlay" Classes="popupContent" Grid.Column="1" Background="#F2101116" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="12" Margin="-5,10,25,15" ZIndex="400" IsVisible="False" Padding="0" VerticalAlignment="Top" MaxHeight="460" BoxShadow="0 0 50 1000 #B3000000">
+<Border x:Name="panSplitOverlay" Classes="popupContent" Grid.Column="1" Background="#101116" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="12" Margin="-5,10,25,15" ZIndex="400" IsVisible="False" Padding="0" VerticalAlignment="Top" MaxHeight="460" BoxShadow="0 0 50 1000 #B3000000">
     <overlays:SplitTunnelOverlay x:Name="ucSplitTunnel" />
 </Border>
-                      
-                      <Border x:Name="panAboutOverlay" Classes="popupContent" Grid.Column="1" Background="#F2101116" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="12" Margin="-5,10,25,15" ZIndex="400" IsVisible="False" Padding="0" VerticalAlignment="Top" MaxHeight="460" BoxShadow="0 0 50 1000 #B3000000">
-                          <Grid>
-                              <ScrollViewer>
-                                  <StackPanel Margin="20,20,20,20" Spacing="20">
-                                      
-                                      <Grid ColumnDefinitions="*, Auto">
-                                          <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="15" VerticalAlignment="Center">
-                                              <Image Source="avares://CrimsonOnion/Assets/icon.ico" Width="40" Height="40" RenderOptions.BitmapInterpolationMode="HighQuality"/>
-                                              <StackPanel VerticalAlignment="Center">
-                                                  <TextBlock Text="CrimsonOnion" FontSize="20" FontWeight="Bold" Foreground="#E2E8F0"/>
-                                                  <TextBlock x:Name="lblAboutCreator" Text="Creator: @RichTitan" FontSize="12" FontWeight="SemiBold" Foreground="#8B949E" Margin="0,2,0,0"/>
-                                                  <TextBlock x:Name="lblAboutLicense" Text="License: GPL-3.0 license" FontSize="11" FontWeight="Normal" Foreground="#A0AEC0" Margin="0,1,0,0"/>
-                                              </StackPanel>
-                                          </StackPanel>
 
-                                          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,15,0">
-                                              <Button Click="BtnGithub_Click" Classes="optBtn" Background="#101112" BorderBrush="#2D3748" BorderThickness="1" Padding="10">
-                                                  <PathIcon Data="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.866-.013-1.699-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.379.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.418 22 12c0-5.523-4.477-10-10-10z" Width="16" Height="16" Foreground="#8B949E"/>
-                                              </Button>
-                                              <Button Click="BtnTelegram_Click" Classes="optBtn" Background="#101112" BorderBrush="#2D3748" BorderThickness="1" Padding="10">
-                                                  <PathIcon Data="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.892-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" Width="16" Height="16" Foreground="#8B949E"/>
-                                              </Button>
-                                          </StackPanel>
-                                      </Grid>
-                                      
-                                      <StackPanel Spacing="10">
-                                          <Border Background="#1A1B1E" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="15,10">
-                                              <Grid ColumnDefinitions="Auto, *, Auto">
-                                              <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                                  <PathIcon Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" Width="14" Height="14" Foreground="#8B949E"/>
-                                                  <TextBlock x:Name="lblAboutVersion" Text="VERSION" FontSize="11" FontWeight="SemiBold" Foreground="#8B949E" LetterSpacing="1" VerticalAlignment="Center"/>
-                                              </StackPanel>
-                                              <Button x:Name="btnCheckUpdate" Grid.Column="1" Content="CHECK FOR UPDATES" Click="BtnCheckUpdate_Click" FontSize="11" FontWeight="Bold" Background="Transparent" Foreground="{DynamicResource ThemeGlowBrush}" Padding="5" Cursor="Hand" BorderThickness="0" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,10,0"/>
-                                              <TextBlock x:Name="lblVersion" Grid.Column="2" Text="2.0.0" FontSize="14" FontWeight="Bold" Foreground="#E2E8F0" VerticalAlignment="Center"/>
-                                          </Grid>
-                                      </Border>
-
-                                      <Border Background="#1A1B1E" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="15,10">
-                                          <Grid ColumnDefinitions="Auto, *, Auto">
-                                              <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                                  <PathIcon Data="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z" Width="14" Height="14" Foreground="#8B949E"/>
-                                                  <TextBlock Text="OTHER APPS" FontSize="11" FontWeight="SemiBold" Foreground="#8B949E" LetterSpacing="1" VerticalAlignment="Center"/>
-                                              </StackPanel>
-                                              
-                                              <Button Grid.Column="2" Click="BtnOtherApps_Click" Background="Transparent" BorderThickness="0" Padding="5" Cursor="Hand" VerticalAlignment="Center">
-                                                  <StackPanel Orientation="Horizontal" Spacing="8">
-                                                      <Image Source="avares://CrimsonOnion/Assets/CrimsonX.ico" Width="20" Height="20" RenderOptions.BitmapInterpolationMode="HighQuality"/>
-                                                      <TextBlock Text="CrimsonX" FontSize="13" FontWeight="Bold" Foreground="#E2E8F0" VerticalAlignment="Center"/>
-                                                  </StackPanel>
-                                              </Button>
-                                          </Grid>
-                                      </Border>
-                                      
-                                      <Border Background="#1A1B1E" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="15,10">
-                                          <StackPanel Spacing="15">
-                                              <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                                  <PathIcon Data="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" Width="14" Height="14" Foreground="#8B949E"/>
-                                                  <TextBlock x:Name="lblDonations" Text="DONATIONS" FontSize="11" FontWeight="SemiBold" Foreground="#8B949E" LetterSpacing="1" VerticalAlignment="Center"/>
-                                                  <TextBlock x:Name="lblDonationsDesc" Text="if u want to support me or the project you can do so by sending your desired amount to one of these wallet addresses," FontSize="9" FontWeight="Normal" Foreground="#A0AEC0" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="350" Margin="5,0,0,0"/>
-                                              </StackPanel>
-                                              
-                                              <StackPanel Spacing="8">
-                                                  <StackPanel Spacing="2">
-                                                      <TextBlock Text="USDT (BEP20)" FontSize="10" FontWeight="SemiBold" Foreground="#8B949E"/>
-                                                      <Button Click="BtnCopyAddress_Click" Content="0xFc1d71C22DC2604f6C13Ca540ed842535cbE6d75" FontSize="10" FontWeight="Normal" Foreground="#E2E8F0" Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" HorizontalAlignment="Left"/>
-                                                  </StackPanel>
-                                                  <StackPanel Spacing="2">
-                                                      <TextBlock Text="USDT (TRC20)" FontSize="10" FontWeight="SemiBold" Foreground="#8B949E"/>
-                                                      <Button Click="BtnCopyAddress_Click" Content="TNMaNGDMG7BzbjkXeiguFWzDHZ4hCUU9R8" FontSize="10" FontWeight="Normal" Foreground="#E2E8F0" Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" HorizontalAlignment="Left"/>
-                                                  </StackPanel>
-                                                  <StackPanel Spacing="2">
-                                                      <TextBlock Text="BITCOIN" FontSize="10" FontWeight="SemiBold" Foreground="#8B949E"/>
-                                                      <Button Click="BtnCopyAddress_Click" Content="bc1quzdzuhrfse520r0wkqgkvsl7nv354r8sj5u9f9" FontSize="10" FontWeight="Normal" Foreground="#E2E8F0" Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" HorizontalAlignment="Left"/>
-                                                  </StackPanel>
-                                                  <StackPanel Spacing="2">
-                                                      <TextBlock Text="TON (GRAM)" FontSize="10" FontWeight="SemiBold" Foreground="#8B949E"/>
-                                                      <Button Click="BtnCopyAddress_Click" Content="UQCB3bvk4nXMiokNWprb7CwPjurU8WOUfVSgAVXMMke0CxdW" FontSize="10" FontWeight="Normal" Foreground="#E2E8F0" Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" HorizontalAlignment="Left"/>
-                                                  </StackPanel>
-                                              </StackPanel>
-                                          </StackPanel>
-                                      </Border>
-                                      </StackPanel>
-                                      
-                                  </StackPanel>
-                              </ScrollViewer>
-
-                              <Button Background="Transparent" BorderThickness="0" Cursor="Hand" Click="CloseOverlay_Click" HorizontalAlignment="Right" VerticalAlignment="Top" Padding="5" Margin="0,8,8,0">
-                                  <Button.Styles>
-                                      <Style Selector="Button:pointerover /template/ ContentPresenter">
-                                          <Setter Property="Background" Value="Transparent"/>
-                                      </Style>
-                                      <Style Selector="Button:pointerover PathIcon">
-                                          <Setter Property="Foreground" Value="#E2E8F0"/>
-                                      </Style>
-                                  </Button.Styles>
-                                  <PathIcon Data="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" Width="10" Height="10" Foreground="#8B949E"/>
-                              </Button>
-                          </Grid>
+                      <Border x:Name="panAboutOverlay" Classes="popupContent" Grid.Column="1" Background="#101116" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="12" Margin="-5,10,25,15" ZIndex="400" IsVisible="False" Padding="0" VerticalAlignment="Top" MaxHeight="460" BoxShadow="0 0 50 1000 #B3000000">
+                          <overlays:AboutOverlay x:Name="ucAbout" />
                       </Border>
-  
+
                     <Border x:Name="LightDismissOverlay" Grid.ColumnSpan="2" Background="#01000000" IsVisible="False" PointerPressed="LightDismissOverlay_PointerPressed" ZIndex="200"/>
 
                     <Popup x:Name="LanguagePopup" IsLightDismissEnabled="False">
@@ -1257,7 +838,7 @@
                         <Border Classes="popupContent" Background="#E6101116" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="12" Width="260" MaxHeight="425" Padding="5">
                         <ScrollViewer>
                             <StackPanel>
-                                    
+
                                     <Button Classes="countryControl" Tag="Optimized" Click="RoutingOption_Click" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="15,10" Cursor="Hand" CornerRadius="8" Margin="0,0,5,0">
                                         <StackPanel Orientation="Horizontal" Spacing="15">
                                             <Border Width="24" Height="16">
@@ -1294,7 +875,7 @@
                             </ScrollViewer>
                         </Border>
                     </Popup>
-                    
+
                 </Grid>
 
                 <Border x:Name="ToastBorder"
@@ -1329,43 +910,6 @@
 
             </Grid>
 
-
         </Grid>
     </Border>
 </Window>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -16,11 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System.IO;
 using CrimsonOnion.Models;
-using System.Collections.Generic;
-using System;
-using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace CrimsonOnion.Services
@@ -29,7 +25,7 @@ namespace CrimsonOnion.Services
     {
         public static readonly Dictionary<string, BridgeEntry> BridgeData = new()
         {
-            ["meek_lite"] = new BridgeEntry
+            [BridgeNames.MeekLite] = new BridgeEntry
             {
                 Plugin = "ClientTransportPlugin meek_lite,obfs2,obfs3,obfs4,scramblesuit,webtunnel exec %%LYREBIRD%%",
                 Lines = new[]
@@ -37,7 +33,7 @@ namespace CrimsonOnion.Services
                     "Bridge meek_lite 192.0.2.20:80 url=https://1603026938.rsc.cdn77.org front=www.phpmyadmin.net utls=HelloRandomizedALPN"
                 }
             },
-            ["conjure"] = new BridgeEntry
+            [BridgeNames.Conjure] = new BridgeEntry
             {
                 Plugin = "ClientTransportPlugin conjure exec ../../TorBin/conjure-client.exe -registerURL https://registration.refraction.network/api",
                 Lines = new[]
@@ -45,7 +41,7 @@ namespace CrimsonOnion.Services
                     "Bridge conjure 143.110.214.222:80 url=https://registration.refraction.network.global.prod.fastly.net/api front=cdn.sstatic.net"
                 }
             },
-            ["obfs4"] = new BridgeEntry
+            [BridgeNames.Obfs4] = new BridgeEntry
             {
                 Plugin = "ClientTransportPlugin meek_lite,obfs2,obfs3,obfs4,scramblesuit,webtunnel exec %%LYREBIRD%%",
                 Lines = new[]
@@ -59,7 +55,7 @@ namespace CrimsonOnion.Services
                     "Bridge obfs4 212.83.43.74:443 39562501228A4D5E27FCA4C0C81A01EE23AE3EE4 cert=PBwr+S8JTVZo6MPdHnkTwXJPILWADLqfMGoVvhZClMq/Urndyd42BwX9YFJHZnBB3H0XCw iat-mode=1"
                 }
             },
-            ["snowflake"] = new BridgeEntry
+            [BridgeNames.Snowflake] = new BridgeEntry
             {
                 Plugin = "ClientTransportPlugin snowflake exec %%LYREBIRD%%",
                 Lines = new[]
@@ -133,7 +129,6 @@ namespace CrimsonOnion.Services
             cleanCfg.Add($"ControlPort {20050 + torIndex}");
             cleanCfg.Add("CookieAuthentication 1");
 
-
             if (selConfig == "Optimized")
             {
                 cleanCfg.Add("CircuitBuildTimeout 10");
@@ -197,14 +192,14 @@ namespace CrimsonOnion.Services
                 cleanCfg.Add("Socks5Proxy 127.0.0.1:10819");
             }
 
-            if (selBridge == "Custom")
+            if (selBridge == BridgeNames.Custom)
             {
                 if (!string.IsNullOrWhiteSpace(config.CustomBridgeLine))
                 {
                     cleanCfg.Add("UseBridges 1");
                     cleanCfg.Add("ClientTransportPlugin meek_lite,obfs2,obfs3,obfs4,scramblesuit,webtunnel,snowflake exec ../../TorBin/lyrebird.exe");
                     cleanCfg.Add("ClientTransportPlugin conjure exec ../../TorBin/conjure-client.exe -registerURL https://registration.refraction.network/api");
-                    
+
                     int torInstanceId = 1;
                     var matchInstance = Regex.Match(path, @"Tor(\d+)");
                     if (matchInstance.Success)
@@ -225,23 +220,23 @@ namespace CrimsonOnion.Services
                     cleanCfg.Add("UseBridges 0");
                 }
             }
-            else if (selBridge != "Direct")
+            else if (selBridge != BridgeNames.Direct)
             {
                 if (BridgeData.TryGetValue(selBridge, out var b))
                 {
                     cleanCfg.Add("UseBridges 1");
                     cleanCfg.Add(b.Plugin.Replace("%%LYREBIRD%%", "../../TorBin/lyrebird.exe"));
-                    
-                    if (selBridge == "snowflake" && config.EnableSnowflakeAmpCache)
+
+                    if (selBridge == BridgeNames.Snowflake && config.EnableSnowflakeAmpCache)
                     {
                         cleanCfg.Add("Bridge snowflake 192.0.2.3:80 2B280B23E1107BB62ABFC40DDCC8824814F80A72 fingerprint=2B280B23E1107BB62ABFC40DDCC8824814F80A72 url=https://snowflake-broker.torproject.net/ ampcache=https://cdn.ampproject.org/ front=www.google.com ice=stun:stun.epygi.com:3478,stun:stun.uls.co.za:3478,stun:stun.voipgate.com:3478,stun:stun.mixvoip.com:3478,stun:stun.telnyx.com:3478,stun:stun.hot-chilli.net:3478,stun:stun.fitauto.ru:3478,stun:stun.m-online.net:3478 utls-imitate=hellorandomizedalpn");
                         cleanCfg.Add("Bridge snowflake 192.0.2.4:80 8838024498816A039FCBBAB14E6F40A0843051FA fingerprint=8838024498816A039FCBBAB14E6F40A0843051FA url=https://snowflake-broker.torproject.net/ ampcache=https://cdn.ampproject.org/ front=www.google.com ice=stun:stun.epygi.com:3478,stun:stun.uls.co.za:3478,stun:stun.voipgate.com:3478,stun:stun.mixvoip.com:3478,stun:stun.telnyx.com:3478,stun:stun.hot-chilli.net:3478,stun:stun.fitauto.ru:3478,stun:stun.m-online.net:3478 utls-imitate=hellorandomizedalpn");
                     }
-                    else if (selBridge == "conjure" && config.EnableConjureAmpCache)
+                    else if (selBridge == BridgeNames.Conjure && config.EnableConjureAmpCache)
                     {
                         cleanCfg.Add("Bridge conjure 143.110.214.222:80 50B99540A96C5E9F9F7704BAAE11DF01564711F4 url=https://amp.refraction.network registrar=ampcache ampcache=https://cdn.ampproject.org/ fronts=www.google.com transport=prefix");
                     }
-                    else if (selBridge == "conjure" && config.EnableConjureDnsRegistration)
+                    else if (selBridge == BridgeNames.Conjure && config.EnableConjureDnsRegistration)
                     {
                         cleanCfg.Add("Bridge conjure 143.110.214.222:80 50B99540A96C5E9F9F7704BAAE11DF01564711F4 registrar=dns url=https://registration.refraction.network fronts=cdn.zk.mk,www.cdn77.com transport=min");
                     }
@@ -264,3 +259,4 @@ namespace CrimsonOnion.Services
         }
     }
 }
+

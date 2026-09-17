@@ -1,4 +1,4 @@
-/*
+﻿/*
  * CrimsonOnion - A GUI client that runs multiple Tor instances and load-balances them.
  * Copyright (C) 2026 RichTiTAN
  *
@@ -16,10 +16,26 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-namespace CrimsonOnion.Services;
-public static class AppMessenger
+using System.Diagnostics;
+using Newtonsoft.Json;
+
+namespace CrimsonOnion.Services
 {
-    public static event Action<string, bool>? ToastRequested;
-    public static void RequestToast(string message, bool success = false)
-        => ToastRequested?.Invoke(message, success);
+    internal static class ConfigFileWriter
+    {
+        public static bool TryWrite(string path, object config, string engineName)
+        {
+            try
+            {
+                File.WriteAllText(path, JsonConvert.SerializeObject(config, Formatting.Indented));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to write {engineName} config. Check disk space and permissions.\n\n{ex.Message}", "Config Error");
+                return false;
+            }
+        }
+    }
 }
+

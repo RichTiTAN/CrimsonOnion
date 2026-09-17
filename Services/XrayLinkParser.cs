@@ -16,7 +16,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System;
 using System.Text;
 using Newtonsoft.Json.Linq;
 using System.Web;
@@ -247,14 +246,14 @@ namespace CrimsonOnion.Services
                 if (!string.IsNullOrEmpty(sni)) tlsObj["serverName"] = sni;
                 if (!string.IsNullOrEmpty(fp)) tlsObj["fingerprint"] = fp;
                 if (!string.IsNullOrEmpty(alpn)) tlsObj["alpn"] = new JArray(alpn.Split(','));
-                
+
                 if (tls == "reality")
                 {
                     if (!string.IsNullOrEmpty(pbk)) tlsObj["publicKey"] = pbk;
                     if (!string.IsNullOrEmpty(sid)) tlsObj["shortId"] = sid;
                     if (!string.IsNullOrEmpty(spx)) tlsObj["spiderX"] = spx;
                 }
-                
+
                 stream[tls + "Settings"] = tlsObj;
             }
 
@@ -297,7 +296,7 @@ namespace CrimsonOnion.Services
                 outbound["streamSettings"] = stream;
             }
         }
-    
+
         private static JObject ParseSocks(string link)
         {
             string payload = link.Substring(8);
@@ -328,7 +327,7 @@ namespace CrimsonOnion.Services
                     userPass = Uri.UnescapeDataString(up);
                 }
             }
-            
+
             var hpParts = hostPort.Split(new[] { ':' }, 2);
             var outbound = new JObject
             {
@@ -345,7 +344,7 @@ namespace CrimsonOnion.Services
                     }
                 }
             };
-            
+
             if (!string.IsNullOrEmpty(userPass) && userPass.Contains(":"))
             {
                 var upParts = userPass.Split(new[] { ':' }, 2);
@@ -367,6 +366,4 @@ namespace CrimsonOnion.Services
         }
 }
 }
-
-
 

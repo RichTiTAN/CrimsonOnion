@@ -10,9 +10,9 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     
     <!-- Assembly & App Details -->
-    <Version>2.3.1</Version>
-    <AssemblyVersion>2.3.1.0</AssemblyVersion>
-    <FileVersion>2.3.1.0</FileVersion>
+    <Version>2.4.0</Version>
+    <AssemblyVersion>2.4.0.0</AssemblyVersion>
+    <FileVersion>2.4.0.0</FileVersion>
     <Company>RichTiTAN</Company>
     <Authors>RichTiTAN</Authors>
     <Product>CrimsonOnion</Product>
@@ -37,5 +37,10 @@
   </ItemGroup>
   <ItemGroup>
     <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove=".coa-tmp\**" />
+    <AvaloniaXaml Remove=".coa-tmp\**" />
+    <None Remove=".coa-tmp\**" />
   </ItemGroup>
 </Project>

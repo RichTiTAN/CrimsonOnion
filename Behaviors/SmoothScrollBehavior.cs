@@ -21,7 +21,6 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using System;
 
 namespace CrimsonOnion.Behaviors
 {
@@ -100,10 +99,9 @@ namespace CrimsonOnion.Behaviors
 
                 double scrollAmount = 180; 
                 _scrollVelocity += e.Delta.Y * scrollAmount;
-                
 
                 _targetOffset = _currentScroller.Offset.Y - _scrollVelocity;
-                
+
                 double maxOffset = scroller.Extent.Height - scroller.Viewport.Height;
                 _targetOffset = Math.Max(0, Math.Min(_targetOffset, maxOffset));
 
@@ -114,7 +112,7 @@ namespace CrimsonOnion.Behaviors
                     _animTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) }; 
                     _animTimer.Tick += AnimTimer_Tick;
                 }
-                
+
                 if (!_animTimer.IsEnabled)
                     _animTimer.Start();
             }
@@ -146,3 +144,4 @@ namespace CrimsonOnion.Behaviors
         }
     }
 }
+

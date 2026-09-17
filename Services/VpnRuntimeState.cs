@@ -17,9 +17,23 @@
  */
 
 namespace CrimsonOnion.Services;
-public static class AppMessenger
+public sealed class VpnRuntimeState
 {
-    public static event Action<string, bool>? ToastRequested;
-    public static void RequestToast(string message, bool success = false)
-        => ToastRequested?.Invoke(message, success);
+    public int?[] TorPids = new int?[8];
+
+    public int? XrayDebugPid;
+    public int? SbDebugPid;
+    public int? AdapterXrayDebugPid;
+    public int? XrayPid;
+    public int? AdapterXrayPid;
+    public int? SbPid;
+    public System.Threading.CancellationTokenSource? UpdateCts;
+    public System.Threading.CancellationTokenSource? StatsCts;
+    public System.Threading.CancellationTokenSource? PingCts;
+    public System.Threading.CancellationTokenSource? GeoCts;
+    public long LastUpBytes;
+    public long LastDnBytes;
+    public System.DateTime LastPollTime = System.DateTime.MinValue;
+    public int IsFetchingStatsInt;
+
 }

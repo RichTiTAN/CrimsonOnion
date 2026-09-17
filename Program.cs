@@ -17,7 +17,6 @@
  */
 
 using Avalonia;
-using System;
 
 namespace CrimsonOnion;
 
@@ -57,3 +56,4 @@ class Program
             .WithInterFont()
             .LogToTrace();
 }
+

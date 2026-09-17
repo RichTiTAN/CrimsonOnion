@@ -17,7 +17,6 @@
  */
 
 using System.Diagnostics;
-using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using CrimsonOnion.Models;
@@ -33,9 +32,9 @@ namespace CrimsonOnion.Services
             if (torCount > 8) torCount = 8;
 
             bool useCustomChain = config.EnableV2rayChain && !string.IsNullOrWhiteSpace(config.V2rayChainJson);
-            bool preferDirectDefault = config.EnableDirect && config.SplitTunnelMode == "INCLUSIVE" && config.LastXrayMode != "VPN Mode";
+            bool preferDirectDefault = config.EnableDirect && config.SplitTunnelMode == "INCLUSIVE" && config.LastXrayMode != XrayModes.VpnMode;
 
-            string xrayBalancePolicy = GetXrayBalancePolicy(config.HaProxyBalancePolicy);
+            string xrayBalancePolicy = GetXrayBalancePolicy(config.XrayBalancePolicy);
             object strategy = GetXrayBalancerStrategy(xrayDir, xrayBalancePolicy);
 
             var rules = new List<object>
@@ -73,7 +72,7 @@ namespace CrimsonOnion.Services
             if (blockPorts.Count > 0)
                 rules.Add(new { type = "field", port = string.Join(",", blockPorts), outboundTag = "block" });
 
-            if (config.EnableDirect && config.LastXrayMode != "VPN Mode" && !string.IsNullOrWhiteSpace(config.LastManualSplit))
+            if (config.EnableDirect && config.LastXrayMode != XrayModes.VpnMode && !string.IsNullOrWhiteSpace(config.LastManualSplit))
             {
                 var domains = new List<string>();
                 var ips = new List<string>();
@@ -93,7 +92,7 @@ namespace CrimsonOnion.Services
             }
 
             rules.Insert(0, new { type = "field", inboundTag = new[] { "api" }, outboundTag = "api" });
-            
+
             if (preferDirectDefault)
             {
                 rules.Add(new { type = "field", network = "tcp,udp", outboundTag = "direct" });
@@ -205,7 +204,12 @@ namespace CrimsonOnion.Services
 
             var cfg = new Dictionary<string, object>
             {
-                ["log"] = new { logLevel = "info", access = Path.Combine(xrayDir, "access.log").Replace("\\", "/"), error = Path.Combine(xrayDir, "error.log").Replace("\\", "/") },
+                ["log"] = new
+                {
+                    logLevel = "info",
+                    access   = Path.Combine(xrayDir, XraySupervisor.AccessLogFileName).Replace("\\", "/"),
+                    error    = Path.Combine(xrayDir, XraySupervisor.ErrorLogFileName).Replace("\\", "/")
+                },
                 ["stats"] = new { },
                 ["api"] = new { tag = "api", services = new[] { "StatsService" } },
                 ["policy"] = new
@@ -253,17 +257,7 @@ namespace CrimsonOnion.Services
                 }
             }
 
-            try
-            {
-                var json = JsonConvert.SerializeObject(cfg, Formatting.Indented);
-                File.WriteAllText(Path.Combine(xrayDir, "config.json"), json);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Failed to write Xray config. Check disk space and permissions.\n\n{ex.Message}", "Config Error");
-                return false;
-            }
+            return ConfigFileWriter.TryWrite(Path.Combine(xrayDir, "config.json"), cfg, "Xray");
         }
 
         private static string GetXrayBalancePolicy(string? policy)
@@ -274,8 +268,6 @@ namespace CrimsonOnion.Services
                 "leastping" => "leastPing",
                 "roundrobin" => "roundRobin",
                 "random" => "random",
-                "leastconn" => "roundRobin",
-                "first" => "roundRobin",
                 _ => "leastPing"
             };
         }
@@ -401,10 +393,10 @@ namespace CrimsonOnion.Services
                     if (string.IsNullOrEmpty(a)) continue;
                     var appExe = a.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ? a : a + ".exe";
                     var appBase = Path.GetFileNameWithoutExtension(appExe);
-                    
+
                     if (!userApps.Contains(appExe)) userApps.Add(appExe);
                     if (!userApps.Contains(appBase)) userApps.Add(appBase);
-                    
+
                     if (!userApps.Contains(appExe.ToLower())) userApps.Add(appExe.ToLower());
                     if (!userApps.Contains(appBase.ToLower())) userApps.Add(appBase.ToLower());
                 }
@@ -541,31 +533,8 @@ namespace CrimsonOnion.Services
                 }
             };
 
-            try
-            {
-                var json = JsonConvert.SerializeObject(sbConfig, Formatting.Indented);
-                File.WriteAllText(Path.Combine(sbDir, "config.json"), json);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Failed to write Sing-Box config.\n\n{ex.Message}", "Config Error");
-                return false;
-            }
-        }
-        private static System.Collections.Generic.List<object> GetSingBoxOutbounds(CrimsonOnion.Models.AppConfig config)
-        {
-            var obs = new System.Collections.Generic.List<object>
-            {
-                new { type = "socks", tag = "proxy", server = "127.0.0.1", server_port = 10818 },
-                new { type = "direct", tag = "direct" }
-            };
-
-            return obs;
+            return ConfigFileWriter.TryWrite(Path.Combine(sbDir, "config.json"), sbConfig, "Sing-Box");
         }
     }
 }
-
-
-
 

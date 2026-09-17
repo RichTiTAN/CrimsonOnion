@@ -29,25 +29,24 @@ namespace CrimsonOnion.Localization
             IsPersian = lang == "PERSIAN";
         }
 
-
-        public static void Apply(TextBlock? tb, string text, bool forceLtr = false)
+        public static void Apply(TextBlock? tb, string text, bool forceLtr = false, bool keepFont = false, bool leftAlign = false)
         {
             if (tb == null) return;
             tb.Text = text;
             if (IsPersian)
             {
-                tb.FontFamily = new global::Avalonia.Media.FontFamily("Segoe UI");
+                if (!keepFont) tb.FontFamily = new global::Avalonia.Media.FontFamily("Segoe UI");
                 tb.FlowDirection = forceLtr
                     ? global::Avalonia.Media.FlowDirection.LeftToRight
                     : global::Avalonia.Media.FlowDirection.RightToLeft;
             }
             else
             {
-                tb.FontFamily = global::Avalonia.Media.FontFamily.Default;
+                if (!keepFont) tb.FontFamily = global::Avalonia.Media.FontFamily.Default;
                 tb.FlowDirection = global::Avalonia.Media.FlowDirection.LeftToRight;
             }
-            
-            if (forceLtr && IsPersian)
+
+            if (IsPersian && (forceLtr || leftAlign))
             {
                 tb.HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Left;
             }
@@ -104,9 +103,9 @@ namespace CrimsonOnion.Localization
         public static string Connect            => IsPersian ? "اتصال"             : "CONNECT";
         public static string ConnectedBtn       => IsPersian ? "متصل"              : "CONNECTED";
         public static string Disconnect         => IsPersian ? "قطع اتصال"         : "DISCONNECT";
-        public static string Disconnected       => IsPersian ? "منتظر اتصال"       : "DISCONNECTED";
-        public static string ConnectedFor       => IsPersian ? "متصل برای"         : "CONNECTED FOR";
-        public static string ConnectedTo        => IsPersian ? "به"                 : "TO";
+        public static string Disconnected       => IsPersian ? "منتظر اتصال"       : "Disconnected";
+        public static string SessionLabel       => IsPersian ? "نشست"             : "SESSION:";
+        public static string LocationLabel      => IsPersian ? "کشور"             : "LOCATION:";
         public static string ProxyMode          => IsPersian ? "حالت پروکسی"       : "PROXY MODE";
         public static string VpnMode            => IsPersian ? "حالت VPN"          : "VPN MODE";
         public static string ClearProxy         => IsPersian ? "بدون پروکسی"       : "CLEAR PROXY";
@@ -115,22 +114,21 @@ namespace CrimsonOnion.Localization
         public static string LogsStatus         => IsPersian ? "لاگ‌ها و وضعیت"   : "LOGS & STATUS";
         public static string TorBootstrap       => IsPersian ? "راه اندازی تور"    : "TOR BOOTSTRAP";
         public static string XrayLogHeader      => IsPersian ? "اتصالات (لاگ Xray)" : "CONNECTIONS (XRAY LOG)";
-        public static string OpenLocalPort      => IsPersian ? "پورت لوکال:"       : "OPEN LOCAL PORT:";
-        public static string OpenLanPort        => IsPersian ? "پورت لن:"         : "OPEN LAN PORT:";
-        public static string PingLabel          => IsPersian ? "پینگ"              : "Ping";
-        public static string TotalLabel         => IsPersian ? "مجموع"             : "Total";
-        public static string DownloadLabel      => IsPersian ? "دانلود"            : "Download";
-        public static string UploadLabel        => IsPersian ? "آپلود"             : "Upload";
+        public static string OpenLocalPort      => IsPersian ? "پورت لوکال"       : "LOCAL PORT:";
+        public static string OpenLanPort        => IsPersian ? "پورت لن"         : "LAN PORT:";
+        public static string PingLabel          => IsPersian ? "پینگ"              : "PING";
+        public static string TotalLabel         => IsPersian ? "مجموع"             : "TOTAL";
+        public static string DownloadLabel      => IsPersian ? "دانلود"            : "DOWNLOAD";
+        public static string UploadLabel        => IsPersian ? "آپلود"             : "UPLOAD";
         public static string GetBridges         => IsPersian ? "دریافت بریج"       : "GET BRIDGES";
-        public static string EnterCaptcha       => IsPersian ? "کپچا را وارد کنید" : "ENTER CAPTCHA";
         public static string Save               => IsPersian ? "ذخیره"             : "SAVE";
         public static string Submit             => IsPersian ? "ثبت"               : "SUBMIT";
         public static string CaptchaVerifying   => IsPersian ? "در حال بررسی..."   : "VERIFYING...";
         public static string TorStatusOffline   => IsPersian ? "آفلاین"             : "OFFLINE";
         public static string TorStatusBooting   => IsPersian ? "در حال اجرا..."     : "BOOTING...";
         public static string TorStatusWaiting   => IsPersian ? "منتظر..."           : "WAITING...";
-        public static string GeoTracing             => IsPersian ? "در حال جستجو..." : "TRACING...";
-        public static string GeoTimeout             => IsPersian ? "ناموفق"          : "TIMEOUT";
+        public static string GeoTracing             => IsPersian ? "در حال جستجو..." : "Tracing...";
+        public static string GeoTimeout             => IsPersian ? "ناموفق"          : "Timeout";
         public static string RoutingOptimized   => IsPersian ? "بهینه"             : "OPTIMIZED";
         public static string RoutingExpert      => IsPersian ? "حرفه ای"           : "EXPERT";
 		public static string BtnBrowse => IsPersian ? "مرور" : "BROWSE";
@@ -139,10 +137,8 @@ namespace CrimsonOnion.Localization
         // ==================================================
         // THEMES OVERLAY
         // ==================================================
-        public static string ThemesPauseGlow => IsPersian ? "توقف هاله پس‌زمینه" : "PAUSE BACKGROUND GLOW";
-        public static string ThemesPauseGlowDesc => IsPersian ? "انیمیشن حرکت هاله را برای کاهش مصرف گرافیک متوقف می‌کند." : "Stops the rotation animation to reduce GPU usage.";
-        public static string ThemesDisableGlow => IsPersian ? "غیرفعال‌سازی هاله پس‌زمینه" : "DISABLE BACKGROUND GLOW";
-        public static string ThemesDisableGlowDesc => IsPersian ? "هاله پس‌زمینه را برای حداکثر کارایی به طور کامل خاموش می‌کند." : "Turns off the background glow completely for maximum performance.";
+        public static string ThemesPauseGlow => IsPersian ? "توقف انیمیشن‌ها" : "PAUSE ANIMATIONS";
+        public static string ThemesDisableGlow => IsPersian ? "غیرفعال‌سازی انیمیشن‌ها" : "DISABLE ANIMATIONS";
 
         // ==================================================
         // SETTINGS OVERLAY
@@ -177,14 +173,12 @@ namespace CrimsonOnion.Localization
         public static string Authentication     => IsPersian ? "احراز هویت"        : "AUTHENTICATION";
         public static string Username           => IsPersian ? "نام کاربری"         : "USERNAME";
         public static string Password           => IsPersian ? "رمز عبور"           : "PASSWORD";
-        public static string ImportJson         => IsPersian ? "وارد کردن .JSON"    : "IMPORT .JSON";
 
         // ==================================================
         // SPLIT TUNNEL OVERLAY
         // ==================================================
         public static string SplitTunneling     => IsPersian ? "اسپلیت تانل"       : "SPLIT TUNNELING";
         public static string SplitTunnelDirectUDP => IsPersian ? "UDP مستقیم" : "DIRECT UDP";
-        public static string SplitTunnelDirectUDPDesc => IsPersian ? "این گزینه می‌تواند به بازی‌های ویدیویی، چت صوتی دیسکورد یا سایر پلتفرم‌های وابسته به UDP کمک کند." : "This option can help with video games, discord voice or other udp dependant platforms.";
         public static string Disabled           => IsPersian ? "غیرفعال"           : "DISABLED";
         public static string Exclusive          => IsPersian ? "اختصاصی"           : "EXCLUSIVE";
         public static string Inclusive          => IsPersian ? "شامل"              : "INCLUSIVE";
@@ -214,11 +208,11 @@ namespace CrimsonOnion.Localization
         public static string BtnCancel => IsPersian ? "لغو" : "CANCEL";
         public static string AboutCreator => IsPersian ? "سازنده: RichTitan" : "Creator: @RichTitan";
         public static string AboutLicense => IsPersian ? "لایسنس: GPL-3.0 license" : "License: GPL-3.0 license";
+        public static string AboutOtherApps => IsPersian ? "برنامه‌های دیگر" : "OTHER APPS";
 
         // ==================================================
         // TRAY MENU
         // ==================================================
-        public static string TrayNotConnected   => IsPersian ? "متصل نیست"         : "NOT CONNECTED";
 		public static string TrayStatusNotConnected => IsPersian ? "متصل نیست" : "NOT CONNECTED";
 		public static string TrayBtnCloseApp => IsPersian ? "بستن برنامه" : "CLOSE THE APP";
 		public static string TrayBtnShowWindow => IsPersian ? "نمایش پنجره" : "SHOW WINDOW";
@@ -227,7 +221,7 @@ namespace CrimsonOnion.Localization
         // PROMOTIONS & MISC
         // ==================================================
         public static string DonationsTitle     => IsPersian ? "حمایت مالی"         : "DONATIONS";
-        public static string DonationsDesc      => IsPersian ? "اگر می‌خواهید از من یا پروژه حمایت کنید، می‌توانید با ارسال مبلغ دلخواه به یکی از آدرس‌های کیف پول زیر این کار را انجام دهید،" : "if u want to support me or the project you can do so by sending your desired amount to one of these wallet addresses,";
+        public static string DonationsDesc      => IsPersian ? "به دلیل حفظ حریم خصوصی، کمک‌های مالی تنها از طریق کیف پول‌های رمزارز امکان‌پذیر است." : "Donations are only available through Crypto wallets due to privacy reasons.";
         public static string ExpertTitle        => IsPersian ? "پیکربندی پیشرفته مسیریابی" : "EXPERT ROUTING CONFIGURATION";
         public static string PromoCrimsonXTitle => IsPersian ? "کشف CrimsonX" : "Discover CrimsonX";
         public static string PromoCrimsonXHeader => IsPersian ? "برنامه جدید ما CrimsonX منتشر شد!" : "Our new app CrimsonX was released!";
@@ -243,7 +237,7 @@ namespace CrimsonOnion.Localization
         public static string TtLanAuth          => IsPersian
             ? "اگر فعال باشد، دستگاه‌های روی شبکه باید نام کاربری و رمز عبور وارد کنند تا از این پروکسی استفاده کنند. فقط در حالت پروکسی و Clear Proxy اعمال می‌شود."
             : "When enabled, devices on the network must supply a username and password to use this proxy. Only applies in Proxy and Clear Proxy mode.";
-        public static string SplitTunnelDirectUDPTooltip => IsPersian ? "ترافیک UDP را مستقیم و بدون عبور از شبکه تور به اینترنت ارسال می‌کند. این ترافیک تونل نخواهد شد، بنابراین این گزینه ناشناس بودن را کاهش می‌دهد." : "Bypass Tor and route all UDP traffic directly to the internet adapter. UDP traffic will not be tunneled, so this option reduces anonymity.";
+        public static string SplitTunnelDirectUDPTooltip => IsPersian ? "ترافیک UDP را مستقیم و بدون عبور از شبکه تور به اینترنت ارسال می‌کند. این ترافیک تونل نخواهد شد، بنابراین این گزینه ناشناس بودن را کاهش می‌دهد. این گزینه می‌تواند به بازی‌های ویدیویی، چت صوتی دیسکورد یا سایر پلتفرم‌های وابسته به UDP کمک کند." : "Bypass Tor and route all UDP traffic directly to the internet adapter. UDP traffic will not be tunneled, so this option reduces anonymity. This option can help with video games, discord voice or other udp dependant platforms.";
         public static string TtCustomXray   => IsPersian ? "از سرور شخصی Xray خود به عنوان نود خروجی بعد از Tor استفاده کنید. مسیر: شما -> Tor -> سرور Xray شما -> اینترنت. سایت‌ها IP سرور Xray شما را می‌بینند نه Tor. یک خروجی JSON جایگذاری کنید یا یک لینک اشتراک‌گذاری (VLESS, VMess, Trojan, SS) وارد کنید. فقط پورت‌های 80 و 443 از طریق Tor کار می‌کنند؛ REALITY, KCP و QUIC مسدود هستند." : "Use a personal Xray server as your exit node after Tor. Path: you → Tor → your Xray server → internet. Websites see your Xray server's IP, not Tor's. Paste outbound JSON or import a share link (VLESS, VMess, Trojan, SS). Only ports 80 and 443 work over Tor; REALITY, KCP, and QUIC are blocked.";
         public static string TtOutboundProxy => IsPersian ? "کل اتصال Tor را از طریق یک پروکسی خروجی SOCKS5 یا HTTPS خارجی عبور می‌دهد. زمانی که Tor مسدود است و برای رسیدن به گره‌های محافظ به پروکسی نیاز دارید، از این استفاده کنید. این بر نحوه بوت شدن Tor تأثیر می‌گذارد، نه اینکه مرور شما از کدام کشور خارج می‌شود." : "Send Tor's own connection to the network through an external SOCKS5 or HTTPS proxy. Use this when Tor is blocked and you need a proxy just to reach guard nodes. This affects how Tor boots up—not which country your browsing exits from.";
         public static string TtAdapterBinding => IsPersian ? "کل ترافیک Tor را مجبور می‌کند منحصراً از طریق آداپتور شبکه انتخاب شده خارج شود. زمانی که پل \"Snowflake\" انتخاب شده باشد کار نمی‌کند." : "Forces all Tor traffic to exclusively exit through the selected network adapter. Does not work when \"Snowflake\" bridge is selected.";
@@ -266,12 +260,11 @@ namespace CrimsonOnion.Localization
         public static string TtStartMinimized => IsPersian ? "اجرای برنامه به صورت کوچک شده (مخفی)." : "Start the application minimized in the background.";
         public static string TtMinimizeToTray => IsPersian ? "کوچک کردن برنامه در سینی سیستم به جای نوار وظیفه." : "Minimize the application to the system tray instead of the taskbar.";
         public static string TtPingRefresh => IsPersian ? "برای به‌روزرسانی پینگ کلیک کنید" : "Click to refresh ping";
+        public static string TtLocationRefresh => IsPersian ? "برای به‌روزرسانی موقعیت و پینگ کلیک کنید" : "Click to refresh location and ping";
         public static string TtLbLeastLoad => IsPersian ? "هر اتصال جدید را به خلوت‌ترین نمونه Tor ارسال می‌کند. بهترین گزینه برای ترافیک ترکیبی با حجم متغیر." : "Distributes each new connection to the least-loaded Tor instance. Best for mixed traffic with varying connection size.";
         public static string TtLbRoundRobin => IsPersian ? "اتصالات را به طور مساوی و به نوبت بین تمام نمونه‌های Tor توزیع می‌کند. مناسب برای توزیع یکنواخت و برابر." : "Distributes connections evenly across all Tor instances in order, cycling through them one by one. Good for consistent, equal distribution.";
         public static string TtLbLeastPing => IsPersian ? "نمونه Tor با کمترین پینگ اخیر را انتخاب می‌کند. بهترین گزینه برای ترافیک حساس به تأخیر." : "Picks the Tor instance with the lowest recent ping. Best for latency-sensitive traffic.";
         public static string TtLbRandom => IsPersian ? "برای هر اتصال جدید یک نمونه Tor را به صورت تصادفی انتخاب می‌کند. در طول زمان متعادل است اما نوسان بیشتری نسبت به Round Robin دارد." : "Picks a Tor instance at random for each new connection. Statistically even over time but with more variance than Round Robin.";
-        public static string TtDisabledAdapterBinding => IsPersian ? "غیرفعال است زیرا پروکسی خروجی فعال است." : "Disabled because Outbound Proxy is enabled.";
-        public static string TtDisabledOutboundProxy => IsPersian ? "غیرفعال است زیرا اتصال به آداپتور فعال است." : "Disabled because Adapter Binding is enabled.";
         public static string TtDisabledVpnSnowflake => IsPersian ? "غیرفعال است چون پل Snowflake انتخاب شده است. اگر می‌خواهید از Snowflake در حالت VPN استفاده کنید، لطفاً گزینه \"Direct UDP\" را در منوی تونل‌زنی دوگانه روشن کنید." : "Disabled because Snowflake bridge is selected.\nIf you want to use Snowflake in VPN Mode please turn on the \"Direct UDP\" option in split tunneling menu.";
 
         // ==================================================
@@ -280,7 +273,6 @@ namespace CrimsonOnion.Localization
         public static string ToastLatestVersion => IsPersian ? "شما از قبل آخرین نسخه را دارید!" : "You are already on the latest version!";
         public static string ToastVpnDisabledSnowflake => IsPersian ? "حالت VPN برای پل Snowflake غیرفعال شد. اگر می‌خواهید از Snowflake در حالت VPN استفاده کنید، لطفاً گزینه \"Direct UDP\" را در منوی اسپلیت تانل روشن کنید." : "VPN Mode disabled for Snowflake bridge. To use it, turn on \"Direct UDP\" in split tunneling.";
         public static string ToastAdapterBindingSnowflake => IsPersian ? "وقتی پل \"Snowflake\" انتخاب شده، اتصال به آداپتور کار نمی‌کند." : "BIND ADAPTER will not work when Snowflake bridge is selected.";
-        public static string ToastBootstrapTimeout => IsPersian ? "تایم اوت در اتصال. سعی کنید نوع پل دیگری را انتخاب کنید." : "Bootstrap timed out. Try a different bridge type.";
         public static string ToastRealityNotSupported => IsPersian ? "کانفیگ های REALITY بر روی Tor پشتیبانی نمی شوند." : "REALITY configs are not supported over Tor.";
         public static string ToastKcpQuicNotSupported => IsPersian ? "کانکشن های KCP و QUIC بر روی Tor پشتیبانی نمی شوند." : "KCP and QUIC transports are not supported over Tor.";
         public static string ToastPortsSupported => IsPersian ? "تنها پورت های 80 و 443 پشتیبانی می شوند." : "Only port 80 and 443 are supported.";
@@ -313,6 +305,6 @@ namespace CrimsonOnion.Localization
 		public static string ToastInvalidSecondaryDns => IsPersian ? "لطفا یک آدرس IPv4 معتبر برای DNS ثانویه وارد کنید." : "Please enter a valid IPv4 address for the secondary DNS.";
 		public static string ToastEnterUsername => IsPersian ? "لطفا نام کاربری را وارد کنید." : "Please enter a username.";
 		public static string ToastCredentialsSaved => IsPersian ? "اطلاعات ورود ذخیره شد." : "Credentials saved.";
-
+		public static string ToastDnsttTunnelFailed => IsPersian ? "راه‌اندازی تونل DNSTT ناموفق بود." : "Failed to start the DNSTT tunnel.";
 }
 }

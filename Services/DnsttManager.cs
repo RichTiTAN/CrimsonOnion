@@ -16,12 +16,8 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Text.RegularExpressions;
 using CrimsonOnion.Models;
 
@@ -67,7 +63,7 @@ namespace CrimsonOnion.Services
                 {
                     string doh = "", dot = "", pubkey = "", domain = "", fingerprint = "";
                     var parts = trimmed.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-                    
+
                     if (parts.Length >= 3 && !parts[2].Contains("="))
                     {
                         fingerprint = parts[2]; 
@@ -176,7 +172,8 @@ namespace CrimsonOnion.Services
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Failed to start dnstt-client.exe: {ex.Message}");
+                    SimpleLogger.Log(ex);
+                    AppMessenger.RequestToast(CrimsonOnion.Localization.AppStrings.ToastDnsttTunnelFailed);
                 }
             }
         }
@@ -211,3 +208,4 @@ namespace CrimsonOnion.Services
         }
     }
 }
+
