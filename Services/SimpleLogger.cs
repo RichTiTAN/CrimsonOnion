@@ -82,6 +82,18 @@ namespace CrimsonOnion.Services
 
         public static bool EnableLogging { get; set; } = true;
 
+        private static readonly HashSet<string> _onceKeys = new(StringComparer.Ordinal);
+
+        public static void LogOnce(string key, string message)
+        {
+            lock (_onceKeys)
+            {
+                if (_onceKeys.Count > 500) _onceKeys.Clear();
+                if (!_onceKeys.Add(key)) return;
+            }
+            Log(message);
+        }
+
         public static void Log(Exception ex)
         {
             if (!EnableLogging) return;

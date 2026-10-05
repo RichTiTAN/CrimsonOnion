@@ -1,4 +1,4 @@
-﻿<!--
+<!--
   CrimsonOnion - A GUI client that runs multiple Tor instances and load-balances them.
   Copyright (C) 2026 RichTiTAN
 
@@ -92,7 +92,7 @@
                                                         <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                                             <PathIcon Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" Width="14" Height="14" Foreground="#8B949E"/>
                                                             <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
-                                                                <TextBlock x:Name="lblCustomXrayExit" Classes="settingTitle" Text="CUSTOM XRAY EXIT-NODE" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" VerticalAlignment="Center" ToolTip.Tip="Use a personal Xray server as your exit node after Tor. Path: you ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ Tor ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ your Xray server ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ internet. Websites see your Xray server's IP, not Tor's. Paste outbound JSON or import a share link (VLESS, VMess, Trojan, SS). Only ports 80 and 443 work over Tor; REALITY, KCP, and QUIC are blocked."/>
+<TextBlock x:Name="lblCustomXrayExit" Classes="settingTitle" Text="CUSTOM EXIT-NODE" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" VerticalAlignment="Center" ToolTip.Tip="Use a personal server as your exit node after Tor. Websites see your exit server's IP, not Tor's. Paste an Xray outbound JSON or a share link (VLESS, VMess, Trojan, SS), a plain-TCP VLESS config, or an OpenVPN TCP (.ovpn) profile. WireGuard and UDP-based configs (OpenVPN UDP, KCP, QUIC, Hysteria) are not supported. OpenVPN configs may ask for credentials."/>
                                                             </StackPanel>
                                                         </StackPanel>
                                                         <ToggleSwitch Grid.Column="2" x:Name="togXrayExitNode" OnContent="{x:Null}" OffContent="{x:Null}" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="40" Margin="0,0,10,0" IsCheckedChanged="togXrayExitNode_IsCheckedChanged"/>
@@ -117,7 +117,7 @@
                                                     <TextBox x:Name="txtXrayJson" TextChanged="txtXrayJson_TextChanged" Height="120" AcceptsReturn="True" TextWrapping="Wrap" Background="#1A1C20" Foreground="{DynamicResource ThemeGlowBrush}" BorderBrush="#2D3748" BorderThickness="1" FontFamily="Consolas" FontSize="11" CornerRadius="4" VerticalAlignment="Stretch"/>
 
                                                     <Grid ColumnDefinitions="Auto, *">
-                                                        <Button Grid.Column="0" x:Name="btnXrayImport" Click="btnXrayImport_Click" Content="IMPORT .JSON" Classes="optBtn" FontSize="10" FontWeight="Bold" Background="#1AFFFFFF" Padding="12,6" VerticalAlignment="Center"/>
+                                                        <Button Grid.Column="0" x:Name="btnXrayImport" Click="btnXrayImport_Click" Content="IMPORT FILE" Classes="optBtn" FontSize="10" FontWeight="Bold" Background="#1AFFFFFF" Padding="12,6" VerticalAlignment="Center"/>
 
                                                         <Border Grid.Column="1" Background="#0A0C0F" CornerRadius="3" BorderBrush="#2D3748" BorderThickness="1" HorizontalAlignment="Right" Width="140" Margin="0">
                                                             <Grid ColumnDefinitions="*, 1, *">

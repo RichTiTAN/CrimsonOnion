@@ -24,7 +24,7 @@ namespace CrimsonOnion.Services
 {
     public static class UpdateService
     {
-        public const string AppVersion = "2.4.0";
+        public const string AppVersion = "2.5.0";
 
         private static readonly HttpClient _httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
 

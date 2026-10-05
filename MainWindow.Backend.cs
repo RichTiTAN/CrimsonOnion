@@ -70,7 +70,7 @@ public partial class MainWindow
         ConfigService.Save(_cfg, _state, _cfg.CfgFile, _cfg.LastConfig, _cfg.LastBridge, _cfg.LastCount);
     }
 
-    private string GetAppPath(string relPath)
+    internal string GetAppPath(string relPath)
     {
         return Path.Combine(_cfg.BaseDir, relPath);
     }
@@ -112,7 +112,7 @@ public partial class MainWindow
 
         if (_state.IsConnected || _state.IsEngineRunning)
         {
-            lblLocalIp.Text = "127.0.0.1:10818";
+            lblLocalIp.Text = "127.0.0.1:" + CrimsonOnion.Services.ExitNodeChain.ActivePort;
         }
         else
         {
@@ -135,7 +135,7 @@ public partial class MainWindow
         {
             if (_state.IsConnected || _state.IsEngineRunning)
             {
-                lblLanIp.Text = (_state.LanIp ?? "UNKNOWN") + ":10818";
+                lblLanIp.Text = (_state.LanIp ?? "UNKNOWN") + ":" + CrimsonOnion.Services.ExitNodeChain.ActivePort;
             }
             else
             {
@@ -177,7 +177,7 @@ public partial class MainWindow
 
     private void OnTorConnectionDropped(int torIdx) => _torFarm.NoteDropped(torIdx);
 
-    public void ShowToast(string message, bool success = false)
+    public void ShowToast(string message, bool success = false, int durationMs = 3000)
     {
         Dispatcher.UIThread.InvokeAsync(() =>
         {
@@ -222,6 +222,7 @@ public partial class MainWindow
                     }
                 };
             }
+            _toastTimer.Interval = TimeSpan.FromMilliseconds(durationMs);
             _toastTimer.Start();
         });
     }

@@ -172,6 +172,9 @@ public static class VpnEngineService
         if (line.IndexOf("is relative and will resolve to", StringComparison.OrdinalIgnoreCase) >= 0)
             return false;
 
+        if (line.IndexOf("endpoint is not ready yet", StringComparison.OrdinalIgnoreCase) >= 0)
+            return false;
+
         bool isWarn = line.IndexOf("warn",  StringComparison.OrdinalIgnoreCase) >= 0
             || line.IndexOf("error", StringComparison.OrdinalIgnoreCase) >= 0
             || line.IndexOf("fatal", StringComparison.OrdinalIgnoreCase) >= 0

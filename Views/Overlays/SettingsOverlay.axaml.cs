@@ -1,4 +1,4 @@
-﻿/*
+/*
  * CrimsonOnion - A GUI client that runs multiple Tor instances and load-balances them.
  * Copyright (C) 2026 RichTiTAN
  *
@@ -960,11 +960,6 @@ private void txtXrayJson_TextChanged(object? sender, global::Avalonia.Controls.T
 
         if (text.StartsWith("vless://") || text.StartsWith("vmess://") || text.StartsWith("trojan://") || text.StartsWith("ss://") || text.StartsWith("socks://"))
         {
-            if (text.Contains("security=reality", StringComparison.OrdinalIgnoreCase))
-            {
-                _main!.TriggerShowToast(CrimsonOnion.Localization.AppStrings.ToastRealityNotSupported);
-                return;
-            }
             if (text.Contains("type=kcp", StringComparison.OrdinalIgnoreCase) || text.Contains("net=kcp", StringComparison.OrdinalIgnoreCase) || text.Contains("type=quic", StringComparison.OrdinalIgnoreCase) || text.Contains("net=quic", StringComparison.OrdinalIgnoreCase))
             {
                 _main!.TriggerShowToast(CrimsonOnion.Localization.AppStrings.ToastKcpQuicNotSupported);
@@ -988,9 +983,14 @@ private async void btnXrayImport_Click(object? sender, global::Avalonia.Interact
 
             var files = await topLevel.StorageProvider.OpenFilePickerAsync(new global::Avalonia.Platform.Storage.FilePickerOpenOptions
             {
-                Title = "Select Xray JSON File",
+                Title = "Select Config File",
                 AllowMultiple = false,
-                FileTypeFilter = new[] { new global::Avalonia.Platform.Storage.FilePickerFileType("JSON Files") { Patterns = new[] { "*.json" } }, new global::Avalonia.Platform.Storage.FilePickerFileType("All Files") { Patterns = new[] { "*.*" } } }
+                FileTypeFilter = new[]
+                {
+                    new global::Avalonia.Platform.Storage.FilePickerFileType("Config Files") { Patterns = new[] { "*.json", "*.ovpn", "*.conf", "*.txt" } },
+                    new global::Avalonia.Platform.Storage.FilePickerFileType("OpenVPN Profiles") { Patterns = new[] { "*.ovpn", "*.conf" } },
+                    new global::Avalonia.Platform.Storage.FilePickerFileType("All Files") { Patterns = new[] { "*.*" } }
+                }
             });
 
             if (files != null && files.Count > 0)
@@ -1015,156 +1015,81 @@ private async void btnXraySave_Click(object? sender, global::Avalonia.Interactiv
     {
         var txt = this.FindControl<global::Avalonia.Controls.TextBox>("txtXrayJson");
         var tog = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togXrayExitNode");
+        if (txt == null || tog == null || _main == null) return;
 
-        if (txt != null && tog != null)
+        string text = (txt.Text ?? "").Trim();
+        bool enable = tog.IsChecked ?? false;
+
+        if (text.Length == 0)
         {
-            var text = txt.Text ?? "";
-            bool enable = tog.IsChecked ?? false;
+            _main.Cfg.V2rayChainJson = "";
+            _main.Cfg.EnableV2rayChain = enable;
+            SaveExitNode();
+            return;
+        }
 
-            if (string.IsNullOrWhiteSpace(text))
+        try
+        {
+            if (TunnelConfigParser.TryParse(text, out var tunnel))
             {
-                _main!.Cfg.V2rayChainJson = "";
-                _main!.Cfg.EnableV2rayChain = enable;
-                ConfigService.Save(_main!.Cfg, _main!.State, _main!.Cfg.CfgFile, _main!.Cfg.LastConfig, _main!.Cfg.LastBridge, _main!.Cfg.LastCount);
+                if (tunnel.Endpoint != null && tunnel.Success)
+                {
+                    if (!await TunnelCredentialResolver.ApplyAsync(tunnel))
+                    {
+                        _main.TriggerShowToast(CrimsonOnion.Localization.AppStrings.ToastTunnelNeedsCredentials);
+                        return;
+                    }
+                    CommitExitNode(text, tog);
+                    if (ExitNodeChain.OpenVpnTorCountTooHigh(tunnel.Kind, _main.ActiveTorEngines))
+                        _main.TriggerShowToast(CrimsonOnion.Localization.AppStrings.ToastOpenVpnTorAdvice, durationMs: 5000);
+                    return;
+                }
+                if (tunnel.Kind != TunnelKind.None && tunnel.Error.Length > 0)
+                {
+                    _main.TriggerShowToast(tunnel.Error);
+                    return;
+                }
+            }
 
-                btnXrayCancel_Click(sender, e);
+            var target = ExitNodeChain.IsPlainTcpVless(text) ? ConfigTarget.Singbox : ConfigTarget.Xray;
+            var verdict = await ConfigIntake.AcceptAsync(text, _main.Cfg, target, "EXIT NODE");
+            if (!verdict.Accepted)
+            {
+                _main.TriggerShowToast(verdict.NeedsCredentials
+                    ? CrimsonOnion.Localization.AppStrings.ToastTunnelNeedsCredentials
+                    : verdict.Toast);
                 return;
             }
+            if (verdict.Toast.Length > 0) _main.TriggerShowToast(verdict.Toast);
 
-            try
-            {
-                var parsed = Newtonsoft.Json.Linq.JObject.Parse(text);
-                Newtonsoft.Json.Linq.JToken? testNode = parsed["outbounds"] is Newtonsoft.Json.Linq.JArray arr ? arr.FirstOrDefault() : parsed;
-                if (testNode?["protocol"] == null)
-                    throw new Exception("Missing 'protocol' field.");
-
-                var streamSettings = testNode["streamSettings"];
-                if (streamSettings != null)
-                {
-                    if (streamSettings["security"]?.ToString()?.ToLowerInvariant() == "reality")
-                    {
-                        _main!.TriggerShowToast(CrimsonOnion.Localization.AppStrings.ToastRealityNotSupported);
-                        return;
-                    }
-
-                    var net = streamSettings["network"]?.ToString()?.ToLowerInvariant();
-                    if (net == "kcp" || net == "quic")
-                    {
-                        _main!.TriggerShowToast(CrimsonOnion.Localization.AppStrings.ToastKcpQuicNotSupported);
-                        return;
-                    }
-                }
-
-                var settings = testNode["settings"];
-                if (settings != null)
-                {
-                    var ports = settings.SelectTokens("..port").ToList();
-                    foreach (var portToken in ports)
-                    {
-                        if (int.TryParse(portToken.ToString(), out int port))
-                        {
-                            if (port != 80 && port != 443)
-                            {
-                                bool isLocal = false;
-                                var parentObj = portToken.Parent?.Parent as Newtonsoft.Json.Linq.JObject;
-                                if (parentObj != null && parentObj["address"] != null)
-                                {
-                                    string addr = parentObj["address"]?.ToString()?.ToLowerInvariant() ?? "";
-                                    if (addr == "localhost" || addr == "127.0.0.1" || addr == "::1")
-                                    {
-                                        isLocal = true;
-                                    }
-                                    else if (System.Net.IPAddress.TryParse(addr, out var ip))
-                                    {
-                                        byte[] bytes = ip.GetAddressBytes();
-                                        if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-                                        {
-                                            if (bytes[0] == 10 || 
-                                                (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) || 
-                                                (bytes[0] == 192 && bytes[1] == 168))
-                                            {
-                                                isLocal = true;
-                                            }
-                                        }
-                                        else if (System.Net.IPAddress.IsLoopback(ip))
-                                        {
-                                            isLocal = true;
-                                        }
-                                    }
-                                }
-
-                                if (!isLocal)
-                                {
-                                    _main!.TriggerShowToast(CrimsonOnion.Localization.AppStrings.ToastPortsSupported);
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                string tempFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), Guid.NewGuid().ToString() + ".json");
-                try
-                {
-                    System.IO.File.WriteAllText(tempFile, text);
-
-                    string xrayExe = System.IO.Path.Combine(_main!.Cfg.BaseDir, "Data", "xray", "xray.exe");
-                    if (System.IO.File.Exists(xrayExe))
-                    {
-                        var psi = new System.Diagnostics.ProcessStartInfo
-                        {
-                            FileName = xrayExe,
-                            Arguments = $"-test -config \"{tempFile}\"",
-                            RedirectStandardOutput = true,
-                            RedirectStandardError = true,
-                            UseShellExecute = false,
-                            CreateNoWindow = true
-                        };
-
-                        using (var proc = System.Diagnostics.Process.Start(psi))
-                        {
-                            if (proc != null)
-                            {
-                                var outTask = proc.StandardOutput.ReadToEndAsync();
-                                var errTask = proc.StandardError.ReadToEndAsync();
-                                await proc.WaitForExitAsync();
-                                if (proc.ExitCode != 0)
-                                {
-                                    string err = await errTask;
-                                    string outStr = await outTask;
-                                    string msg = string.IsNullOrWhiteSpace(err) ? outStr : err;
-                                    var lines = msg.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-                                    msg = string.Join(" ", lines.Where(l => !l.Contains("Xray, Penetrates Everything") && !l.Contains("unified platform")));
-                                    msg = msg.Trim();
-                                    _main!.TriggerShowToast(CrimsonOnion.Localization.AppStrings.ToastXrayRejected + msg.Substring(0, System.Math.Min(msg.Length, 150)));
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-                finally
-                {
-                    try { if (System.IO.File.Exists(tempFile)) System.IO.File.Delete(tempFile); } catch (Exception ex) { CrimsonOnion.Services.SimpleLogger.Log(ex); }
-                }
-
-                _main!.Cfg.V2rayChainJson = text.Trim();
-                _main!.Cfg.EnableV2rayChain = true;
-                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => {
-                    tog.IsChecked = true;
-                });
-
-                ConfigService.Save(_main!.Cfg, _main!.State, _main!.Cfg.CfgFile, _main!.Cfg.LastConfig, _main!.Cfg.LastBridge, _main!.Cfg.LastCount);
-                if (_main!.State.IsEngineRunning) _main!.TriggerSmartRestartXray();
-
-                btnXrayCancel_Click(sender, e);
-            }
-            catch (Exception ex)
-            {
-                CrimsonOnion.Services.SimpleLogger.Log(ex);
-                _main!.TriggerShowToast(CrimsonOnion.Localization.AppStrings.ToastInvalidJson + " " + ex.Message);
-            }
+            CommitExitNode(verdict.Raw, tog);
         }
+        catch (Exception ex)
+        {
+            CrimsonOnion.Services.SimpleLogger.Log(ex);
+            _main.TriggerShowToast(CrimsonOnion.Localization.AppStrings.ToastInvalidJson + " " + ex.Message);
+        }
+    }
+
+    private void CommitExitNode(string raw, global::Avalonia.Controls.ToggleSwitch tog)
+    {
+        _main!.Cfg.V2rayChainJson = (raw ?? "").Trim();
+        _main!.Cfg.EnableV2rayChain = true;
+        var txt = this.FindControl<global::Avalonia.Controls.TextBox>("txtXrayJson");
+        if (txt != null) txt.Text = _main!.Cfg.V2rayChainJson;
+        global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { tog.IsChecked = true; });
+        SaveExitNode();
+    }
+
+    private void SaveExitNode()
+    {
+        ConfigService.Save(_main!.Cfg, _main!.State, _main!.Cfg.CfgFile, _main!.Cfg.LastConfig, _main!.Cfg.LastBridge, _main!.Cfg.LastCount);
+        if (_main!.State.IsEngineRunning) _main!.TriggerSmartRestartXray();
+        var pan = this.FindControl<global::Avalonia.Controls.Border>("panXrayExitNode");
+        var ico = this.FindControl<global::Avalonia.Controls.PathIcon>("icoXrayExitNodeExpander");
+        var panToggle = this.FindControl<global::Avalonia.Controls.Border>("panXrayExitNodeToggle");
+        var btnToggle = this.FindControl<global::Avalonia.Controls.Button>("btnXrayExitNodeToggle");
+        if (pan != null && ico != null) AnimateExpander(pan, ico, false, 0, panToggle, btnToggle);
     }
 
 private void btnXrayCancel_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)

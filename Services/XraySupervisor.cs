@@ -31,6 +31,8 @@ internal sealed class XraySupervisor
     private const string CoreConfigArgs     = "run -c " + CoreConfigFileName;
     private const string AdapterConfigFileName = "adapter_config.json";
     private const string AdapterConfigArgs     = "run -c " + AdapterConfigFileName;
+    private const string ExitConfigFileName    = "exit.json";
+    private const string ExitConfigArgs        = "run -c " + ExitConfigFileName;
     internal const string AccessLogFileName        = "access.log";
     internal const string ErrorLogFileName         = "error.log";
     internal const string RotatedAccessLogFileName = "access.log.tmp";
@@ -57,6 +59,11 @@ internal sealed class XraySupervisor
     // -- Starting ------------------------------------------------------------
     internal bool StartCore(string mode)
     {
+        bool chain = ExitNodeChain.ShouldChain(_cfg);
+        if (chain && ExitNodeChain.BuildEngineConfig(_cfg, out _) == null) chain = false;
+        if (chain) ExitNodeChain.AllocateProxyPort();
+        ExitNodeChain.SetChainActive(chain);
+
         if (!XrayConfigWriter.Write(_cfg, _cfg.XrayDir)) return false;
         if (mode == VpnMode && !SingboxConfigWriter.Write(_cfg, _cfg.SbDir)) return false;
 
@@ -64,19 +71,41 @@ internal sealed class XraySupervisor
         int? sbPid   = mode == VpnMode
             ? Spawn(SingboxExePath, CoreConfigArgs, _cfg.SbDir, "SingBox")
             : null;
+        int? exitPid = chain ? StartExitEngine() : null;
 
         if (_cfg.DebugMode)
         {
             _vpn.XrayDebugPid = xrayPid;
+            _vpn.ExitDebugPid = exitPid;
             if (mode == VpnMode) _vpn.SbDebugPid = sbPid;
         }
         else
         {
             _vpn.XrayPid = xrayPid;
+            _vpn.ExitPid = exitPid;
             if (mode == VpnMode) _vpn.SbPid = sbPid;
         }
 
         return true;
+    }
+
+    internal int? StartExitEngine()
+    {
+        var doc = ExitNodeChain.BuildEngineConfig(_cfg, out string error);
+        if (error.Length > 0) SimpleLogger.Log($"[ExitNode] {error}");
+        if (doc == null) return null;
+
+        try
+        {
+            if (!Directory.Exists(_cfg.SbDir)) Directory.CreateDirectory(_cfg.SbDir);
+            File.WriteAllText(Path.Combine(_cfg.SbDir, ExitConfigFileName), doc.ToString(Newtonsoft.Json.Formatting.Indented));
+        }
+        catch (Exception ex)
+        {
+            SimpleLogger.Log(ex);
+            return null;
+        }
+        return Spawn(SingboxExePath, ExitConfigArgs, _cfg.SbDir, "ExitEngine");
     }
     internal bool StartAdapterBinding()
     {
@@ -105,15 +134,21 @@ internal sealed class XraySupervisor
     {
         Kill(ref _vpn.XrayDebugPid);
         Kill(ref _vpn.SbDebugPid);
+        Kill(ref _vpn.ExitDebugPid);
         Kill(ref _vpn.AdapterXrayDebugPid);
         Kill(ref _vpn.XrayPid);
         Kill(ref _vpn.SbPid);
+        Kill(ref _vpn.ExitPid);
         Kill(ref _vpn.AdapterXrayPid);
+        ExitNodeChain.SetChainActive(false);
     }
     internal void StopCore()
     {
         Kill(ref _vpn.XrayDebugPid);
         Kill(ref _vpn.XrayPid);
+        Kill(ref _vpn.ExitDebugPid);
+        Kill(ref _vpn.ExitPid);
+        ExitNodeChain.SetChainActive(false);
     }
 
     // -- Logs ----------------------------------------------------------------

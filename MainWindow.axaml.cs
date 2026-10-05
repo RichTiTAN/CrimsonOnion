@@ -67,10 +67,13 @@ public partial class MainWindow : Window
     private readonly Views.BridgePresets _bridges;
     private readonly CrimsonOnion.Services.MoatBridgeClient _moat = new();
 
+    internal static MainWindow? Instance { get; private set; }
+
     internal AppConfig Cfg => _cfg;
     internal AppState State => _state;
     internal bool IsInitializingSettings => _isInitializingSettings;
     internal string ActiveBridge => _bridges.Active;
+    internal int ActiveTorEngines => _activeTorEngines;
     internal string PollMode { get => _pollMode; set => _pollMode = value; }
 
     internal void TriggerRequestConfigSave() => RequestConfigSave();
@@ -83,7 +86,7 @@ public partial class MainWindow : Window
     internal void ApplyGlowSettings() => _themes.ApplyGlowVisibility();
 
     internal void TriggerCloseAllOverlays() => _overlays.CloseAll();
-    internal void TriggerShowToast(string msg, bool success = false) => ShowToast(msg, success);
+    internal void TriggerShowToast(string msg, bool success = false, int durationMs = 3000) => ShowToast(msg, success, durationMs);
     internal void TriggerBtnLanguage_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e) => BtnLanguage_Click(sender, e);
     internal void TriggerBtnLbPolicy_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e) => BtnLbPolicy_Click(sender, e);
     internal void TriggerSettingsLightDismiss_PointerPressed(object? sender, global::Avalonia.Input.PointerPressedEventArgs e) => SettingsLightDismiss_PointerPressed(sender, e);
@@ -165,6 +168,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Instance = this;
 
         _overlays = new Views.OverlayNavigation(FindNamedControl, TryAutoDisableSplitTunnel);
 
@@ -189,7 +193,7 @@ public partial class MainWindow : Window
             FindNamedControl,
             _cfg,
             _vpn,
-            ShowToast,
+            (msg, success) => ShowToast(msg, success),
             QuitForInstall,
             OpenInBrowser,
             ShowUpdateDialogAsync,

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * CrimsonOnion - A GUI client that runs multiple Tor instances and load-balances them.
  * Copyright (C) 2026 RichTiTAN
  *
@@ -31,7 +31,8 @@ namespace CrimsonOnion.Services
             if (!int.TryParse(config.LastCount, out torCount) || torCount < 1) torCount = 1;
             if (torCount > 8) torCount = 8;
 
-            bool useCustomChain = config.EnableV2rayChain && !string.IsNullOrWhiteSpace(config.V2rayChainJson);
+            bool exitIsSingbox = ExitNodeChain.ShouldChain(config);
+            bool useCustomChain = config.EnableV2rayChain && !string.IsNullOrWhiteSpace(config.V2rayChainJson) && !exitIsSingbox;
             bool preferDirectDefault = config.EnableDirect && config.SplitTunnelMode == "INCLUSIVE" && config.LastXrayMode != XrayModes.VpnMode;
 
             string xrayBalancePolicy = GetXrayBalancePolicy(config.XrayBalancePolicy);
@@ -123,43 +124,24 @@ namespace CrimsonOnion.Services
             var outbounds = new List<object>();
             var proxyCloneTags = new List<string>();
 
-            if (config.EnableV2rayChain && !string.IsNullOrWhiteSpace(config.V2rayChainJson))
+            if (useCustomChain)
             {
-                try
+                var v2ob = ResolveExitNodeOutbound(config.V2rayChainJson!);
+                if (v2ob != null)
                 {
-                    var v2p = JObject.Parse(config.V2rayChainJson);
-                    JObject? v2ob;
-
-                    if (v2p["outbounds"] is JArray obArr)
+                    for (int i = 1; i <= torCount; i++)
                     {
-                        v2ob = obArr.OfType<JObject>()
-                            .FirstOrDefault(o => o["protocol"]?.ToString() != "freedom" && o["protocol"]?.ToString() != "blackhole");
-                    }
-                    else
-                    {
-                        v2ob = v2p;
-                    }
+                        string cloneTag = $"proxy-clone-{i}";
+                        proxyCloneTags.Add(cloneTag);
 
-                    if (v2ob != null)
-                    {
-                        for (int i = 1; i <= torCount; i++)
-                        {
-                            string cloneTag = $"proxy-clone-{i}";
-                            proxyCloneTags.Add(cloneTag);
+                        var clone = (JObject)v2ob.DeepClone();
+                        clone["tag"] = cloneTag;
+                        ChainThroughDialer(clone, $"tor{i}");
 
-                            var clone = (JObject)v2ob.DeepClone();
-                            clone["tag"] = cloneTag;
-                            clone["proxySettings"] = JObject.FromObject(new { tag = $"tor{i}" });
-
-                            outbounds.Add(clone);
-                        }
-                    }
-                    else
-                    {
-                        useCustomChain = false;
+                        outbounds.Add(clone);
                     }
                 }
-                catch
+                else
                 {
                     useCustomChain = false;
                 }
@@ -258,6 +240,48 @@ namespace CrimsonOnion.Services
             }
 
             return ConfigFileWriter.TryWrite(Path.Combine(xrayDir, "config.json"), cfg, "Xray");
+        }
+
+        internal static void ChainThroughDialer(JObject outbound, string dialerTag)
+        {
+            if (outbound == null || string.IsNullOrWhiteSpace(dialerTag)) return;
+            if (outbound["streamSettings"] is not JObject stream)
+            {
+                stream = new JObject();
+                outbound["streamSettings"] = stream;
+            }
+            if (stream["sockopt"] is not JObject sockopt)
+            {
+                sockopt = new JObject();
+                stream["sockopt"] = sockopt;
+            }
+            sockopt["dialerProxy"] = dialerTag.Trim();
+        }
+
+        internal static JObject? ResolveExitNodeOutbound(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return null;
+            if (ExitNodeChain.IsPlainTcpVless(raw)) return null;
+            try
+            {
+                if (ConfigConverter.IsXrayOutbound(raw))
+                {
+                    var parsed = JObject.Parse(raw);
+                    if (parsed["outbounds"] is JArray arr)
+                        return arr.OfType<JObject>().FirstOrDefault(o => o["protocol"]?.ToString() != "freedom" && o["protocol"]?.ToString() != "blackhole");
+                    return parsed;
+                }
+                if (TunnelConfigParser.LooksLikeTunnel(raw)) return null;
+                if (ConfigConverter.TryXrayOutbound(raw, out string doc, out _, out string error))
+                    return (JObject.Parse(doc)["outbounds"] as JArray)?.OfType<JObject>().FirstOrDefault();
+                if (error.Length > 0) SimpleLogger.Log($"[ExitNode] The custom exit node could not be used by xray: {error}");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                SimpleLogger.Log(ex);
+                return null;
+            }
         }
 
         private static string GetXrayBalancePolicy(string? policy)
@@ -520,7 +544,7 @@ namespace CrimsonOnion.Services
                 },
                 outbounds = new object[]
                 {
-                    new { type = "socks", tag = "proxy", server = "127.0.0.1", server_port = 10818 },
+                    new { type = "socks", tag = "proxy", server = "127.0.0.1", server_port = ExitNodeChain.ActivePort },
                     new { type = "direct", tag = "direct" }
                 },
                 route = new

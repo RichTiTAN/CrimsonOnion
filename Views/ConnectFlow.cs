@@ -56,6 +56,8 @@ namespace CrimsonOnion.Views
         private static readonly TimeSpan PingAfterRestart = TimeSpan.FromMilliseconds(1500);
         private const int KillGraceMs = 3000;
         private const int CountToastMs = 3000;
+        private const int ExitChainProbeWindowMs = 5000;
+        private const int ExitChainTipMs = 30000;
         private const string LogBox = "txtXrayLogs";
         private const string PingLabel = "lblPing";
         private const string TotalLabel = "lblTotalData";
@@ -544,6 +546,28 @@ namespace CrimsonOnion.Views
                 if (!await Task.Run(() => _xray.StartCore(_mode()))) return;
 
                 ProxyService.SetSystemProxy(_mode() == XraySupervisor.ProxyMode);
+
+                if (ExitNodeChain.ChainActive && ExitNodeChain.Plane(_cfg) == ExitNodeChain.ExitNodePlane.SingboxEndpoint)
+                {
+                    SetProgress(99);
+                    long lastTip = Environment.TickCount64;
+                    while (!_state.AbortBoot)
+                    {
+                        bool established = await Task.Run(() =>
+                            NetworkDiagnosticsService.VerifyChainAsync(ExitChainProbeWindowMs, CancellationToken.None));
+                        if (established) break;
+                        if (_state.AbortBoot) return;
+
+                        if (Environment.TickCount64 - lastTip >= ExitChainTipMs)
+                        {
+                            lastTip = Environment.TickCount64;
+                            SimpleLogger.Log("[ExitNode] Still waiting for the OpenVPN exit chain to come up.");
+                            _toast(AppStrings.ToastExitNodeWaiting);
+                        }
+                    }
+
+                    if (_state.AbortBoot) return;
+                }
 
                 _state.IsConnected      = true;
                 _state.SessionStartTime = DateTime.Now;

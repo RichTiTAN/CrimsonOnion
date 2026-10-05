@@ -1,4 +1,4 @@
-﻿/*
+/*
  * CrimsonOnion - A GUI client that runs multiple Tor instances and load-balances them.
  * Copyright (C) 2026 RichTiTAN
  *
@@ -28,6 +28,23 @@ namespace CrimsonOnion.Localization
         {
             IsPersian = lang == "PERSIAN";
         }
+
+        public static string ToastNotSupportedPrefix => IsPersian ? "این کانفیگ در بخش پشتیبانی نمی‌شود: " : "CONFIG NOT SUPPORTED IN ";
+        public static string ToastTunnelNeedsCredentials => IsPersian ? "این نود خروجی به نام کاربری و رمز عبور نیاز دارد." : "This exit node needs a username and password.";
+        public static string ToastFinalMaskDropped => IsPersian ? "ماسک نهایی این کانفیگ رد شد و بدون آن استفاده می‌شود: " : "The final mask was refused and is dropped: ";
+        public static string ToastWireGuardNotSupported => IsPersian ? "نودهای WireGuard پشتیبانی نمی‌شوند؛ فقط OpenVPN روی TCP." : "WireGuard exit nodes are not supported; only OpenVPN over TCP.";
+        public static string ToastOpenVpnUdpNotSupported => IsPersian ? "OpenVPN روی UDP پشتیبانی نمی‌شود؛ از کانفیگ TCP استفاده کنید." : "OpenVPN over UDP is not supported; use a TCP OpenVPN config.";
+        public static string ToastUdpNotSupported => IsPersian ? "پروتکل‌های مبتنی بر UDP (KCP/QUIC/Hysteria) روی Tor پشتیبانی نمی‌شوند." : "UDP-based transports (KCP/QUIC/Hysteria) are not supported over Tor.";
+        public static string ToastConfigUnreadable => IsPersian ? "این کانفیگ خوانده نشد." : "This config could not be read.";
+        public static string TunnelCredsTitle => IsPersian ? "اطلاعات ورود OpenVPN" : "OPENVPN CREDENTIALS";
+        public static string TunnelCredsSubtitle => IsPersian ? "این کانفیگ OpenVPN به نام کاربری و رمز عبور نیاز دارد:" : "This OpenVPN config needs a username and password:";
+        public static string TunnelCredsUser => IsPersian ? "نام کاربری" : "USERNAME";
+        public static string TunnelCredsPass => IsPersian ? "رمز عبور" : "PASSWORD";
+        public static string TunnelCredsRemember => IsPersian ? "به خاطر بسپار" : "Remember";
+        public static string TunnelCredsOk => IsPersian ? "ذخیره" : "SAVE";
+        public static string TunnelCredsCancel => IsPersian ? "انصراف" : "CANCEL";
+        public static string ToastOpenVpnTorAdvice => IsPersian ? "برای نودهای خروجی OpenVPN استفاده از ۱ یا ۲ تور توصیه می‌شود." : "1 or 2 Tor engines is recommended when using OpenVPN exit-nodes.";
+        public static string ToastExitNodeWaiting => IsPersian ? "هنوز در انتظار برقراری نود خروجی OpenVPN هستیم..." : "Still waiting for the OpenVPN exit node to come up...";
 
         public static void Apply(TextBlock? tb, string text, bool forceLtr = false, bool keepFont = false, bool leftAlign = false)
         {
@@ -148,7 +165,7 @@ namespace CrimsonOnion.Localization
         public static string AutoConnect        => IsPersian ? "اتصال خودکار"      : "AUTO-CONNECT";
         public static string StartMinimized     => IsPersian ? "شروع کوچک‌شده"     : "START MINIMIZED";
         public static string MinimizeToTray     => IsPersian ? "کوچک کردن به tray" : "MINIMIZE TO TRAY";
-        public static string CustomXrayExit     => IsPersian ? "نود خروجی Xray" : "CUSTOM XRAY EXIT-NODE";
+        public static string CustomXrayExit     => IsPersian ? "نود خروجی" : "CUSTOM EXIT-NODE";
         public static string OutboundProxy      => IsPersian ? "پروکسی خروجی"     : "OUTBOUND PROXY";
         public static string AdapterBinding     => IsPersian ? "اتصال به آداپتور" : "BIND ADAPTER";
         public static string ScanAdapters       => IsPersian ? "اسکن"            : "SCAN";
@@ -224,8 +241,8 @@ namespace CrimsonOnion.Localization
         public static string DonationsDesc      => IsPersian ? "به دلیل حفظ حریم خصوصی، کمک‌های مالی تنها از طریق کیف پول‌های رمزارز امکان‌پذیر است." : "Donations are only available through Crypto wallets due to privacy reasons.";
         public static string ExpertTitle        => IsPersian ? "پیکربندی پیشرفته مسیریابی" : "EXPERT ROUTING CONFIGURATION";
         public static string PromoCrimsonXTitle => IsPersian ? "کشف CrimsonX" : "Discover CrimsonX";
-        public static string PromoCrimsonXHeader => IsPersian ? "برنامه جدید ما CrimsonX منتشر شد!" : "Our new app CrimsonX was released!";
-        public static string PromoCrimsonXMsg => IsPersian ? "کریمسون‌ایکس (CrimsonX) یک کلاینت رابط کاربری VPN است که چندین کانفیگ xray مناسب برای ارائه‌دهنده اینترنت شما را دریافت، تست و بالانس می‌کند." : "CrimsonX is a GUI VPN client that fetches, tests and load-balances multiple xray configs suited for your specific ISP and internet.";
+        public static string PromoCrimsonXHeader => IsPersian ? "CrimsonX را امتحان کنید" : "Check out CrimsonX";
+        public static string PromoCrimsonXMsg => IsPersian ? "کریمسون‌ایکس (CrimsonX) یک کلاینت رابط کاربری VPN است که چندین کانفیگ xray مناسب برای ارائه‌دهنده اینترنت شما را دریافت، تست و بالانس می‌کند.\nبا قابلیت‌های مرتبط با گیمینگ." : "CrimsonX is a GUI VPN client that fetches, tests and load-balances multiple xray configs suited for your specific ISP and internet.\nWith Gaming related features.";
         public static string BtnClose => IsPersian ? "بستن" : "Close";
 
         // ==================================================
@@ -238,7 +255,7 @@ namespace CrimsonOnion.Localization
             ? "اگر فعال باشد، دستگاه‌های روی شبکه باید نام کاربری و رمز عبور وارد کنند تا از این پروکسی استفاده کنند. فقط در حالت پروکسی و Clear Proxy اعمال می‌شود."
             : "When enabled, devices on the network must supply a username and password to use this proxy. Only applies in Proxy and Clear Proxy mode.";
         public static string SplitTunnelDirectUDPTooltip => IsPersian ? "ترافیک UDP را مستقیم و بدون عبور از شبکه تور به اینترنت ارسال می‌کند. این ترافیک تونل نخواهد شد، بنابراین این گزینه ناشناس بودن را کاهش می‌دهد. این گزینه می‌تواند به بازی‌های ویدیویی، چت صوتی دیسکورد یا سایر پلتفرم‌های وابسته به UDP کمک کند." : "Bypass Tor and route all UDP traffic directly to the internet adapter. UDP traffic will not be tunneled, so this option reduces anonymity. This option can help with video games, discord voice or other udp dependant platforms.";
-        public static string TtCustomXray   => IsPersian ? "از سرور شخصی Xray خود به عنوان نود خروجی بعد از Tor استفاده کنید. مسیر: شما -> Tor -> سرور Xray شما -> اینترنت. سایت‌ها IP سرور Xray شما را می‌بینند نه Tor. یک خروجی JSON جایگذاری کنید یا یک لینک اشتراک‌گذاری (VLESS, VMess, Trojan, SS) وارد کنید. فقط پورت‌های 80 و 443 از طریق Tor کار می‌کنند؛ REALITY, KCP و QUIC مسدود هستند." : "Use a personal Xray server as your exit node after Tor. Path: you → Tor → your Xray server → internet. Websites see your Xray server's IP, not Tor's. Paste outbound JSON or import a share link (VLESS, VMess, Trojan, SS). Only ports 80 and 443 work over Tor; REALITY, KCP, and QUIC are blocked.";
+        public static string TtCustomXray   => IsPersian ? "از یک سرور Xray شخصی به عنوان نود خروجی پس از Tor استفاده کنید. مسیر: شما -> Tor -> سرور Xray شما -> اینترنت. وب‌سایت‌ها IP سرور Xray شما را می‌بینند، نه Tor را. می‌توانید JSON خروجی یا یک لینک اشتراک (VLESS، VMess، Trojan، SS) وارد کنید. برای کانفیگ‌های Xray فقط پورت‌های 80 و 443 روی Tor کار می‌کنند و KCP و QUIC مسدود هستند." : "Use a personal Xray server as your exit node after Tor. Path: you -> Tor -> your Xray server -> internet. Websites see your Xray server's IP, not Tor's. Paste outbound JSON or import a share link (VLESS, VMess, Trojan, SS). Only ports 80 and 443 work over Tor; KCP and QUIC are blocked.";
         public static string TtOutboundProxy => IsPersian ? "کل اتصال Tor را از طریق یک پروکسی خروجی SOCKS5 یا HTTPS خارجی عبور می‌دهد. زمانی که Tor مسدود است و برای رسیدن به گره‌های محافظ به پروکسی نیاز دارید، از این استفاده کنید. این بر نحوه بوت شدن Tor تأثیر می‌گذارد، نه اینکه مرور شما از کدام کشور خارج می‌شود." : "Send Tor's own connection to the network through an external SOCKS5 or HTTPS proxy. Use this when Tor is blocked and you need a proxy just to reach guard nodes. This affects how Tor boots up—not which country your browsing exits from.";
         public static string TtAdapterBinding => IsPersian ? "کل ترافیک Tor را مجبور می‌کند منحصراً از طریق آداپتور شبکه انتخاب شده خارج شود. زمانی که پل \"Snowflake\" انتخاب شده باشد کار نمی‌کند." : "Forces all Tor traffic to exclusively exit through the selected network adapter. Does not work when \"Snowflake\" bridge is selected.";
         public static string TtDnsSettings  => IsPersian ? "تنظیمات DNS رمزگذاری‌شده را کنترل می‌کند. DoH: DNS را از طریق HTTPS رمزگذاری می‌کند تا نشت و سانسور کاهش یابد؛ برای حالت پروکسی (Xray) و VPN (sing-box) اعمال می‌شود. DNS سیستم: DNS آداپتور شبکه اصلی ویندوز را هنگام اتصال تغییر می‌دهد تا Tor بتواند بوت‌استرپ کند؛ پس از قطع اتصال یا بستن برنامه بازگردانده می‌شود." : "Controls encrypted DNS settings. DoH: resolves DNS over HTTPS to reduce leaks and censorship; applies in proxy mode (Xray) and VPN mode (sing-box). System Proxy DNS: changes the Windows DNS on your main adapter at connect time so Tor can bootstrap; restored on disconnect or app close.";

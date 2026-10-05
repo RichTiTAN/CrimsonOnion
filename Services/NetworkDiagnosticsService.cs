@@ -1,4 +1,4 @@
-﻿/*
+/*
  * CrimsonOnion - A GUI client that runs multiple Tor instances and load-balances them.
  * Copyright (C) 2026 RichTiTAN
  *
@@ -33,15 +33,25 @@ public sealed class GeoResult
 public static class NetworkDiagnosticsService
 {
     // ── HTTP clients ────────────────────────────────────────────────────────
-    private static readonly HttpClient _geoPingClient = new HttpClient(
-        new HttpClientHandler
-        {
-            Proxy    = new System.Net.WebProxy("http://127.0.0.1:10818"),
-            UseProxy = true
-        })
+    private static async Task<string?> FetchProxiedAsync(string url, CancellationToken ct)
     {
-        Timeout = TimeSpan.FromSeconds(30)
-    };
+        try
+        {
+            using var client = new HttpClient(new HttpClientHandler
+            {
+                Proxy    = new System.Net.WebProxy("http://127.0.0.1:" + ExitNodeChain.ActivePort),
+                UseProxy = true
+            })
+            {
+                Timeout = TimeSpan.FromSeconds(30)
+            };
+            return await client.GetStringAsync(url, ct).ConfigureAwait(false);
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     private static readonly HttpClient _grpcClient = new HttpClient(new HttpClientHandler())
     {
@@ -59,8 +69,9 @@ public static class NetworkDiagnosticsService
         var sw = System.Diagnostics.Stopwatch.StartNew();
         try
         {
-            var json = await _geoPingClient.GetStringAsync(
+            var json = await FetchProxiedAsync(
                 "https://get.geojs.io/v1/ip/geo.json", ct).ConfigureAwait(false);
+            if (json == null) return null;
             sw.Stop();
 
             var data          = Newtonsoft.Json.Linq.JObject.Parse(json);
@@ -82,6 +93,33 @@ public static class NetworkDiagnosticsService
         {
             return null;
         }
+    }
+
+    public static async Task<bool> VerifyChainAsync(int timeoutMs, CancellationToken ct)
+    {
+        long deadline = Environment.TickCount64 + timeoutMs;
+        while (Environment.TickCount64 < deadline)
+        {
+            if (ct.IsCancellationRequested) return false;
+            try
+            {
+                using var client = new HttpClient(new HttpClientHandler
+                {
+                    Proxy    = new System.Net.WebProxy("http://127.0.0.1:" + ExitNodeChain.ActivePort),
+                    UseProxy = true
+                })
+                {
+                    Timeout = TimeSpan.FromSeconds(6)
+                };
+                using var response = await client
+                    .GetAsync("https://www.gstatic.com/generate_204", ct).ConfigureAwait(false);
+                if (response.IsSuccessStatusCode) return true;
+            }
+            catch { }
+            try { await Task.Delay(1000, ct).ConfigureAwait(false); }
+            catch { return false; }
+        }
+        return false;
     }
 
     public static async Task<(long Up, long Dn)> FetchStatsAsync(CancellationToken ct)

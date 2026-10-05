@@ -17,25 +17,19 @@
  */
 
 namespace CrimsonOnion.Services;
-public sealed class VpnRuntimeState
+
+internal static class AppPaths
 {
-    public int?[] TorPids = new int?[8];
+    public static string BaseDir
+        => MainWindow.Instance?.Cfg.BaseDir is { Length: > 0 } dir
+            ? dir
+            : AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
-    public int? XrayDebugPid;
-    public int? SbDebugPid;
-    public int? ExitDebugPid;
-    public int? AdapterXrayDebugPid;
-    public int? XrayPid;
-    public int? AdapterXrayPid;
-    public int? SbPid;
-    public int? ExitPid;
-    public System.Threading.CancellationTokenSource? UpdateCts;
-    public System.Threading.CancellationTokenSource? StatsCts;
-    public System.Threading.CancellationTokenSource? PingCts;
-    public System.Threading.CancellationTokenSource? GeoCts;
-    public long LastUpBytes;
-    public long LastDnBytes;
-    public System.DateTime LastPollTime = System.DateTime.MinValue;
-    public int IsFetchingStatsInt;
+    public static string DataDir => Path.Combine(BaseDir, "Data");
 
+    public static string DataFile(string name) => Path.Combine(DataDir, name);
+
+    public static string XrayExe => Path.Combine(BaseDir, @"Data\Xray\xray.exe");
+
+    public static string SingboxExe => Path.Combine(BaseDir, @"Data\sing_box\sing-box.exe");
 }
