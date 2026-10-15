@@ -72,13 +72,37 @@ namespace CrimsonOnion.Services
             }
         }
 
-        public static void Forget(string key)
+        public static bool Forget(string key)
         {
-            if (string.IsNullOrWhiteSpace(key)) return;
+            if (string.IsNullOrWhiteSpace(key)) return false;
             lock (Sync)
             {
                 var map = LoadCore();
-                if (map.Remove(key)) SaveCore(map);
+                if (!map.Remove(key)) return false;
+                SaveCore(map);
+                return true;
+            }
+        }
+
+        public static int ForgetExcept(IEnumerable<string> keep)
+        {
+            var wanted = new HashSet<string>(StringComparer.Ordinal);
+            foreach (string key in keep)
+                if (!string.IsNullOrWhiteSpace(key)) wanted.Add(key);
+
+            lock (Sync)
+            {
+                var map = LoadCore();
+                int gone = 0;
+                foreach (string key in new List<string>(map.Keys))
+                {
+                    if (wanted.Contains(key)) continue;
+                    map.Remove(key);
+                    gone++;
+                }
+
+                if (gone > 0) SaveCore(map);
+                return gone;
             }
         }
 
@@ -163,6 +187,15 @@ namespace CrimsonOnion.Services
             if (stored == null || stored.User.Length == 0) return false;
             TunnelConfigParser.WithCredentials(tunnel.Endpoint, stored.User, stored.Password);
             return true;
+        }
+
+        public static int ForgetAllBut(string previousRaw, string currentRaw)
+        {
+            string previous = TunnelConfigParser.Normalize(previousRaw);
+            string current  = TunnelConfigParser.Normalize(currentRaw);
+            if (previous.Length == 0) return 0;
+            if (string.Equals(previous, current, StringComparison.Ordinal)) return 0;
+            return TunnelCredentialStore.ForgetExcept(new[] { previous, current });
         }
 
         public static bool NeedsCredentials(TunnelParseResult tunnel)

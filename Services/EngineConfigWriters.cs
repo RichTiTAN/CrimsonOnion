@@ -395,6 +395,18 @@ namespace CrimsonOnion.Services
 
     public static class SingboxConfigWriter
     {
+        internal static object BuildTunInbound()
+        {
+            return new
+            {
+                type = "tun", tag = "tun-in",
+                interface_name = TunProfile.InterfaceName,
+                address = new[] { TunProfile.AddressPrefix },
+                mtu = 9000, auto_route = true, strict_route = true,
+                stack = "mixed", endpoint_independent_nat = true
+            };
+        }
+
         public static bool Write(AppConfig config, string sbDir)
         {
             var currentExe = Path.GetFileName(System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName ?? "").ToLower();
@@ -531,17 +543,7 @@ namespace CrimsonOnion.Services
                     rules = dnsRules.ToArray(),
                     strategy = "ipv4_only"
                 },
-                inbounds = new object[]
-                {
-                    new
-                    {
-                        type = "tun", tag = "tun-in",
-                        interface_name = "singbox_tun",
-                        address = new[] { "172.18.0.1/30" },
-                        mtu = 9000, auto_route = true, strict_route = true,
-                        stack = "mixed", endpoint_independent_nat = true
-                    }
-                },
+                inbounds = new object[] { BuildTunInbound() },
                 outbounds = new object[]
                 {
                     new { type = "socks", tag = "proxy", server = "127.0.0.1", server_port = ExitNodeChain.ActivePort },

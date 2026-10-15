@@ -1022,8 +1022,10 @@ private async void btnXraySave_Click(object? sender, global::Avalonia.Interactiv
 
         if (text.Length == 0)
         {
+            string cleared = _main.Cfg.V2rayChainJson;
             _main.Cfg.V2rayChainJson = "";
             _main.Cfg.EnableV2rayChain = enable;
+            TunnelCredentialResolver.ForgetAllBut(cleared, _main.Cfg.V2rayChainJson);
             SaveExitNode();
             return;
         }
@@ -1073,8 +1075,10 @@ private async void btnXraySave_Click(object? sender, global::Avalonia.Interactiv
 
     private void CommitExitNode(string raw, global::Avalonia.Controls.ToggleSwitch tog)
     {
+        string replaced = _main!.Cfg.V2rayChainJson;
         _main!.Cfg.V2rayChainJson = (raw ?? "").Trim();
         _main!.Cfg.EnableV2rayChain = true;
+        TunnelCredentialResolver.ForgetAllBut(replaced, _main!.Cfg.V2rayChainJson);
         var txt = this.FindControl<global::Avalonia.Controls.TextBox>("txtXrayJson");
         if (txt != null) txt.Text = _main!.Cfg.V2rayChainJson;
         global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { tog.IsChecked = true; });
