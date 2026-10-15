@@ -2,7 +2,7 @@
 A GUI client that runs Multiple Tor instances and load-balances them.  
 This project is a rewritten and improved version of [TorMultiplexer](https://github.com/richTiTAN/Tor-Multiplexer/) in C# and .NET.  
 
-<img width="2900" height="1080" alt="coui" src="https://github.com/user-attachments/assets/662c1e32-dfad-483d-be5f-63c77fbb1165" />
+<img width="788" height="557" alt="Screenshot 2026-10-15 171152" src="https://github.com/user-attachments/assets/538125a4-b8d6-4220-8083-93f3308cbb19" />
 
 
 __HOW IT WORKS:__
