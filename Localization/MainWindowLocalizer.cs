@@ -183,6 +183,11 @@ namespace CrimsonOnion.Localization
             new(LocalizeTarget.ToolTip, "lblAdapterBindingTitle",   () => AppStrings.TtAdapterBinding),
             new(LocalizeTarget.Button, "btnScanAdapters",           () => AppStrings.ScanAdapters),
 
+            new(LocalizeTarget.Text, "lblLoadBalanceAdaptersTitle", () => AppStrings.LoadBalanceAdapters),
+            new(LocalizeTarget.ToolTip, "lblLoadBalanceAdaptersTitle", () => AppStrings.TtLoadBalanceAdapters),
+            new(LocalizeTarget.Button, "btnLbAddAdapter",           () => AppStrings.AddAdapter),
+            new(LocalizeTarget.Button, "btnLbScanAdapters",         () => AppStrings.ScanAllAdapters),
+
             new(LocalizeTarget.Text, "lblDnsSettingTitle",          () => AppStrings.DnsSettings),
             new(LocalizeTarget.ToolTip, "lblDnsSettingTitle",       () => AppStrings.TtDnsSettings),
 

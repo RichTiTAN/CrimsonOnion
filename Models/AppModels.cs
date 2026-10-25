@@ -72,6 +72,9 @@ namespace CrimsonOnion.Models
         public string SelectedAdapterName { get; set; } = "";
         public string SelectedAdapterIp { get; set; } = "";
 
+        public bool EnableLoadBalanceAdapters { get; set; } = false;
+        public List<string> LoadBalanceAdapters { get; set; } = new();
+
         public bool EnableUpstreamDoh { get; set; } = false;
         public string UpstreamDohUrl { get; set; } = "https://cloudflare-dns.com/dns-query";
         public bool EnableSystemDns { get; set; } = false;
