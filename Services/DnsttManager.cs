@@ -111,9 +111,13 @@ namespace CrimsonOnion.Services
 
             string proxyUrl = "";
 
-            if (config.EnableAdapterBinding && !string.IsNullOrWhiteSpace(config.SelectedAdapterIp))
+            if (LoadBalanceAdapters.IsUsable(config))
             {
-                proxyUrl = "socks5://127.0.0.1:10819";
+                proxyUrl = $"socks5://127.0.0.1:{LoadBalanceAdapters.ProxyPortForTor(config, 1)}";
+            }
+            else if (config.EnableAdapterBinding && !string.IsNullOrWhiteSpace(config.SelectedAdapterIp))
+            {
+                proxyUrl = $"socks5://127.0.0.1:{LoadBalanceAdapters.SingleAdapterProxyPort}";
             }
             else if (config.EnableOutboundProxy && !string.IsNullOrEmpty(config.OutboundProxyAddress) && !string.IsNullOrEmpty(config.OutboundProxyPort))
             {

@@ -335,6 +335,10 @@ public partial class MainWindow : Window
             {
                 ucSettings?.TriggerScanAdapters();
             }
+            if (isFirstOpen && _cfg.EnableLoadBalanceAdapters)
+            {
+                ucSettings?.TriggerScanLoadBalanceAdapters();
+            }
             isFirstOpen = false;
         };
 

@@ -193,6 +193,18 @@ namespace CrimsonOnion.Views
                 return;
             }
 
+            if (_cfg.EnableLoadBalanceAdapters)
+            {
+                if (LoadBalanceAdapters.ActiveIps(_cfg).Count < LoadBalanceAdapters.MinSlots)
+                {
+                    _toast(AppStrings.ToastLoadBalanceNeedsTwoAdapters);
+                }
+                else if (LoadBalanceAdapters.StaleEntries(_cfg).Count > 0)
+                {
+                    _toast(AppStrings.ToastLoadBalanceAdapterSkipped);
+                }
+            }
+
             if (_cfg.EnableDirectUDP && !string.IsNullOrWhiteSpace(_cfg.DirectUdpAdapterName)
                 && _cfg.DirectUdpAdapterName != SplitTunnelService.DefaultAdapter
                 && !SplitTunnelService.IsAdapterUp(_cfg.DirectUdpAdapterName))

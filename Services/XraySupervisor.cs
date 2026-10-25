@@ -178,6 +178,8 @@ internal sealed class XraySupervisor
     // -- Planning ------------------------------------------------------------
     internal static string? BuildAdapterConfig(AppConfig cfg)
     {
+        if (LoadBalanceAdapters.IsUsable(cfg)) return BuildLoadBalanceAdapterConfig(cfg);
+
         bool useAdapter  = cfg.EnableAdapterBinding && !string.IsNullOrWhiteSpace(cfg.SelectedAdapterIp);
         bool useOutbound = cfg.EnableOutboundProxy
             && !string.IsNullOrEmpty(cfg.OutboundProxyAddress)
@@ -201,47 +203,7 @@ internal sealed class XraySupervisor
         };
 
         var outbounds = new JArray();
-
-        var boundOutbound = new JObject
-        {
-            ["tag"] = "bound_out"
-        };
-
-        if (useAdapter)
-        {
-            boundOutbound["protocol"] = "freedom";
-            boundOutbound["settings"] = new JObject();
-            boundOutbound["sendThrough"] = cfg.SelectedAdapterIp;
-        }
-        else if (useOutbound)
-        {
-            boundOutbound["protocol"] = cfg.OutboundProxyType == "HTTPS" ? "http" : "socks";
-
-            var serverObj = new JObject
-            {
-                ["address"] = cfg.OutboundProxyAddress,
-                ["port"] = int.TryParse(cfg.OutboundProxyPort, out int port) ? port : 1080
-            };
-
-            if (cfg.EnableOutboundAuth
-                && !string.IsNullOrEmpty(cfg.OutboundProxyUser)
-                && !string.IsNullOrEmpty(cfg.OutboundProxyPass))
-            {
-                var userObj = new JObject
-                {
-                    ["user"] = cfg.OutboundProxyUser,
-                    ["pass"] = cfg.OutboundProxyPass
-                };
-                serverObj["users"] = new JArray { userObj };
-            }
-
-            boundOutbound["settings"] = new JObject
-            {
-                ["servers"] = new JArray { serverObj }
-            };
-        }
-
-        outbounds.Add(boundOutbound);
+        outbounds.Add(BuildRideOutbound(cfg, "bound_out", useAdapter ? cfg.SelectedAdapterIp : ""));
 
         var directOutbound = new JObject
         {
@@ -270,6 +232,109 @@ internal sealed class XraySupervisor
         {
             ["domainStrategy"] = "AsIs",
             ["rules"] = new JArray { localRule, allRule }
+        };
+
+        return configObj.ToString();
+    }
+
+    private static JObject BuildRideOutbound(AppConfig cfg, string tag, string sendThroughIp)
+    {
+        var outbound = new JObject { ["tag"] = tag };
+
+        bool useOutbound = cfg.EnableOutboundProxy
+            && !string.IsNullOrEmpty(cfg.OutboundProxyAddress)
+            && !string.IsNullOrEmpty(cfg.OutboundProxyPort);
+
+        if (useOutbound)
+        {
+            outbound["protocol"] = cfg.OutboundProxyType == "HTTPS" ? "http" : "socks";
+
+            var serverObj = new JObject
+            {
+                ["address"] = cfg.OutboundProxyAddress,
+                ["port"] = int.TryParse(cfg.OutboundProxyPort, out int port) ? port : 1080
+            };
+
+            if (cfg.EnableOutboundAuth
+                && !string.IsNullOrEmpty(cfg.OutboundProxyUser)
+                && !string.IsNullOrEmpty(cfg.OutboundProxyPass))
+            {
+                serverObj["users"] = new JArray
+                {
+                    new JObject { ["user"] = cfg.OutboundProxyUser, ["pass"] = cfg.OutboundProxyPass }
+                };
+            }
+
+            outbound["settings"] = new JObject { ["servers"] = new JArray { serverObj } };
+        }
+        else
+        {
+            outbound["protocol"] = "freedom";
+            outbound["settings"] = new JObject();
+        }
+
+        if (!string.IsNullOrWhiteSpace(sendThroughIp)) outbound["sendThrough"] = sendThroughIp;
+
+        return outbound;
+    }
+
+    internal static string BuildLoadBalanceAdapterConfig(AppConfig cfg)
+    {
+        var ips = LoadBalanceAdapters.ActiveIps(cfg);
+
+        var inbounds = new JArray();
+        var outbounds = new JArray();
+        var rules = new JArray();
+
+        var localRule = new JObject
+        {
+            ["type"] = "field",
+            ["outboundTag"] = "direct_out"
+        };
+        localRule["ip"] = new JArray { "127.0.0.0/8", "::1/128", "geoip:private" };
+        rules.Add(localRule);
+
+        for (int i = 0; i < ips.Count; i++)
+        {
+            string inboundTag = "lb-in-" + i;
+            string outboundTag = "lb-out-" + i;
+
+            inbounds.Add(new JObject
+            {
+                ["port"] = LoadBalanceAdapters.ProxyPortBase + i,
+                ["listen"] = "127.0.0.1",
+                ["protocol"] = "socks",
+                ["tag"] = inboundTag,
+                ["settings"] = new JObject { ["auth"] = "noauth", ["udp"] = true }
+            });
+
+            outbounds.Add(BuildRideOutbound(cfg, outboundTag, ips[i]));
+
+            rules.Add(new JObject
+            {
+                ["type"] = "field",
+                ["inboundTag"] = new JArray { inboundTag },
+                ["outboundTag"] = outboundTag
+            });
+        }
+
+        outbounds.Add(new JObject
+        {
+            ["protocol"] = "freedom",
+            ["tag"] = "direct_out",
+            ["settings"] = new JObject()
+        });
+
+        var configObj = new JObject
+        {
+            ["log"] = new JObject { ["loglevel"] = "warning" },
+            ["inbounds"] = inbounds,
+            ["outbounds"] = outbounds,
+            ["routing"] = new JObject
+            {
+                ["domainStrategy"] = "AsIs",
+                ["rules"] = rules
+            }
         };
 
         return configObj.ToString();

@@ -188,6 +188,10 @@ namespace CrimsonOnion.Views
             {
                 _toast(AppStrings.ToastAdapterBindingSnowflake);
             }
+            else if (Active == Snowflake && _cfg.EnableLoadBalanceAdapters)
+            {
+                _toast(AppStrings.ToastLoadBalanceSnowflake);
+            }
 
             if (Active == Custom) OpenCustomPanel(); else CloseCustomPanel();
 
@@ -242,7 +246,7 @@ namespace CrimsonOnion.Views
 
             UpdateAdvancedUI();
 
-            bool dnsttBypass = (_cfg.EnableAdapterBinding || _cfg.EnableOutboundProxy)
+            bool dnsttBypass = (_cfg.EnableAdapterBinding || _cfg.EnableOutboundProxy || _cfg.EnableLoadBalanceAdapters)
                             && _cfg.CustomBridgeLine.IndexOf("dnstt", StringComparison.OrdinalIgnoreCase) >= 0;
 
             if (_state.IsEngineRunning)

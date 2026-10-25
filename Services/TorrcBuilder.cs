@@ -186,10 +186,14 @@ namespace CrimsonOnion.Services
             if (config.DebugMode)
                 cleanCfg.Add("Log warn stdout");
 
-            if ((config.EnableAdapterBinding && !string.IsNullOrWhiteSpace(config.SelectedAdapterIp)) ||
+            if (LoadBalanceAdapters.IsUsable(config))
+            {
+                cleanCfg.Add($"Socks5Proxy 127.0.0.1:{LoadBalanceAdapters.ProxyPortForTor(config, torIndex)}");
+            }
+            else if ((config.EnableAdapterBinding && !string.IsNullOrWhiteSpace(config.SelectedAdapterIp)) ||
                 (config.EnableOutboundProxy && !string.IsNullOrEmpty(config.OutboundProxyAddress) && !string.IsNullOrEmpty(config.OutboundProxyPort)))
             {
-                cleanCfg.Add("Socks5Proxy 127.0.0.1:10819");
+                cleanCfg.Add($"Socks5Proxy 127.0.0.1:{LoadBalanceAdapters.SingleAdapterProxyPort}");
             }
 
             if (selBridge == BridgeNames.Custom)

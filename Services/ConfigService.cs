@@ -68,6 +68,8 @@ namespace CrimsonOnion.Services
                 EnableAdapterBinding = config.EnableAdapterBinding,
                 SelectedAdapterName = config.SelectedAdapterName,
                 SelectedAdapterIp = config.SelectedAdapterIp,
+                EnableLoadBalanceAdapters = config.EnableLoadBalanceAdapters,
+                LoadBalanceAdapters = new List<string>(config.LoadBalanceAdapters ?? new List<string>()),
                 EnableUpstreamDoh = config.EnableUpstreamDoh,
                 UpstreamDohUrl = config.UpstreamDohUrl,
                 EnableSystemDns = config.EnableSystemDns,
@@ -117,6 +119,7 @@ namespace CrimsonOnion.Services
                 var json = File.ReadAllText(cfgFile);
 
                 var jobj = Newtonsoft.Json.Linq.JObject.Parse(json);
+                if (jobj["LoadBalanceAdapters"] != null) config.LoadBalanceAdapters = new List<string>();
                 using var jReader = jobj.CreateReader();
                 Newtonsoft.Json.JsonSerializer.CreateDefault().Populate(jReader, config);
 
@@ -126,6 +129,9 @@ namespace CrimsonOnion.Services
                 if (jobj["XrayBalancePolicy"] == null && jobj["HaProxyBalancePolicy"] != null)
                     config.XrayBalancePolicy = jobj.Value<string>("HaProxyBalancePolicy") ?? "";
                 config.XrayBalancePolicy = NormalizeLbPolicy(config.XrayBalancePolicy);
+                config.LoadBalanceAdapters ??= new List<string>();
+                for (int i = 0; i < config.LoadBalanceAdapters.Count; i++)
+                    config.LoadBalanceAdapters[i] = (config.LoadBalanceAdapters[i] ?? "").Trim();
 
                 if (config.LastConfig == "Stable" || config.LastConfig == "Fast")
                     config.LastConfig = "Optimized";

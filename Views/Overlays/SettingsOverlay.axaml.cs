@@ -163,6 +163,309 @@ private void btnAdapterBindingToggle_Click(object? sender, global::Avalonia.Inte
         }
     }
 
+private const int LbAdapterMinSlots = 2;
+private const int LbAdapterMaxSlots = 4;
+private bool _lbToggleResetByCode;
+
+internal void TriggerScanLoadBalanceAdapters()
+{
+    PruneLbAdapterConfig();
+    RefreshLbAdapterCombos();
+}
+
+private global::Avalonia.Controls.ComboBox? LbCombo(int slot)
+    => this.FindControl<global::Avalonia.Controls.ComboBox>("cmbLbAdapter" + slot);
+
+private global::Avalonia.Controls.Grid? LbRow(int slot)
+    => this.FindControl<global::Avalonia.Controls.Grid>("rowLbAdapter" + slot);
+
+private int LbVisibleSlots()
+{
+    int stored = _main?.Cfg.LoadBalanceAdapters?.Count ?? 0;
+    return Math.Max(LbAdapterMinSlots, Math.Min(LbAdapterMaxSlots, stored));
+}
+
+private void btnLoadBalanceAdaptersToggle_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+{
+    var src = e.Source as global::Avalonia.Controls.Control;
+    while (src != null)
+    {
+        if (src.Name == "togLoadBalanceAdapters") return;
+        src = src.Parent as global::Avalonia.Controls.Control;
+    }
+
+    var pan = this.FindControl<global::Avalonia.Controls.Border>("panLoadBalanceAdapters");
+    if (pan == null) return;
+
+    if (pan.MaxHeight == 0)
+    {
+        RefreshLbAdapterCombos();
+        ExpandLoadBalanceAdaptersPanel(true);
+    }
+    else
+    {
+        ExpandLoadBalanceAdaptersPanel(false);
+    }
+}
+
+private void ExpandLoadBalanceAdaptersPanel(bool open)
+{
+    var pan       = this.FindControl<global::Avalonia.Controls.Border>("panLoadBalanceAdapters");
+    var ico       = this.FindControl<global::Avalonia.Controls.PathIcon>("icoLoadBalanceAdaptersExpander");
+    var panToggle = this.FindControl<global::Avalonia.Controls.Border>("panLoadBalanceAdaptersToggle");
+    var btnToggle = this.FindControl<global::Avalonia.Controls.Button>("btnLoadBalanceAdaptersToggle");
+    if (pan == null) return;
+
+    AnimateExpander(pan, ico, open, open ? 200 : 0, panToggle, btnToggle);
+}
+
+private void CollapseAdapterBindingPanel()
+{
+    var pan       = this.FindControl<global::Avalonia.Controls.Border>("panAdapterBinding");
+    var ico       = this.FindControl<global::Avalonia.Controls.PathIcon>("icoAdapterBindingExpander");
+    var panToggle = this.FindControl<global::Avalonia.Controls.Border>("panAdapterBindingToggle");
+    var btnToggle = this.FindControl<global::Avalonia.Controls.Button>("btnAdapterBindingToggle");
+    if (pan == null || pan.MaxHeight == 0) return;
+
+    AnimateExpander(pan, ico, false, 0, panToggle, btnToggle);
+}
+
+private void RefreshLbAdapterCombos()
+{
+    if (_main == null) return;
+
+    bool wasInit = _isInitializingSettings;
+    _isInitializingSettings = true;
+    try
+    {
+        int visible = LbVisibleSlots();
+        bool showSecondRow = visible >= 3;
+        var secondRowPan = this.FindControl<global::Avalonia.Controls.Border>("panLbAdapterRow2");
+        if (secondRowPan != null)
+        {
+            secondRowPan.MaxHeight = showSecondRow ? 36 : 0;
+            secondRowPan.Opacity   = showSecondRow ? 1 : 0;
+        }
+
+        var stored  = _main.Cfg.LoadBalanceAdapters ?? new List<string>();
+        var all     = SplitTunnelService.ListUsableAdapters(includeDefault: false);
+
+        for (int slot = 1; slot <= LbAdapterMaxSlots; slot++)
+        {
+            var cmb = LbCombo(slot);
+            var row = LbRow(slot);
+            if (cmb == null || row == null) continue;
+
+            row.IsVisible = true;
+            row.Opacity = slot == 4 && visible < 4 ? 0 : 1;
+            row.IsHitTestVisible = slot != 4 || visible >= 4;
+            if (slot == 4) row.IsEnabled = visible >= 4;
+            if (slot > visible)
+            {
+                cmb.ItemsSource  = null;
+                cmb.SelectedItem = null;
+                continue;
+            }
+
+            string keep  = slot <= stored.Count ? stored[slot - 1] ?? "" : "";
+            var taken    = new List<string>();
+            for (int other = 1; other <= visible; other++)
+            {
+                if (other == slot) continue;
+                string value = other <= stored.Count ? stored[other - 1] ?? "" : "";
+                if (!string.IsNullOrWhiteSpace(value)) taken.Add(value);
+            }
+
+            var items = all.Where(a => !taken.Contains(a)).ToList();
+            cmb.ItemsSource  = items;
+            cmb.SelectedItem = items.Contains(keep) ? keep : null;
+        }
+
+        var add = this.FindControl<global::Avalonia.Controls.Button>("btnLbAddAdapter");
+        if (add != null) add.IsVisible = visible < LbAdapterMaxSlots;
+
+        RefreshLbAdapterHint(visible, stored, all);
+    }
+    finally
+    {
+        _isInitializingSettings = wasInit;
+    }
+}
+
+private void RefreshLbAdapterHint(int visible, List<string> stored, List<string> available)
+{
+    var hint = this.FindControl<global::Avalonia.Controls.TextBlock>("lblLbAdapterHint");
+    if (hint == null) return;
+
+    var picks = new List<string>();
+    for (int i = 0; i < stored.Count && i < visible; i++)
+    {
+        string entry = (stored[i] ?? "").Trim();
+        if (entry.Length == 0 || !available.Contains(entry) || picks.Contains(entry)) continue;
+        picks.Add(entry);
+    }
+
+    int engines = 1;
+    if (_main != null && !int.TryParse(_main.Cfg.LastCount, out engines)) engines = 1;
+
+    hint.Text = picks.Count < LoadBalanceAdapters.MinSlots
+        ? ""
+        : LoadBalanceAdapters.Describe(picks, Math.Max(1, engines));
+    hint.IsVisible = hint.Text.Length > 0;
+}
+
+private void PruneLbAdapterConfig()
+{
+    if (_main == null) return;
+
+    var list = _main.Cfg.LoadBalanceAdapters;
+    if (list == null || list.Count == 0) return;
+
+    var available = SplitTunnelService.ListUsableAdapters(includeDefault: false);
+    bool changed  = false;
+    for (int i = 0; i < list.Count; i++)
+    {
+        string entry = (list[i] ?? "").Trim();
+        if (list[i] != entry)
+        {
+            list[i] = entry;
+            changed = true;
+        }
+        if (entry.Length == 0 || available.Contains(entry)) continue;
+        list[i] = "";
+        changed = true;
+    }
+
+    if (changed) _main.TriggerRequestConfigSave();
+}
+
+private void StoreLbSlot(int slot, string picked)
+{
+    if (_main == null) return;
+
+    var cfg  = _main.Cfg;
+    var list = cfg.LoadBalanceAdapters ??= new List<string>();
+    while (list.Count < LbVisibleSlots()) list.Add("");
+    if (slot < 1 || slot > list.Count) return;
+    if (list[slot - 1] == picked) return;
+
+    list[slot - 1] = picked;
+    _main.TriggerRequestConfigSave();
+}
+
+private void btnLbScanAdapters_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    => TriggerScanLoadBalanceAdapters();
+
+private void btnLbAdapterAdd_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+{
+    if (_main == null) return;
+
+    var list = _main.Cfg.LoadBalanceAdapters ??= new List<string>();
+    while (list.Count < LbVisibleSlots()) list.Add("");
+    if (list.Count >= LbAdapterMaxSlots) return;
+
+    list.Add("");
+    _main.TriggerRequestConfigSave();
+    RefreshLbAdapterCombos();
+}
+
+private void btnLbAdapterRemove_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+{
+    if (_main == null) return;
+    if (sender is not global::Avalonia.Controls.Button btn || btn.Tag is not string slotText) return;
+    if (!int.TryParse(slotText, out int slot) || slot <= LbAdapterMinSlots) return;
+
+    var list = _main.Cfg.LoadBalanceAdapters ??= new List<string>();
+    if (slot > list.Count) return;
+
+    bool hadPick = !string.IsNullOrWhiteSpace(list[slot - 1]);
+    list.RemoveAt(slot - 1);
+    _main.TriggerRequestConfigSave();
+    RefreshLbAdapterCombos();
+
+    if (hadPick && _main.State.IsEngineRunning)
+        _main.TriggerShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
+}
+
+private void cmbLbAdapter_SelectionChanged(object? sender, global::Avalonia.Controls.SelectionChangedEventArgs e)
+{
+    if (_isInitializingSettings || _main == null) return;
+    if (sender is not global::Avalonia.Controls.ComboBox cmb) return;
+
+    string name = cmb.Name ?? "";
+    if (!int.TryParse(name.Replace("cmbLbAdapter", ""), out int slot)) return;
+
+    string picked = cmb.SelectedItem as string ?? "";
+    StoreLbSlot(slot, picked);
+    RefreshLbAdapterCombos();
+
+    if (!string.IsNullOrWhiteSpace(picked) && _main.State.IsEngineRunning)
+        _main.TriggerShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
+}
+
+private void togLoadBalanceAdapters_IsCheckedChanged(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+{
+    if (_isInitializingSettings || _main == null) return;
+    if (sender is not global::Avalonia.Controls.ToggleSwitch tog) return;
+
+    var cfg = _main.Cfg;
+
+    if (tog.IsChecked == true)
+    {
+        PruneLbAdapterConfig();
+        RefreshLbAdapterCombos();
+
+        if (LoadBalanceAdapters.ActiveIps(cfg).Count < LoadBalanceAdapters.MinSlots)
+        {
+            _lbToggleResetByCode = true;
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { tog.IsChecked = false; });
+            ExpandLoadBalanceAdaptersPanel(true);
+            _main.TriggerShowToast(CrimsonOnion.Localization.AppStrings.ToastLoadBalanceNeedsTwoAdapters);
+            return;
+        }
+
+        if (cfg.EnableAdapterBinding)
+        {
+            cfg.EnableAdapterBinding = false;
+            var bindTog = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togAdapterBinding");
+            if (bindTog != null)
+                global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { bindTog.IsChecked = false; });
+            CollapseAdapterBindingPanel();
+        }
+
+        if (!cfg.EnableLoadBalanceAdapters)
+        {
+            cfg.EnableLoadBalanceAdapters = true;
+            _main.TriggerRequestConfigSave();
+            if (_main.State.IsEngineRunning)
+                _main.TriggerShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
+        }
+
+        if (cfg.LastBridge == BridgeNames.Snowflake)
+            _main.TriggerShowToast(CrimsonOnion.Localization.AppStrings.ToastLoadBalanceSnowflake);
+    }
+    else
+    {
+        if (_lbToggleResetByCode)
+        {
+            _lbToggleResetByCode = false;
+            return;
+        }
+
+        if (cfg.EnableLoadBalanceAdapters)
+        {
+            cfg.EnableLoadBalanceAdapters = false;
+            _main.TriggerRequestConfigSave();
+            if (_main.State.IsEngineRunning)
+                _main.TriggerShowToast(CrimsonOnion.Localization.AppStrings.ToastReconnectChanges);
+        }
+
+        ExpandLoadBalanceAdaptersPanel(false);
+    }
+
+    UpdateAdapterBindingMutualExclusivity();
+}
+
 private void btnDnsToggle_Click(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         var src = e.Source as global::Avalonia.Controls.Control;
@@ -537,6 +840,7 @@ private void togAdapterBinding_IsCheckedChanged(object? sender, global::Avalonia
                 else if (!_main!.Cfg.EnableAdapterBinding)
                 {
                     _main!.Cfg.EnableAdapterBinding = true;
+                    ClearLoadBalanceAdaptersMode();
                     _main!.TriggerRequestConfigSave();
                     if (_main!.Cfg.LastBridge == BridgeNames.Snowflake)
                         _main!.TriggerShowToast(CrimsonOnion.Localization.AppStrings.ToastAdapterBindingSnowflake);
@@ -764,6 +1068,47 @@ private void togSysDns_IsCheckedChanged(object? sender, global::Avalonia.Interac
 
 private void UpdateAdapterBindingMutualExclusivity()
     {
+        var cfg = _main?.Cfg;
+        if (cfg == null) return;
+
+        bool changed = false;
+        if (cfg.EnableLoadBalanceAdapters && cfg.EnableAdapterBinding)
+        {
+            cfg.EnableAdapterBinding = false;
+            changed = true;
+        }
+        if (changed) _main!.TriggerRequestConfigSave();
+
+        var lbTog = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togLoadBalanceAdapters");
+        if (lbTog == null) return;
+        if ((lbTog.IsChecked ?? false) == cfg.EnableLoadBalanceAdapters) return;
+
+        bool wasInit = _isInitializingSettings;
+        _isInitializingSettings = true;
+        try
+        {
+            lbTog.IsChecked = cfg.EnableLoadBalanceAdapters;
+        }
+        finally
+        {
+            _isInitializingSettings = wasInit;
+        }
+    }
+
+private void ClearLoadBalanceAdaptersMode()
+    {
+        if (_main == null || !_main.Cfg.EnableLoadBalanceAdapters) return;
+
+        _main.Cfg.EnableLoadBalanceAdapters = false;
+
+        var lbTog = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togLoadBalanceAdapters");
+        if (lbTog != null)
+        {
+            _lbToggleResetByCode = true;
+            global::Avalonia.Threading.Dispatcher.UIThread.Post(() => { lbTog.IsChecked = false; });
+        }
+
+        ExpandLoadBalanceAdaptersPanel(false);
     }
 
     private bool _isInitializingSettings = false;
@@ -857,6 +1202,22 @@ private void UpdateAdapterBindingMutualExclusivity()
             togAdapterBinding.IsChecked = _main.Cfg.EnableAdapterBinding;
             UpdateAdapterBindingMutualExclusivity();
         }
+
+        if (_main.Cfg.EnableLoadBalanceAdapters
+            && LoadBalanceAdapters.ActiveIps(_main.Cfg).Count < LoadBalanceAdapters.MinSlots)
+        {
+            _main.Cfg.EnableLoadBalanceAdapters = false;
+            _main.TriggerRequestConfigSave();
+        }
+
+        PruneLbAdapterConfig();
+        RefreshLbAdapterCombos();
+
+        var lbAdapterTog = this.FindControl<global::Avalonia.Controls.ToggleSwitch>("togLoadBalanceAdapters");
+        if (lbAdapterTog != null) lbAdapterTog.IsChecked = _main.Cfg.EnableLoadBalanceAdapters;
+
+        ExpandLoadBalanceAdaptersPanel(false);
+        UpdateAdapterBindingMutualExclusivity();
 
         _isInitializingSettings = false;
     }

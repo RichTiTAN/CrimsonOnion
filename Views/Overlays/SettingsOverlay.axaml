@@ -278,6 +278,89 @@
                                             </Border>
                                         </StackPanel>
                                         <StackPanel Spacing="0">
+                                            <Border x:Name="panLoadBalanceAdaptersToggle" Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="0">
+                                                <Button x:Name="btnLoadBalanceAdaptersToggle" Classes="optBtn" CornerRadius="8" BorderThickness="0" Background="Transparent" Padding="12,8" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="btnLoadBalanceAdaptersToggle_Click">
+                                                    <Grid ColumnDefinitions="Auto, *, Auto, Auto" MinHeight="36">
+                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                                            <PathIcon Data="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z" Width="14" Height="14" Foreground="#8B949E"/>
+                                                            <TextBlock x:Name="lblLoadBalanceAdaptersTitle" Classes="settingTitle" Text="LOAD-BALANCE ADAPTERS" FontSize="11" FontWeight="SemiBold" LetterSpacing="1" VerticalAlignment="Center" ToolTip.Tip="Binds each Tor instance to one of the selected adapters and rotates them in turn."/>
+                                                        </StackPanel>
+                                                        <ToggleSwitch Grid.Column="2" x:Name="togLoadBalanceAdapters" OnContent="{x:Null}" OffContent="{x:Null}" HorizontalAlignment="Right" VerticalAlignment="Center" MinWidth="40" Margin="0,0,10,0" IsCheckedChanged="togLoadBalanceAdapters_IsCheckedChanged"/>
+                                                        <PathIcon x:Name="icoLoadBalanceAdaptersExpander" Grid.Column="3" Data="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" Width="12" Height="12" Foreground="#8B949E" VerticalAlignment="Center">
+                                                            <PathIcon.Transitions>
+                                                                <Transitions>
+                                                                    <DoubleTransition Property="RotateTransform.Angle" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+                                                                </Transitions>
+                                                            </PathIcon.Transitions>
+                                                        </PathIcon>
+                                                    </Grid>
+                                                </Button>
+                                            </Border>
+                                            <Border x:Name="panLoadBalanceAdapters" Background="#0A0B0E" BorderBrush="#2D3748" BorderThickness="1,0,1,1" CornerRadius="0,0,8,8" MaxHeight="0" Opacity="0" ClipToBounds="True">
+                                                <Border.Transitions>
+                                                    <Transitions>
+                                                        <DoubleTransition Property="MaxHeight" Duration="0:0:0.3" Easing="CubicEaseOut"/>
+                                                        <DoubleTransition Property="Opacity" Duration="0:0:0.3" Easing="CubicEaseOut"/>
+                                                    </Transitions>
+                                                </Border.Transitions>
+                                                <StackPanel Margin="15,15,15,15" Spacing="0">
+                                                    <Grid ColumnDefinitions="*,12,*" Margin="0,0,0,10">
+                                                        <Grid x:Name="rowLbAdapter1" ColumnDefinitions="Auto,*" MinHeight="26">
+                                                            <Border Grid.Column="0" Background="#0A0C0F" BorderBrush="#2D3748" BorderThickness="1,1,0,1" CornerRadius="4,0,0,4" Padding="10,0">
+                                                                <TextBlock x:Name="lblLbAdapter1" Text="ADAPTER 01" FontSize="9" FontWeight="Bold" LetterSpacing="1" Foreground="#A0AEC0" VerticalAlignment="Center"/>
+                                                            </Border>
+                                                            <ComboBox Grid.Column="1" x:Name="cmbLbAdapter1" HorizontalAlignment="Stretch" MinHeight="26" Height="26" FontSize="11" VerticalContentAlignment="Center" PlaceholderText="Select an adapter..." SelectionChanged="cmbLbAdapter_SelectionChanged" Background="#1A1C20" Foreground="#E2E8F0" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="0,4,4,0"/>
+                                                        </Grid>
+                                                        <Grid x:Name="rowLbAdapter2" Grid.Column="2" ColumnDefinitions="Auto,*" MinHeight="26">
+                                                            <Border Grid.Column="0" Background="#0A0C0F" BorderBrush="#2D3748" BorderThickness="1,1,0,1" CornerRadius="4,0,0,4" Padding="10,0">
+                                                                <TextBlock x:Name="lblLbAdapter2" Text="ADAPTER 02" FontSize="9" FontWeight="Bold" LetterSpacing="1" Foreground="#A0AEC0" VerticalAlignment="Center"/>
+                                                            </Border>
+                                                            <ComboBox Grid.Column="1" x:Name="cmbLbAdapter2" HorizontalAlignment="Stretch" MinHeight="26" Height="26" FontSize="11" VerticalContentAlignment="Center" PlaceholderText="Select an adapter..." SelectionChanged="cmbLbAdapter_SelectionChanged" Background="#1A1C20" Foreground="#E2E8F0" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="0,4,4,0"/>
+                                                        </Grid>
+                                                    </Grid>
+                                                    <Border x:Name="panLbAdapterRow2" MaxHeight="0" Opacity="0" ClipToBounds="True">
+                                                        <Border.Transitions>
+                                                            <Transitions>
+                                                                <DoubleTransition Property="MaxHeight" Duration="0:0:0.25" Easing="CubicEaseOut"/>
+                                                                <DoubleTransition Property="Opacity" Duration="0:0:0.25" Easing="CubicEaseOut"/>
+                                                            </Transitions>
+                                                        </Border.Transitions>
+                                                        <Grid x:Name="rowLbAdapterRow2" ColumnDefinitions="*,12,*" Margin="0,0,0,10">
+                                                            <Grid x:Name="rowLbAdapter3" ColumnDefinitions="Auto,*,Auto" MinHeight="26" IsVisible="False">
+                                                                <Border Grid.Column="0" Background="#0A0C0F" BorderBrush="#2D3748" BorderThickness="1,1,0,1" CornerRadius="4,0,0,4" Padding="10,0">
+                                                                    <TextBlock x:Name="lblLbAdapter3" Text="ADAPTER 03" FontSize="9" FontWeight="Bold" LetterSpacing="1" Foreground="#A0AEC0" VerticalAlignment="Center"/>
+                                                                </Border>
+                                                                <ComboBox Grid.Column="1" x:Name="cmbLbAdapter3" HorizontalAlignment="Stretch" MinHeight="26" Height="26" FontSize="11" VerticalContentAlignment="Center" PlaceholderText="Select an adapter..." SelectionChanged="cmbLbAdapter_SelectionChanged" Background="#1A1C20" Foreground="#E2E8F0" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="0"/>
+                                                                <Border Grid.Column="2" Background="#0A0C0F" BorderBrush="#2D3748" BorderThickness="0,1,1,1" CornerRadius="0,4,4,0" Width="26" MinHeight="26">
+                                                                    <Button x:Name="btnLbRemove3" Tag="3" Content="&#x2715;" Click="btnLbAdapterRemove_Click" FontSize="10" Foreground="#A0AEC0" Background="Transparent" BorderThickness="0" MinWidth="0" MinHeight="0" Width="24" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" VerticalAlignment="Stretch" Cursor="Hand"/>
+                                                                </Border>
+                                                            </Grid>
+                                                            <Grid Grid.Column="2" x:Name="rowLbAdapter4" ColumnDefinitions="Auto,*,Auto" MinHeight="26" IsVisible="False" Opacity="0">
+                                                                <Grid.Transitions>
+                                                                    <Transitions>
+                                                                        <DoubleTransition Property="Opacity" Duration="0:0:0.25" Easing="CubicEaseOut"/>
+                                                                    </Transitions>
+                                                                </Grid.Transitions>
+                                                                <Border Grid.Column="0" Background="#0A0C0F" BorderBrush="#2D3748" BorderThickness="1,1,0,1" CornerRadius="4,0,0,4" Padding="10,0">
+                                                                    <TextBlock x:Name="lblLbAdapter4" Text="ADAPTER 04" FontSize="9" FontWeight="Bold" LetterSpacing="1" Foreground="#A0AEC0" VerticalAlignment="Center"/>
+                                                                </Border>
+                                                                <ComboBox Grid.Column="1" x:Name="cmbLbAdapter4" HorizontalAlignment="Stretch" MinHeight="26" Height="26" FontSize="11" VerticalContentAlignment="Center" PlaceholderText="Select an adapter..." SelectionChanged="cmbLbAdapter_SelectionChanged" Background="#1A1C20" Foreground="#E2E8F0" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="0"/>
+                                                                <Border Grid.Column="2" Background="#0A0C0F" BorderBrush="#2D3748" BorderThickness="0,1,1,1" CornerRadius="0,4,4,0" Width="26" MinHeight="26">
+                                                                    <Button x:Name="btnLbRemove4" Tag="4" Content="&#x2715;" Click="btnLbAdapterRemove_Click" FontSize="10" Foreground="#A0AEC0" Background="Transparent" BorderThickness="0" MinWidth="0" MinHeight="0" Width="24" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" VerticalAlignment="Stretch" Cursor="Hand"/>
+                                                                </Border>
+                                                            </Grid>
+                                                        </Grid>
+                                                    </Border>
+                                                    <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,2">
+                                                        <Button x:Name="btnLbAddAdapter" Content="+ ADD ADAPTER" Click="btnLbAdapterAdd_Click" Classes="optBtn" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0" Background="#0A0C0F" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="4" Padding="9,5" MinWidth="0" MinHeight="0" HorizontalAlignment="Left" Cursor="Hand"/>
+                                                        <Button x:Name="btnLbScanAdapters" Content="SCAN ADAPTERS" Click="btnLbScanAdapters_Click" Classes="optBtn" FontSize="10" FontWeight="Bold" Foreground="#A0AEC0" Background="#0A0C0F" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="4" Padding="9,5" MinWidth="0" MinHeight="0" HorizontalAlignment="Left" Cursor="Hand"/>
+                                                    </StackPanel>
+                                                    <TextBlock x:Name="lblLbAdapterHint" Text="" FontSize="9" Foreground="#5A6472" TextWrapping="Wrap" IsVisible="False" Margin="0,12,0,0"/>
+
+                                                </StackPanel>
+                                            </Border>
+                                        </StackPanel>
+                                        <StackPanel Spacing="0">
                                             <Border x:Name="panDnsToggle" Background="#101112" BorderBrush="#2D3748" BorderThickness="1" CornerRadius="8" Padding="0">
                                                 <Button x:Name="btnDnsToggle" Classes="optBtn" CornerRadius="8" BorderThickness="0" Background="Transparent" Padding="12,8" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Click="btnDnsToggle_Click">
                                                     <Grid ColumnDefinitions="Auto, *, Auto" MinHeight="36">
